@@ -1,0 +1,6 @@
+list l ;
+push ( l , 1.0 ) ;
+float v ;
+v = len ( l ) ;
+out v + "%n" ;
+.

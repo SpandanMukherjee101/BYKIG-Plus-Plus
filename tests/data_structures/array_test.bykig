@@ -1,0 +1,6 @@
+intarr a [ 5 ] ;
+a [ 0 ] = 42 ;
+float v ;
+v = a [ 0 ] ;
+out v + "%n" ;
+.

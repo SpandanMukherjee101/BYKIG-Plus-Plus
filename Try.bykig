@@ -1,0 +1,92 @@
+out "List of program you will see:%n(a.) Star Pattern upto n%n(b.) Even numbers from 1 to n%n(c.) Greatest among three numbers%n(d.) Last but not least, Prime numbers upto the number of user input!!!%nProgram A:%nEnter the number of rows of star pattern-" ;
+
+int i = 0 , j = 0 , n ;
+char star = '*' ;
+
+in n ;
+
+while i<n
+{
+    j = 0 ;
+    while j<i+1
+    {
+        out star ;
+        j = j + 1 ;
+    }
+    out "%n" ;
+    i = i + 1 ;
+}
+
+out "Program B:%nEnter the number upto which you want to see even numbers-" ;
+
+int i2 = 1 ;
+
+in n ;
+
+while i2<n+1
+{
+    if i2%2~0
+    {
+        out i2 + "%n" ;
+    }
+    i2 =i2+1;
+}
+
+out "Program C:%nEnter the values of A, B and C-%n" ;
+
+int A , B , C ;
+
+in A + B + C ;
+
+if A>B
+{
+    if A>C
+    {
+        out "A is highest%n" ;
+    }
+    else
+    {
+        out "C is highest%n" ;
+    }
+}
+else
+{
+    if B>C
+    {
+        out "B is highest%n" ;
+    }
+    else
+    {
+        out "C is highest%n" ;
+    }
+}
+
+out "Program D:%nEnter the number upto which you want to see prime numbers-" ;
+
+int max , b = 0 , j , i = 2 ;
+
+in max ;
+
+while i<max+1
+{
+    int j = 2 ;
+    while j<i/2+1
+    {
+        if i%j~0
+        {
+            int b = 1 ;
+        }
+        j =j+1;
+    }
+    
+    if b!1
+    {
+        out i + "%n" ;
+    }
+
+    int b = 0 ;
+    i =i+1;
+}
+
+out "Press any key to exit" ;
+.

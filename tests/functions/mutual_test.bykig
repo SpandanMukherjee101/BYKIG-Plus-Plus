@@ -1,0 +1,21 @@
+func a ( float x )
+{
+if x == 0
+{
+return 0 ;
+}
+float p ; p = b ( x - 1 ) ;
+return p ;
+}
+func b ( float x )
+{
+if x == 0
+{
+return 0 ;
+}
+float p ; p = a ( x - 1 ) ;
+return p ;
+}
+float r ; r = a ( 2 ) ;
+out r + "%n" ;
+.

@@ -1,0 +1,9 @@
+if 5 > 3
+{
+out "Yes%n" ;
+}
+else
+{
+out "No%n" ;
+}
+.

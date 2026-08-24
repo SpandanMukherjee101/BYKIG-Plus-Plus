@@ -1,0 +1,12 @@
+func a ( float x )
+{
+return x + 1 ;
+}
+func b ( float x )
+{
+float r ; r = a ( x ) ;
+return r + 1 ;
+}
+float res ; res = b ( 1 ) ;
+out res + "%n" ;
+.

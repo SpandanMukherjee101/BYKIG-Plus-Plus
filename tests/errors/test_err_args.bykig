@@ -1,0 +1,6 @@
+func arg ( float x )
+{
+return x ;
+}
+arg ( 1 , 2 ) ;
+.

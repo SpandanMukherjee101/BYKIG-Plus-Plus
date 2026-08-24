@@ -1,0 +1,8 @@
+int g = 10 ;
+func f ( float x )
+{
+return g ;
+}
+float r ; r = f ( 1 ) ;
+out r + "%n" ;
+.

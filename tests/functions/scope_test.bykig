@@ -1,0 +1,9 @@
+int x = 1 ;
+func f ( float y )
+{
+int x = 2 ;
+return x ;
+}
+float r ; r = f ( 1 ) ;
+out r + "%n" ;
+.

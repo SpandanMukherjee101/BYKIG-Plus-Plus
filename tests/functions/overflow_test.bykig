@@ -1,0 +1,12 @@
+func f ( float x )
+{
+if x > 900
+{
+return x ;
+}
+float r ; r = f ( x + 1 ) ;
+return r ;
+}
+float x ; x = f ( 1 ) ;
+out x + "%n" ;
+.

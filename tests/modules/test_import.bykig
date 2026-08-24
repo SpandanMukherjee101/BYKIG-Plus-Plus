@@ -1,0 +1,3 @@
+use "tests/modules/strlib.bykig" ;
+out greeting + "%n" ;
+.

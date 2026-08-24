@@ -1,0 +1,6 @@
+map m ;
+m [ "id" ] = 1.0 ;
+float v ;
+v = m [ "id" ] ;
+out v + "%n" ;
+.

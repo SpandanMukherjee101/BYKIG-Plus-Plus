@@ -1,0 +1,6 @@
+float w ;
+w = file_write ( "test.txt" , "Hello" ) ;
+float e ;
+e = file_exists ( "test.txt" ) ;
+out e + "%n" ;
+.

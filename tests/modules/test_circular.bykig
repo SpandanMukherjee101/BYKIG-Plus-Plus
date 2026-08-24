@@ -1,0 +1,6 @@
+use "tests/modules/circular_a.bykig" ;
+use "tests/modules/circular_b.bykig" ;
+out a + b + "%n" ;
+int c = a + b ;
+out c + "%n" ;
+.

@@ -1,0 +1,6 @@
+func err ( float x )
+{
+return ;
+}
+err ( 1 ) ;
+.

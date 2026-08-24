@@ -1,0 +1,3 @@
+use "tests/modules/imported_loop.bykig" ;
+out i + "%n" ;
+.

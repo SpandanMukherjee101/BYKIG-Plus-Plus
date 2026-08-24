@@ -1,0 +1,11 @@
+func f ( float x , float y )
+{
+if x < y
+{
+return x ;
+}
+return y ;
+}
+float r ; r = f ( 2 , 3 ) ;
+out r + "%n" ;
+.

@@ -1,0 +1,7 @@
+func f ( float x )
+{
+return x * 2 ;
+}
+float r ; r = f ( 2 ) ;
+out r + "%n" ;
+.

@@ -1,0 +1,12 @@
+func fact ( float n )
+{
+if n < 2
+{
+return 1 ;
+}
+float p ; p = fact ( n - 1 ) ;
+return n * p ;
+}
+float r ; r = fact ( 5 ) ;
+out r + "%n" ;
+.
