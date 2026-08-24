@@ -22,13 +22,32 @@ struct funcDef { char name[100]; int paramCount; struct funcParam params[10]; lo
 
 struct savedVar { char name[100]; int type; int intVal; float floatVal; char charVal; char strVal[1000]; };
 
+enum ValueType {
+    VAL_FLOAT,
+    VAL_STRING,
+    VAL_INT_ARRAY,
+    VAL_FLOAT_ARRAY,
+    VAL_CHAR_ARRAY,
+    VAL_BOOL_ARRAY,
+    VAL_LIST,
+    VAL_MAP,
+    VAL_ERROR
+};
+
+struct Value {
+    enum ValueType type;
+    float f;
+    char s[1000];
+    void *ptr;
+};
+
 struct callFrame {
     struct iV *IV; struct fV *FV; struct cV *CV; struct bV *BV; struct sV *SV;
     struct iA *IA; struct fA *FA; struct cA *CA; struct bA *BA;
     struct lV *LV; struct mV *MV;
     long returnPos; 
     int hasReturn; 
-    float returnValue;
+    struct Value returnValue;
     int saved_p;
     int saved_k;
     int saved_envTop;
@@ -38,9 +57,9 @@ struct callFrame {
 };
 
 
-extern struct callFrame callStack[100];
+extern struct callFrame callStack[10000];
 extern int callStackTop;
-extern struct callFrame envStack[100];
+extern struct callFrame envStack[10000];
 extern int envTop;
 extern struct funcDef *FN;
 
@@ -86,7 +105,12 @@ int typeFetcher(char *name) {
     for (int idx=0; idx<num; idx++) {
         int i = scopes[idx];
         struct iV *iv = envStack[i].IV; while (iv) { if (!strcmp(iv->name, name)) return 1; iv = iv->next; }
-        struct fV *fv = envStack[i].FV; while (fv) { if (!strcmp(fv->name, name)) return 2; fv = fv->next; }
+        struct fV *fv = envStack[i].FV; 
+        while (fv) { 
+            // printf("typeFetcher('%s':%d) checks FV: '%s':%d\n", name, (int)strlen(name), fv->name, (int)strlen(fv->name));
+            if (!strcmp(fv->name, name)) return 2; 
+            fv = fv->next; 
+        }
         struct cV *cv = envStack[i].CV; while (cv) { if (!strcmp(cv->name, name)) return 3; cv = cv->next; }
         struct bV *bv = envStack[i].BV; while (bv) { if (!strcmp(bv->name, name)) return 4; bv = bv->next; }
         struct sV *sv = envStack[i].SV; while (sv) { if (!strcmp(sv->name, name)) return 5; sv = sv->next; }
@@ -100,18 +124,30 @@ int typeFetcher(char *name) {
     return 0;
 }
 
-float valFetcherGlobal(char *name) {
+struct Value valFetcherGlobal(char *name) {
+    struct Value v;
+    v.type = VAL_ERROR;
+    v.f = 0.0;
+    v.ptr = NULL;
+
     int scopes[] = {envTop, 0};
     int num = (envTop == 0) ? 1 : 2;
     for (int idx=0; idx<num; idx++) {
         int i = scopes[idx];
-        struct iV *iv = envStack[i].IV; while (iv) { if (!strcmp(iv->name, name)) {  return (float)iv->data; } iv = iv->next; }
-        struct fV *fv = envStack[i].FV; while (fv) { if (!strcmp(fv->name, name)) {  return fv->data; } fv = fv->next; }
-        struct cV *cv = envStack[i].CV; while (cv) { if (!strcmp(cv->name, name)) return (float)cv->data; cv = cv->next; }
-        struct bV *bv = envStack[i].BV; while (bv) { if (!strcmp(bv->name, name)) return (float)bv->data; bv = bv->next; }
+        struct iV *iv = envStack[i].IV; while (iv) { if (!strcmp(iv->name, name)) { v.type=VAL_FLOAT; v.f=(float)iv->data; return v; } iv = iv->next; }
+        struct fV *fv = envStack[i].FV; while (fv) { if (!strcmp(fv->name, name)) { v.type=VAL_FLOAT; v.f=fv->data; return v; } fv = fv->next; }
+        struct cV *cv = envStack[i].CV; while (cv) { if (!strcmp(cv->name, name)) { v.type=VAL_FLOAT; v.f=(float)cv->data; return v; } cv = cv->next; }
+        struct bV *bv = envStack[i].BV; while (bv) { if (!strcmp(bv->name, name)) { v.type=VAL_FLOAT; v.f=(float)bv->data; return v; } bv = bv->next; }
+        struct sV *sv = envStack[i].SV; while (sv) { if (!strcmp(sv->name, name)) { v.type=VAL_STRING; strcpy(v.s, sv->data); return v; } sv = sv->next; }
+        struct iA *ia = envStack[i].IA; while (ia) { if (!strcmp(ia->name, name)) { v.type=VAL_INT_ARRAY; v.ptr=(void*)ia; return v; } ia = ia->next; }
+        struct fA *fa = envStack[i].FA; while (fa) { if (!strcmp(fa->name, name)) { v.type=VAL_FLOAT_ARRAY; v.ptr=(void*)fa; return v; } fa = fa->next; }
+        struct cA *ca = envStack[i].CA; while (ca) { if (!strcmp(ca->name, name)) { v.type=VAL_CHAR_ARRAY; v.ptr=(void*)ca; return v; } ca = ca->next; }
+        struct bA *ba = envStack[i].BA; while (ba) { if (!strcmp(ba->name, name)) { v.type=VAL_BOOL_ARRAY; v.ptr=(void*)ba; return v; } ba = ba->next; }
+        struct lV *lv = envStack[i].LV; while (lv) { if (!strcmp(lv->name, name)) { v.type=VAL_LIST; v.ptr=(void*)lv; return v; } lv = lv->next; }
+        struct mV *mv = envStack[i].MV; while (mv) { if (!strcmp(mv->name, name)) { v.type=VAL_MAP; v.ptr=(void*)mv; return v; } mv = mv->next; }
     }
     
-    return 0.0;
+    return v;
 }
 
 
@@ -126,6 +162,9 @@ char getCA(struct cA *CA, char *name, int idx) {
 }
 int getBA(struct bA *BA, char *name, int idx) {
     while (BA) { if (!strcmp(name, BA->name)) return BA->data[idx]; BA = BA->next; } return 0;
+}
+float getL(struct lV *LV, char *name, int idx) {
+    while (LV) { if (!strcmp(name, LV->name)) { if (idx >= 0 && idx < LV->size) return LV->data[idx]; } LV = LV->next; } return 0.0;
 }
 
 void setIA(struct iA *IA, char *name, int idx, int val) {
@@ -154,10 +193,42 @@ void appendBA(struct bA **q, char *name, int size) {
     strcpy(nnode->name, name); nnode->size = size; nnode->data = (int*)calloc(size, sizeof(int)); nnode->next = *q; *q = nnode;
 }
 
+void appendIA_copy(struct iA **q, char *name, struct iA *ref) {
+    struct iA *nnode = (struct iA*)malloc(sizeof(struct iA));
+    strcpy(nnode->name, name); nnode->size = ref->size; nnode->data = (int*)malloc(ref->size * sizeof(int));
+    memcpy(nnode->data, ref->data, ref->size * sizeof(int));
+    nnode->next = *q; *q = nnode;
+}
+void appendFA_copy(struct fA **q, char *name, struct fA *ref) {
+    struct fA *nnode = (struct fA*)malloc(sizeof(struct fA));
+    strcpy(nnode->name, name); nnode->size = ref->size; nnode->data = (float*)malloc(ref->size * sizeof(float));
+    memcpy(nnode->data, ref->data, ref->size * sizeof(float));
+    nnode->next = *q; *q = nnode;
+}
+void appendCA_copy(struct cA **q, char *name, struct cA *ref) {
+    struct cA *nnode = (struct cA*)malloc(sizeof(struct cA));
+    strcpy(nnode->name, name); nnode->size = ref->size; nnode->data = (char*)malloc(ref->size * sizeof(char));
+    memcpy(nnode->data, ref->data, ref->size * sizeof(char));
+    nnode->next = *q; *q = nnode;
+}
+void appendBA_copy(struct bA **q, char *name, struct bA *ref) {
+    struct bA *nnode = (struct bA*)malloc(sizeof(struct bA));
+    strcpy(nnode->name, name); nnode->size = ref->size; nnode->data = (int*)malloc(ref->size * sizeof(int));
+    memcpy(nnode->data, ref->data, ref->size * sizeof(int));
+    nnode->next = *q; *q = nnode;
+}
+
 void appendL(struct lV **q, char *name, int capacity) {
     struct lV *nnode = (struct lV *)malloc(sizeof(struct lV));
     strcpy(nnode->name, name); nnode->size = 0; nnode->capacity = capacity;
     nnode->data = (float *)malloc(sizeof(float) * capacity);
+    nnode->next = *q; *q = nnode;
+}
+void appendL_copy(struct lV **q, char *name, struct lV *ref) {
+    struct lV *nnode = (struct lV*)malloc(sizeof(struct lV));
+    strcpy(nnode->name, name); nnode->size = ref->size; nnode->capacity = ref->capacity;
+    nnode->data = (float*)malloc(ref->capacity * sizeof(float));
+    memcpy(nnode->data, ref->data, ref->capacity * sizeof(float));
     nnode->next = *q; *q = nnode;
 }
 
@@ -166,6 +237,12 @@ void appendL(struct lV **q, char *name, int capacity) {
 void appendM(struct mV **q, char *name) {
     struct mV *nnode = (struct mV *)malloc(sizeof(struct mV));
     strcpy(nnode->name, name); nnode->count = 0; nnode->next = *q; *q = nnode;
+}
+void appendM_copy(struct mV **q, char *name, struct mV *ref) {
+    struct mV *nnode = (struct mV*)malloc(sizeof(struct mV));
+    memcpy(nnode, ref, sizeof(struct mV));
+    strcpy(nnode->name, name);
+    nnode->next = *q; *q = nnode;
 }
 void setM_F(struct mV *MV, char *name, char *key, float val) {
     while (MV) {

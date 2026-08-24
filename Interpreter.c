@@ -1,4 +1,13 @@
 #include <stdio.h>
+
+#include <stdlib.h>
+void safe_fscanf(FILE* fp, const char* fmt, char* buf) {
+    if (fscanf(fp, fmt, buf) <= 0) {
+        printf("Error: Unexpected EOF or read error.\n");
+        exit(1);
+    }
+}
+
 #include <stdlib.h>
 #include <string.h>
 
@@ -6,16 +15,16 @@
 
 
 
-struct callFrame callStack[100];
+struct callFrame callStack[10000];
 int callStackTop = -1;
-struct callFrame envStack[100];
+struct callFrame envStack[10000];
 int envTop = 0;
 struct funcDef *FN = NULL;
 FILE *current_fp = NULL;
-float global_return_val = 0.0;
+struct Value global_return_val;
 FILE *global_fp = NULL;
 
-float run_interpreter_loop(FILE *fp) {
+struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
 
     char buffer[1000], tempS[1000], name[100], tD[100], dataC, ch;
     int mode, dataI, i, j, type, c[1000], k, p= -1, b1, b2, w[1000], l= 0;
@@ -51,10 +60,10 @@ float run_interpreter_loop(FILE *fp) {
         case 1:
         
         startI:
-            fscanf(fp, "%s", buffer); strcpy(name, buffer);
+            safe_fscanf(fp, "%s", buffer); strcpy(name, buffer);
             dataI=0;
 
-            fscanf(fp, "%s", buffer); if (!(strcmp(buffer,",")))
+            safe_fscanf(fp, "%s", buffer); if (!(strcmp(buffer,",")))
             {
                 appendI( &envStack[envTop].IV, name, dataI);
                 goto startI;
@@ -64,8 +73,9 @@ float run_interpreter_loop(FILE *fp) {
                 char exprBuf[1000] = "";
                 int pDepth = 0;
                 while (1) {
-                    fscanf(fp, "%s", tD);
-                    if (!strcmp(tD, "(")) pDepth++;
+                    safe_fscanf(fp, "%s", tD);
+                    if (!strcmp(tD, ".")) { goto ERROR; }
+                      if (!strcmp(tD, "(")) pDepth++;
                     else if (!strcmp(tD, ")")) pDepth--;
                     
                     if (pDepth == 0 && (!strcmp(tD, ",") || !strcmp(tD, ";"))) {
@@ -76,9 +86,9 @@ float run_interpreter_loop(FILE *fp) {
                     strcat(exprBuf, " ");
                 }
                 strcat(exprBuf, ";");
-                dataI = (int)val(exprBuf);
+                dataI = (int)val(exprBuf).f;
                 
-                // Do NOT call fscanf(fp, "%s", buffer) here because the while loop
+                // Do NOT call safe_fscanf(fp, "%s", buffer) here because the while loop
                 // already put the trailing ',' or ';' into buffer!
                 
                 if (!(strcmp(buffer,",")))
@@ -101,10 +111,10 @@ float run_interpreter_loop(FILE *fp) {
         case 2:
         
         startF:
-            fscanf(fp, "%s", buffer); strcpy(name, buffer);
+            safe_fscanf(fp, "%s", buffer); strcpy(name, buffer);
             dataF=0;
 
-            fscanf(fp, "%s", buffer); if (!(strcmp(buffer,",")))
+            safe_fscanf(fp, "%s", buffer); if (!(strcmp(buffer,",")))
             {
                 appendF( &envStack[envTop].FV, name, dataF);
                 goto startF;
@@ -114,8 +124,9 @@ float run_interpreter_loop(FILE *fp) {
                 char exprBuf[1000] = "";
                 int pDepth = 0;
                 while (1) {
-                    fscanf(fp, "%s", tD);
-                    if (!strcmp(tD, "(")) pDepth++;
+                    safe_fscanf(fp, "%s", tD);
+                    if (!strcmp(tD, ".")) { goto ERROR; }
+                      if (!strcmp(tD, "(")) pDepth++;
                     else if (!strcmp(tD, ")")) pDepth--;
                     
                     if (pDepth == 0 && (!strcmp(tD, ",") || !strcmp(tD, ";"))) {
@@ -126,9 +137,9 @@ float run_interpreter_loop(FILE *fp) {
                     strcat(exprBuf, " ");
                 }
                 strcat(exprBuf, ";");
-                dataF = (float)val(exprBuf);
+                dataF = (float)val(exprBuf).f;
                 
-                // Do NOT call fscanf(fp, "%s", buffer) here because the while loop
+                // Do NOT call safe_fscanf(fp, "%s", buffer) here because the while loop
                 // already put the trailing ',' or ';' into buffer!
                 
                 if (!(strcmp(buffer,",")))
@@ -151,20 +162,20 @@ float run_interpreter_loop(FILE *fp) {
         case 3:
         
         startC:
-            fscanf(fp, "%s", buffer); strcpy(name, buffer);
+            safe_fscanf(fp, "%s", buffer); strcpy(name, buffer);
             dataC= '\0';
 
-            fscanf(fp, "%s", buffer); if (!(strcmp(buffer,",")))
+            safe_fscanf(fp, "%s", buffer); if (!(strcmp(buffer,",")))
             {
                 appendC( &envStack[envTop].CV, name, dataC);
                 goto startC;
             }
             else if (!(strcmp(buffer,"=")))
             {
-                fscanf(fp, "%s", tD);
+                safe_fscanf(fp, "%s", tD);
                 dataC = tD[1];
 
-                fscanf(fp, "%s", buffer); if (!(strcmp(buffer,",")))
+                safe_fscanf(fp, "%s", buffer); if (!(strcmp(buffer,",")))
                 {
                     appendC( &envStack[envTop].CV, name, dataC);
                     goto startC;
@@ -188,7 +199,7 @@ float run_interpreter_loop(FILE *fp) {
             p++;
             k= p-1;
            
-            dataF= val(buffer);
+            dataF = val(buffer).f;
             if (dataF)
             {
                 fgets(buffer, 1000, fp);
@@ -226,7 +237,7 @@ float run_interpreter_loop(FILE *fp) {
                         p--;
                 }
 
-                fscanf(fp, "%s", buffer); if(strcmp(buffer, "elif") && strcmp(buffer, "else"))
+                safe_fscanf(fp, "%s", buffer); if(strcmp(buffer, "elif") && strcmp(buffer, "else"))
                 {
                     c[++p]=0;
                     --p;
@@ -247,7 +258,7 @@ float run_interpreter_loop(FILE *fp) {
             p++;
             k= p-1;
             
-            dataF= val(buffer);
+            dataF = val(buffer).f;
             if (dataF && c[p]!=1)
             {
                 fgets(buffer, 1000, fp);
@@ -286,7 +297,7 @@ float run_interpreter_loop(FILE *fp) {
                         p--;
                 }
 
-                fscanf(fp, "%s", buffer); if(strcmp(buffer, "elif") && strcmp(buffer, "else"))
+                safe_fscanf(fp, "%s", buffer); if(strcmp(buffer, "elif") && strcmp(buffer, "else"))
                 {
                     c[++p]=0;
                     --p;
@@ -345,7 +356,7 @@ float run_interpreter_loop(FILE *fp) {
                         p--;
                 }
 
-                fscanf(fp, "%s", buffer); if(strcmp(buffer, "elif") && strcmp(buffer, "else"))
+                safe_fscanf(fp, "%s", buffer); if(strcmp(buffer, "elif") && strcmp(buffer, "else"))
                 {
                     c[++p]=0;
                     --p;
@@ -365,7 +376,7 @@ float run_interpreter_loop(FILE *fp) {
                 break;
             }
         
-            fscanf(fp, "%s", buffer); if(strcmp(buffer, "elif") && strcmp(buffer, "else") && c[p]!= 2)
+            safe_fscanf(fp, "%s", buffer); if(strcmp(buffer, "elif") && strcmp(buffer, "else") && c[p]!= 2)
             {
                 c[p]=0;
                 k= --p;
@@ -396,7 +407,7 @@ float run_interpreter_loop(FILE *fp) {
             w[p]=ftell( fp)-5;
 
             fgets(buffer, 1000, fp);
-            dataF= val(buffer);
+            dataF = val(buffer).f;
             fgets(buffer, 1000, fp);
             
             if (dataF)
@@ -499,22 +510,22 @@ float run_interpreter_loop(FILE *fp) {
 
                     if (type==1)
                     {
-                        dataI= (int)valFetcherGlobal(tempS);
+                        dataI= (int)valFetcherGlobal(tempS).f;
                         printf("%d", dataI);
                     }
                     else if (type==2)
                     {
-                        dataF= valFetcherGlobal(tempS);
+                        dataF= valFetcherGlobal(tempS).f;
                         printf("%f", dataF);
                     }
                     else if (type==3)
                     {
-                        dataC= (char)valFetcherGlobal(tempS);
+                        dataC= (char)valFetcherGlobal(tempS).f;
                         printf("%c", dataC);
                     }
                     else if (type==4)
                     {
-                        dataI= (int)valFetcherGlobal(tempS);
+                        dataI= (int)valFetcherGlobal(tempS).f;
                         printf("%s", dataI ? "true" : "false");
                     }
                     else if (type==5)
@@ -543,7 +554,7 @@ float run_interpreter_loop(FILE *fp) {
 
         IN:
 
-            fscanf(fp, "%s", buffer); type= typeFetcher(buffer);
+            safe_fscanf(fp, "%s", buffer); type= typeFetcher(buffer);
             
             if (type == 0)
             {
@@ -565,8 +576,55 @@ float run_interpreter_loop(FILE *fp) {
                 scanf("%c",&dataC);
                 appendC( &envStack[envTop].CV, buffer, dataC);
             }
+            else if (type == 5)
+            {
+                char tempS[1000];
+                if (scanf("%s", tempS) <= 0) exit(1);
+                appendS(&envStack[envTop].SV, buffer, tempS);
+            }
+            else if (type >= 6 && type <= 11)
+            {
+                char nameBuf[100]; strcpy(nameBuf, buffer);
+                safe_fscanf(fp, "%s", buffer);
+                safe_fscanf(fp, "%s", buffer);
+                
+                char keyStr[1000] = "";
+                int idx = 0;
+                
+                if (type == 11) {
+                    strcpy(keyStr, buffer);
+                    if (keyStr[0] == '"') {
+                        keyStr[strlen(keyStr)-1] = '\0';
+                        memmove(keyStr, keyStr+1, strlen(keyStr));
+                    }
+                } else {
+                    idx = (int)val(buffer).f;
+                }
+                
+                safe_fscanf(fp, "%s", buffer);
+                
+                if (type == 6) {
+                    int valI; if (scanf("%d", &valI) <= 0) exit(1);
+                    setIA(envStack[envTop].IA, nameBuf, idx, valI);
+                } else if (type == 7) {
+                    float valF; if (scanf("%f", &valF) <= 0) exit(1);
+                    setFA(envStack[envTop].FA, nameBuf, idx, valF);
+                } else if (type == 8) {
+                    char valC; if (scanf(" %c", &valC) <= 0) exit(1);
+                    setCA(envStack[envTop].CA, nameBuf, idx, valC);
+                } else if (type == 9) {
+                    int valI; if (scanf("%d", &valI) <= 0) exit(1);
+                    setBA(envStack[envTop].BA, nameBuf, idx, valI);
+                } else if (type == 10) {
+                    float valF; if (scanf("%f", &valF) <= 0) exit(1);
+                    setL(envStack[envTop].LV, nameBuf, idx, valF);
+                } else if (type == 11) {
+                    float valF; if (scanf("%f", &valF) <= 0) exit(1);
+                    setM_F(envStack[envTop].MV, nameBuf, keyStr, valF);
+                }
+            }
 
-            fscanf(fp, "%s", buffer); if(!(strcmp( buffer, "+")))
+            safe_fscanf(fp, "%s", buffer); if(!(strcmp( buffer, "+")))
                 goto IN;
             break;
         
@@ -583,8 +641,10 @@ float run_interpreter_loop(FILE *fp) {
                     int pDepth = 0;
                     char tD[100];
                     while (1) {
-                        fscanf(fp, "%s", tD);
-                        strcat(exprBuf, tD);
+                        safe_fscanf(fp, "%s", tD);
+                        if (!strcmp(tD, ".")) { goto ERROR; }
+                      if (!strcmp(tD, ".")) { goto ERROR; }
+                      strcat(exprBuf, tD);
                         strcat(exprBuf, " ");
                         if (!strcmp(tD, "(")) pDepth++;
                         else if (!strcmp(tD, ")")) pDepth--;
@@ -595,10 +655,11 @@ float run_interpreter_loop(FILE *fp) {
                 }
                 goto ERROR;
             }            
+            DO_ASSIGNMENT:
             strcpy(name, buffer);
 
             if (type >= 6 && type <= 11) { // Arrays, Lists, Maps
-                fscanf(fp, "%s", buffer); fscanf(fp, "%s", buffer); int idx = 0;
+                safe_fscanf(fp, "%s", buffer); safe_fscanf(fp, "%s", buffer); int idx = 0;
                 char keyStr[1000] = "";
                 if (type == 11) {
                     strcpy(keyStr, buffer);
@@ -607,14 +668,15 @@ float run_interpreter_loop(FILE *fp) {
                         memmove(keyStr, keyStr+1, strlen(keyStr));
                     }
                 } else {
-                    idx = (int)val(buffer); // read index
+                    idx = (int)val(buffer).f; // read index
                 }
                 
-                fscanf(fp, "%s", buffer); fscanf(fp, "%s", buffer); char exprBuf[1000] = "";
+                safe_fscanf(fp, "%s", buffer); safe_fscanf(fp, "%s", buffer); char exprBuf[1000] = "";
                 int pDepth = 0;
                 while (1) {
-                    fscanf(fp, "%s", tD);
-                    if (!strcmp(tD, "(")) pDepth++;
+                    safe_fscanf(fp, "%s", tD);
+                    if (!strcmp(tD, ".")) { goto ERROR; }
+                      if (!strcmp(tD, "(")) pDepth++;
                     else if (!strcmp(tD, ")")) pDepth--;
                     if (pDepth == 0 && (!strcmp(tD, ";"))) {
                         break;
@@ -624,27 +686,27 @@ float run_interpreter_loop(FILE *fp) {
                 }
                 strcat(exprBuf, ";");
                 
-                if (type == 6) setIA(envStack[envTop].IA, name, idx, (int)val(exprBuf));
-                else if (type == 7) setFA(envStack[envTop].FA, name, idx, val(exprBuf));
-                else if (type == 8) setCA(envStack[envTop].CA, name, idx, (char)val(exprBuf));
-                else if (type == 9) setBA(envStack[envTop].BA, name, idx, (int)val(exprBuf));
-                else if (type == 10) setL(envStack[envTop].LV, name, idx, val(exprBuf));
-                else if (type == 11) setM_F(envStack[envTop].MV, name, keyStr, val(exprBuf));
+                if (type == 6) setIA(envStack[envTop].IA, name, idx, (int)val(exprBuf).f);
+                else if (type == 7) setFA(envStack[envTop].FA, name, idx, val(exprBuf).f);
+                else if (type == 8) setCA(envStack[envTop].CA, name, idx, (char)val(exprBuf).f);
+                else if (type == 9) setBA(envStack[envTop].BA, name, idx, (int)val(exprBuf).f);
+                else if (type == 10) setL(envStack[envTop].LV, name, idx, val(exprBuf).f);
+                else if (type == 11) setM_F(envStack[envTop].MV, name, keyStr, val(exprBuf).f);
             } else {
                 fgets(buffer, 1000, fp);
 
                 if (type == 1)
                 {
-                    dataI= (int)val(buffer);
+                    dataI= (int)val(buffer).f;
                     appendI( &envStack[envTop].IV, name, dataI);
                 }
                 else if (type == 2)
                 {
-                    dataF= val(buffer);
+                    dataF = val(buffer).f;
                     appendF( &envStack[envTop].FV, name, dataF);
                 }
-                else if (type == 3) { appendC(&envStack[envTop].CV, name, (char)val(buffer)); }
-                else if (type == 4) { appendB(&envStack[envTop].BV, name, (int)val(buffer)); }
+                else if (type == 3) { appendC(&envStack[envTop].CV, name, (char)val(buffer).f); }
+                else if (type == 4) { appendB(&envStack[envTop].BV, name, (int)val(buffer).f); }
                 else if (type == 5) {
                     char *eq = strchr(buffer, '=');
                     if (eq) {
@@ -672,22 +734,22 @@ float run_interpreter_loop(FILE *fp) {
 case 14:
         
         startB:
-            fscanf(fp, "%s", buffer); strcpy(name, buffer);
+            safe_fscanf(fp, "%s", buffer); strcpy(name, buffer);
             dataI= 0;
 
-            fscanf(fp, "%s", buffer); if (!(strcmp(buffer,",")))
+            safe_fscanf(fp, "%s", buffer); if (!(strcmp(buffer,",")))
             {
                 appendB( &envStack[envTop].BV, name, dataI);
                 goto startB;
             }
             else if (!(strcmp(buffer,"=")))
             {
-                fscanf(fp, "%s", tD);
+                safe_fscanf(fp, "%s", tD);
                 if (!strcmp(tD, "true")) dataI = 1;
                 else if (!strcmp(tD, "false")) dataI = 0;
                 else dataI = atoi(tD);
 
-                fscanf(fp, "%s", buffer); if (!(strcmp(buffer,",")))
+                safe_fscanf(fp, "%s", buffer); if (!(strcmp(buffer,",")))
                 {
                     appendB( &envStack[envTop].BV, name, dataI);
                     goto startB;
@@ -704,111 +766,111 @@ case 14:
         break;
 
 case 15: // intarr
-            fscanf(fp, "%s", name);
-            fscanf(fp, "%s", buffer); if (!strcmp(buffer, "[")) {
-                fscanf(fp, "%s", buffer); int size = (int)val(buffer);
-                fscanf(fp, "%s", buffer); fscanf(fp, "%s", buffer); appendIA(&envStack[envTop].IA, name, size);
+            safe_fscanf(fp, "%s", name);
+            safe_fscanf(fp, "%s", buffer); if (!strcmp(buffer, "[")) {
+                safe_fscanf(fp, "%s", buffer); int size = (int)val(buffer).f;
+                safe_fscanf(fp, "%s", buffer); safe_fscanf(fp, "%s", buffer); appendIA(&envStack[envTop].IA, name, size);
                 if (!strcmp(buffer, "=")) {
-                    fscanf(fp, "%s", buffer); int i = 0;
-                    fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
+                    safe_fscanf(fp, "%s", buffer); int i = 0;
+                    safe_fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
                         if (strcmp(buffer, ",")) {
-                            setIA(envStack[envTop].IA, name, i++, (int)val(buffer));
+                            setIA(envStack[envTop].IA, name, i++, (int)val(buffer).f);
                         }
-                        fscanf(fp, "%s", buffer); }
-                    fscanf(fp, "%s", buffer); }
+                        safe_fscanf(fp, "%s", buffer); }
+                    safe_fscanf(fp, "%s", buffer); }
             } else if (!strcmp(buffer, "=")) {
-                fscanf(fp, "%s", buffer); appendIA(&envStack[envTop].IA, name, 100); // default large capacity
+                safe_fscanf(fp, "%s", buffer); appendIA(&envStack[envTop].IA, name, 100); // default large capacity
                 int i = 0;
-                fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
+                safe_fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
                     if (strcmp(buffer, ",")) {
-                        setIA(envStack[envTop].IA, name, i++, (int)val(buffer));
+                        setIA(envStack[envTop].IA, name, i++, (int)val(buffer).f);
                     }
-                    fscanf(fp, "%s", buffer); }
-                fscanf(fp, "%s", buffer); struct iA *arr = envStack[envTop].IA;
+                    safe_fscanf(fp, "%s", buffer); }
+                safe_fscanf(fp, "%s", buffer); struct iA *arr = envStack[envTop].IA;
                 while (arr) { if (!strcmp(arr->name, name)) { arr->size = i; break; } arr = arr->next; }
             }
             break;
 
         case 16: // floatarr
-            fscanf(fp, "%s", name);
-            fscanf(fp, "%s", buffer); if (!strcmp(buffer, "[")) {
-                fscanf(fp, "%s", buffer); int size = (int)val(buffer);
-                fscanf(fp, "%s", buffer); fscanf(fp, "%s", buffer); appendFA(&envStack[envTop].FA, name, size);
+            safe_fscanf(fp, "%s", name);
+            safe_fscanf(fp, "%s", buffer); if (!strcmp(buffer, "[")) {
+                safe_fscanf(fp, "%s", buffer); int size = (int)val(buffer).f;
+                safe_fscanf(fp, "%s", buffer); safe_fscanf(fp, "%s", buffer); appendFA(&envStack[envTop].FA, name, size);
                 if (!strcmp(buffer, "=")) {
-                    fscanf(fp, "%s", buffer); int i = 0;
-                    fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
+                    safe_fscanf(fp, "%s", buffer); int i = 0;
+                    safe_fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
                         if (strcmp(buffer, ",")) {
-                            setFA(envStack[envTop].FA, name, i++, val(buffer));
+                            setFA(envStack[envTop].FA, name, i++, val(buffer).f);
                         }
-                        fscanf(fp, "%s", buffer); }
-                    fscanf(fp, "%s", buffer); }
+                        safe_fscanf(fp, "%s", buffer); }
+                    safe_fscanf(fp, "%s", buffer); }
             } else if (!strcmp(buffer, "=")) {
-                fscanf(fp, "%s", buffer); appendFA(&envStack[envTop].FA, name, 100);
+                safe_fscanf(fp, "%s", buffer); appendFA(&envStack[envTop].FA, name, 100);
                 int i = 0;
-                fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
+                safe_fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
                     if (strcmp(buffer, ",")) {
-                        setFA(envStack[envTop].FA, name, i++, val(buffer));
+                        setFA(envStack[envTop].FA, name, i++, val(buffer).f);
                     }
-                    fscanf(fp, "%s", buffer); }
-                fscanf(fp, "%s", buffer); struct fA *arr = envStack[envTop].FA;
+                    safe_fscanf(fp, "%s", buffer); }
+                safe_fscanf(fp, "%s", buffer); struct fA *arr = envStack[envTop].FA;
                 while (arr) { if (!strcmp(arr->name, name)) { arr->size = i; break; } arr = arr->next; }
             }
             break;
 
         case 17: // chararr
-            fscanf(fp, "%s", name);
-            fscanf(fp, "%s", buffer); if (!strcmp(buffer, "[")) {
-                fscanf(fp, "%s", buffer); int size = (int)val(buffer);
-                fscanf(fp, "%s", buffer); fscanf(fp, "%s", buffer); appendCA(&envStack[envTop].CA, name, size);
+            safe_fscanf(fp, "%s", name);
+            safe_fscanf(fp, "%s", buffer); if (!strcmp(buffer, "[")) {
+                safe_fscanf(fp, "%s", buffer); int size = (int)val(buffer).f;
+                safe_fscanf(fp, "%s", buffer); safe_fscanf(fp, "%s", buffer); appendCA(&envStack[envTop].CA, name, size);
                 if (!strcmp(buffer, "=")) {
-                    fscanf(fp, "%s", buffer); int i = 0;
-                    fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
+                    safe_fscanf(fp, "%s", buffer); int i = 0;
+                    safe_fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
                         if (strcmp(buffer, ",")) {
                             setCA(envStack[envTop].CA, name, i++, buffer[1] == '\'' ? buffer[1] : buffer[0]);
                         }
-                        fscanf(fp, "%s", buffer); }
-                    fscanf(fp, "%s", buffer); }
+                        safe_fscanf(fp, "%s", buffer); }
+                    safe_fscanf(fp, "%s", buffer); }
             } else if (!strcmp(buffer, "=")) {
-                fscanf(fp, "%s", buffer); appendCA(&envStack[envTop].CA, name, 100);
+                safe_fscanf(fp, "%s", buffer); appendCA(&envStack[envTop].CA, name, 100);
                 int i = 0;
-                fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
+                safe_fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
                     if (strcmp(buffer, ",")) {
                         setCA(envStack[envTop].CA, name, i++, buffer[1] == '\'' ? buffer[1] : buffer[0]);
                     }
-                    fscanf(fp, "%s", buffer); }
-                fscanf(fp, "%s", buffer); struct cA *arr = envStack[envTop].CA;
+                    safe_fscanf(fp, "%s", buffer); }
+                safe_fscanf(fp, "%s", buffer); struct cA *arr = envStack[envTop].CA;
                 while (arr) { if (!strcmp(arr->name, name)) { arr->size = i; break; } arr = arr->next; }
             }
             break;
 
         case 18: // boolarr
-            fscanf(fp, "%s", name);
-            fscanf(fp, "%s", buffer); if (!strcmp(buffer, "[")) {
-                fscanf(fp, "%s", buffer); int size = (int)val(buffer);
-                fscanf(fp, "%s", buffer); fscanf(fp, "%s", buffer); appendBA(&envStack[envTop].BA, name, size);
+            safe_fscanf(fp, "%s", name);
+            safe_fscanf(fp, "%s", buffer); if (!strcmp(buffer, "[")) {
+                safe_fscanf(fp, "%s", buffer); int size = (int)val(buffer).f;
+                safe_fscanf(fp, "%s", buffer); safe_fscanf(fp, "%s", buffer); appendBA(&envStack[envTop].BA, name, size);
                 if (!strcmp(buffer, "=")) {
-                    fscanf(fp, "%s", buffer); int i = 0;
-                    fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
+                    safe_fscanf(fp, "%s", buffer); int i = 0;
+                    safe_fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
                         if (strcmp(buffer, ",")) {
-                            setBA(envStack[envTop].BA, name, i++, (int)val(buffer));
+                            setBA(envStack[envTop].BA, name, i++, (int)val(buffer).f);
                         }
-                        fscanf(fp, "%s", buffer); }
-                    fscanf(fp, "%s", buffer); }
+                        safe_fscanf(fp, "%s", buffer); }
+                    safe_fscanf(fp, "%s", buffer); }
             } else if (!strcmp(buffer, "=")) {
-                fscanf(fp, "%s", buffer); appendBA(&envStack[envTop].BA, name, 100);
+                safe_fscanf(fp, "%s", buffer); appendBA(&envStack[envTop].BA, name, 100);
                 int i = 0;
-                fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
+                safe_fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
                     if (strcmp(buffer, ",")) {
-                        setBA(envStack[envTop].BA, name, i++, (int)val(buffer));
+                        setBA(envStack[envTop].BA, name, i++, (int)val(buffer).f);
                     }
-                    fscanf(fp, "%s", buffer); }
-                fscanf(fp, "%s", buffer); struct bA *arr = envStack[envTop].BA;
+                    safe_fscanf(fp, "%s", buffer); }
+                safe_fscanf(fp, "%s", buffer); struct bA *arr = envStack[envTop].BA;
                 while (arr) { if (!strcmp(arr->name, name)) { arr->size = i; break; } arr = arr->next; }
             }
             break;
 
         case 19: // string
-            fscanf(fp, "%s", name);
+            safe_fscanf(fp, "%s", name);
             fgets(buffer, 1000, fp);
             char *start = strchr(buffer, '"');
             if (start) {
@@ -832,7 +894,7 @@ case 15: // intarr
         case 20: // func
             {
                 char funcName[100];
-                fscanf(fp, "%s", funcName);
+                safe_fscanf(fp, "%s", funcName);
                 
                 int isDuplicate = 0;
                 if (findFunc(FN, funcName) != NULL) {
@@ -840,10 +902,10 @@ case 15: // intarr
                     isDuplicate = 1;
                 }
                 
-                fscanf(fp, "%s", buffer); int paramCount = 0;
+                safe_fscanf(fp, "%s", buffer); int paramCount = 0;
                 struct funcParam params[10];
                 
-                fscanf(fp, "%s", buffer); while (strcmp(buffer, ")")) {
+                safe_fscanf(fp, "%s", buffer); while (strcmp(buffer, ")")) {
                     if (strcmp(buffer, ",")) {
                         int pType = 0;
                         if (!strcmp(buffer, "int")) pType = 1;
@@ -851,14 +913,20 @@ case 15: // intarr
                         else if (!strcmp(buffer, "char")) pType = 3;
                         else if (!strcmp(buffer, "bool")) pType = 4;
                         else if (!strcmp(buffer, "string")) pType = 5;
+                        else if (!strcmp(buffer, "intarr")) pType = 6;
+                        else if (!strcmp(buffer, "floatarr")) pType = 7;
+                        else if (!strcmp(buffer, "chararr")) pType = 8;
+                        else if (!strcmp(buffer, "boolarr")) pType = 9;
+                        else if (!strcmp(buffer, "list")) pType = 10;
+                        else if (!strcmp(buffer, "map")) pType = 11;
                         
                         params[paramCount].type = pType;
-                        fscanf(fp, "%s", params[paramCount].name); // read param name
+                        safe_fscanf(fp, "%s", params[paramCount].name); // read param name
                         paramCount++;
                     }
-                    fscanf(fp, "%s", buffer); }
+                    safe_fscanf(fp, "%s", buffer); }
                 
-                fscanf(fp, "%s", buffer); long bodyPos = ftell(fp);
+                safe_fscanf(fp, "%s", buffer); long bodyPos = ftell(fp);
                 
                 if (!isDuplicate) {
                     if (appendFunc(&FN, funcName, paramCount, params, bodyPos, fp) != 0) {
@@ -870,7 +938,7 @@ case 15: // intarr
                 b1 = 1; // we just read the first '{'
                 b2 = 0;
                 while (b1 != b2) {
-                    fscanf(fp, "%s", buffer); if (buffer[0] == '/' && buffer[1] == '/') {
+                    safe_fscanf(fp, "%s", buffer); if (buffer[0] == '/' && buffer[1] == '/') {
                         fgets(buffer, 1000, fp);
                         continue;
                     }
@@ -882,13 +950,14 @@ case 15: // intarr
 
         case 21: // return
             {
-                float retVal = 0.0;
+                struct Value retVal; retVal.type=VAL_FLOAT; retVal.f=0.0;
                 char exprBuf[1000] = "";
                 int pDepth = 0;
                 char tD[100];
                 while (1) {
-                    fscanf(fp, "%s", tD);
-                    if (!strcmp(tD, "(")) pDepth++;
+                    safe_fscanf(fp, "%s", tD);
+                    if (!strcmp(tD, ".")) { goto ERROR; }
+                      if (!strcmp(tD, "(")) pDepth++;
                     else if (!strcmp(tD, ")")) pDepth--;
                     
                     if (pDepth == 0 && (!strcmp(tD, ";"))) {
@@ -914,23 +983,53 @@ case 15: // intarr
 
         case 22: // list
             {
-                fscanf(fp, "%s", name); // read list name
+                safe_fscanf(fp, "%s", name); // read list name
                 appendL(&envStack[envTop].LV, name, 4); // initialize with capacity 4
 
-                fscanf(fp, "%s", buffer); if (!(strcmp(buffer, "="))) {
-                    fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
-                        fscanf(fp, "%s", buffer); if (!strcmp(buffer, "}")) break;
-                        float d = val(buffer);
+                safe_fscanf(fp, "%s", buffer); if (!(strcmp(buffer, "="))) {
+                    safe_fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
+                        safe_fscanf(fp, "%s", buffer); if (!strcmp(buffer, "}")) break;
+                        float d = val(buffer).f;
                         scopePushL(name, d);
-                        fscanf(fp, "%s", buffer); if (!strcmp(buffer, "}")) break;
+                        safe_fscanf(fp, "%s", buffer); if (!strcmp(buffer, "}")) break;
                     }
-                    fscanf(fp, "%s", buffer); }
+                    safe_fscanf(fp, "%s", buffer); }
             }
             break;
 
         
+
+        case 25: // break
+            {
+                int target_p = p;
+                while (target_p >= 0 && c[target_p] != 2) {
+                    target_p--;
+                }
+                if (target_p < 0) {
+                    printf("Error: break outside of loop\n");
+                    break;
+                }
+                
+                int k = target_p - 1;
+                while (k != p) {
+                    fgets(buffer, 1000, fp);
+                    b1 = 0; b2 = 0;
+                    for(int i= 0; i<strlen(buffer); i++) {
+                        if(buffer[i]=='{') { b1= 1; break; }
+                    }
+                    for(int i= 0; i<strlen(buffer); i++) {
+                        if(buffer[i]=='}') { b2= 1; break; }
+                    }
+                    if (b1) p++;
+                    else if (b2) p--;
+                }
+                c[++p] = 0;
+                --p;
+            }
+            break;
+
         case 24: // use
-            fscanf(fp, "%s", buffer); {
+            safe_fscanf(fp, "%s", buffer); {
                 char *start = strchr(buffer, '"');
                 if (start) {
                     char *end = strrchr(start + 1, '"');
@@ -938,10 +1037,27 @@ case 15: // intarr
                     char *filename = start + 1;
                     
                     FILE *mod_fp = fopen(filename, "rb");
+                    char resolved_path[1024];
+                    strcpy(resolved_path, filename);
+                    
+                    if (!mod_fp && current_filepath) {
+                        char base_path[1024];
+                        strcpy(base_path, current_filepath);
+                        char *last_slash = strrchr(base_path, '/');
+                        char *last_bslash = strrchr(base_path, '\\');
+                        char *slash = (last_slash > last_bslash) ? last_slash : last_bslash;
+                        if (slash) {
+                            *(slash + 1) = '\0';
+                            strcat(base_path, filename);
+                            mod_fp = fopen(base_path, "rb");
+                            if (mod_fp) strcpy(resolved_path, base_path);
+                        }
+                    }
+                    
                     if (mod_fp) {
                         FILE *old_fp = current_fp;
                         current_fp = mod_fp;
-                        run_interpreter_loop(mod_fp);
+                        run_interpreter_loop(mod_fp, resolved_path);
                         fclose(mod_fp);
                         current_fp = old_fp;
                     } else {
@@ -949,38 +1065,41 @@ case 15: // intarr
                     }
                 }
             }
-            fscanf(fp, "%s", buffer); break;
+            safe_fscanf(fp, "%s", buffer); break;
 
         case 23: // map
             {
-                fscanf(fp, "%s", name); // read map name
+                safe_fscanf(fp, "%s", name); // read map name
                 appendM(&envStack[envTop].MV, name); // initialize map
-                fscanf(fp, "%s", buffer); if (!(strcmp(buffer, "="))) {
-                    fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
-                        fscanf(fp, "%s", buffer); if (!strcmp(buffer, "}")) break;
+                safe_fscanf(fp, "%s", buffer); if (!(strcmp(buffer, "="))) {
+                    safe_fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
+                        safe_fscanf(fp, "%s", buffer); if (!strcmp(buffer, "}")) break;
                         char key[100]; strcpy(key, buffer);
-                        fscanf(fp, "%s", buffer); fscanf(fp, "%s", buffer); float d = val(buffer);
+                        if (key[0] == '"') {
+                            key[strlen(key)-1] = '\0';
+                            memmove(key, key+1, strlen(key));
+                        }
+                        safe_fscanf(fp, "%s", buffer); safe_fscanf(fp, "%s", buffer); float d = val(buffer).f;
                         setM_F(envStack[envTop].MV, name, key, d);
-                        fscanf(fp, "%s", buffer); if (!strcmp(buffer, "}")) break;
+                        safe_fscanf(fp, "%s", buffer); if (!strcmp(buffer, "}")) break;
                     }
-                    fscanf(fp, "%s", buffer); }
+                    safe_fscanf(fp, "%s", buffer); }
             }
             break;
 
-                default:
-            
+        default:
+        
             ERROR:
-                printf("Neither variable nor keyword nor function: \"%s\" (eof=%d, err=%d, ftell=%ld)!!!\n", buffer, feof(fp), ferror(fp), ftell(fp));
-                fgets( buffer, 1000000, fp);
-                break;
-        }
-    }
 
-    
-    return global_return_val;
-}
-
-int main(int argc, char const *argv[])
+                    printf("Neither variable nor keyword nor function: \"%s\" (eof=%d, err=%d, ftell=%ld)!!!\n", buffer, feof(fp), ferror(fp), ftell(fp));
+                    fgets( buffer, 1000000, fp);
+                    break;
+          }
+      }
+      return global_return_val;
+  }
+  
+  int main(int argc, char const *argv[])
 {
     char buffer[1000], tempS[1000], name[100], tD[100], dataC, ch;
     int mode, dataI, i, j, type, c[1000], k, p= -1, b1, b2, w[1000], l= 0;
@@ -993,8 +1112,10 @@ int main(int argc, char const *argv[])
         printf("Enter the file name to run: ");
         scanf("%s", buffer);
         fp= fopen( buffer, "rb");
+        setvbuf(fp, NULL, _IOFBF, 1048576);
     } else {
         fp= fopen( argv[1], "rb");
+        setvbuf(fp, NULL, _IOFBF, 1048576);
     }
 
     if (fp == NULL) {
@@ -1004,6 +1125,6 @@ int main(int argc, char const *argv[])
     global_fp = fp;
     current_fp = fp;
     
-    run_interpreter_loop(fp);
+    run_interpreter_loop(fp, argc==1 ? buffer : argv[1]);
 return 0;
 }

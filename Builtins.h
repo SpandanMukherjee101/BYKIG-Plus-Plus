@@ -8,9 +8,9 @@
 #include <string.h>
 
 char builtin_string_return[1000000];
-float val(char* expr);
+struct Value val(char* expr);
 
-typedef float (*BuiltinHandler)(char args[][1000], int argCount);
+typedef struct Value (*BuiltinHandler)(char args[][1000], int argCount);
 
 struct BuiltinFunc {
     char name[100];
@@ -37,30 +37,30 @@ static inline void strip_quotes(char *s) {
     }
 }
 
-static inline float builtin_len(char args[][1000], int argCount) {
+static inline struct Value builtin_len(char args[][1000], int argCount) {
     char name[100];
     strcpy(name, args[0]);
     trim_spaces(name);
-    return scopeGetLen(name);
+    struct Value retV; retV.type=VAL_FLOAT; retV.f=scopeGetLen(name); return retV;
 }
 
-static inline float builtin_push(char args[][1000], int argCount) {
+static inline struct Value builtin_push(char args[][1000], int argCount) {
     char name[100];
     strcpy(name, args[0]);
     trim_spaces(name);
-    float valData = val(args[1]);
+    float valData = val(args[1]).f;
     scopePushL(name, valData);
-    return 0.0;
+    struct Value retV; retV.type=VAL_FLOAT; retV.f=0.0; return retV;
 }
 
-static inline float builtin_pop(char args[][1000], int argCount) {
+static inline struct Value builtin_pop(char args[][1000], int argCount) {
     char name[100];
     strcpy(name, args[0]);
     trim_spaces(name);
-    return scopePopL(name);
+    struct Value retV; retV.type=VAL_FLOAT; retV.f=scopePopL(name); return retV;
 }
 
-static inline float builtin_map_exists(char args[][1000], int argCount) {
+static inline struct Value builtin_map_exists(char args[][1000], int argCount) {
     char name[100];
     strcpy(name, args[0]);
     trim_spaces(name);
@@ -68,10 +68,10 @@ static inline float builtin_map_exists(char args[][1000], int argCount) {
     strcpy(key, args[1]);
     trim_spaces(key);
     strip_quotes(key);
-    return scopeMapExists(name, key);
+    struct Value retV; retV.type=VAL_FLOAT; retV.f=scopeMapExists(name, key); return retV;
 }
 
-static inline float builtin_map_delete(char args[][1000], int argCount) {
+static inline struct Value builtin_map_delete(char args[][1000], int argCount) {
     char name[100];
     strcpy(name, args[0]);
     trim_spaces(name);
@@ -80,10 +80,10 @@ static inline float builtin_map_delete(char args[][1000], int argCount) {
     trim_spaces(key);
     strip_quotes(key);
     scopeMapDelete(name, key);
-    return 0.0;
+    struct Value retV; retV.type=VAL_FLOAT; retV.f=0.0; return retV;
 }
 
-static inline float builtin_file_exists(char args[][1000], int argCount) {
+static inline struct Value builtin_file_exists(char args[][1000], int argCount) {
     char filename[1000];
     strcpy(filename, args[0]);
     trim_spaces(filename);
@@ -91,12 +91,12 @@ static inline float builtin_file_exists(char args[][1000], int argCount) {
     FILE *f = fopen(filename, "r");
     if (f) {
         fclose(f);
-        return 1.0;
+        struct Value retV; retV.type=VAL_FLOAT; retV.f=1.0; return retV;
     }
-    return 0.0;
+    struct Value retV; retV.type=VAL_FLOAT; retV.f=0.0; return retV;
 }
 
-static inline float builtin_file_write(char args[][1000], int argCount) {
+static inline struct Value builtin_file_write(char args[][1000], int argCount) {
     char filename[1000];
     strcpy(filename, args[0]);
     trim_spaces(filename);
@@ -109,12 +109,12 @@ static inline float builtin_file_write(char args[][1000], int argCount) {
     if (f) {
         fprintf(f, "%s", content);
         fclose(f);
-        return 1.0;
+        struct Value retV; retV.type=VAL_FLOAT; retV.f=1.0; return retV;
     }
-    return 0.0;
+    struct Value retV; retV.type=VAL_FLOAT; retV.f=0.0; return retV;
 }
 
-static inline float builtin_file_append(char args[][1000], int argCount) {
+static inline struct Value builtin_file_append(char args[][1000], int argCount) {
     char filename[1000];
     strcpy(filename, args[0]);
     trim_spaces(filename);
@@ -127,12 +127,12 @@ static inline float builtin_file_append(char args[][1000], int argCount) {
     if (f) {
         fprintf(f, "%s", content);
         fclose(f);
-        return 1.0;
+        struct Value retV; retV.type=VAL_FLOAT; retV.f=1.0; return retV;
     }
-    return 0.0;
+    struct Value retV; retV.type=VAL_FLOAT; retV.f=0.0; return retV;
 }
 
-static inline float builtin_file_read(char args[][1000], int argCount) {
+static inline struct Value builtin_file_read(char args[][1000], int argCount) {
     char filename[1000];
     strcpy(filename, args[0]);
     trim_spaces(filename);
@@ -146,10 +146,10 @@ static inline float builtin_file_read(char args[][1000], int argCount) {
         }
         fclose(f);
         strcpy(builtin_string_return, content);
-        return 1.0;
+        struct Value retV; retV.type=VAL_FLOAT; retV.f=1.0; return retV;
     }
     strcpy(builtin_string_return, "");
-    return 0.0;
+    struct Value retV; retV.type=VAL_FLOAT; retV.f=0.0; return retV;
 }
 
 static struct BuiltinFunc builtins[] = {

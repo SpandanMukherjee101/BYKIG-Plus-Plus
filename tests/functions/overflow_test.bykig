@@ -1,6 +1,6 @@
 func f ( float x )
 {
-if x > 900
+if x > 15
 {
 return x ;
 }

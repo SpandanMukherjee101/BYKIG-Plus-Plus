@@ -8,15 +8,15 @@ struct node
 
 struct node2
 {
-	float x;
+	struct Value x;
 	struct node2 *next;
 };
 
 void push( struct node **, char);
 char pop( struct node **);
 
-void pushF( float, struct node2 **);
-float popF( struct node2 **);
+void pushV( struct Value, struct node2 **);
+struct Value popV( struct node2 **);
 
 void push (struct node **top, char Op)
 {
@@ -56,7 +56,7 @@ char pop( struct node **top)
 	}
 }
 
-void pushF(float x, struct node2 **top)
+void pushV(struct Value x, struct node2 **top)
 {
     struct node2 *nnode, *temp= *top;
 
@@ -76,14 +76,16 @@ void pushF(float x, struct node2 **top)
     }
 }
 
-float popF( struct node2 **top)
+struct Value popV( struct node2 **top)
 {
 	struct node2 *temp= *top;
-	float item;
+	struct Value item;
 
 	if ( temp == NULL )
 	{
-		return ' ';
+        item.type = VAL_ERROR;
+        item.f = 0.0;
+		return item;
 	}
 	else
 	{

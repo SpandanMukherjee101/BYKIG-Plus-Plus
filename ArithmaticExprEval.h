@@ -8,14 +8,14 @@ extern FILE *current_fp;
 #include "VarLL.h"
 #include "Builtins.h"
 
-float run_interpreter_loop(FILE *fp);
+struct Value run_interpreter_loop(FILE *fp, const char *current_filepath);
 
 #include "ExprEvalStack.h"
 
 struct node *Stack;
 struct node2 *PFEval;
 
-float val(char *);
+struct Value val(char *);
 int priority( char);
 
 
@@ -75,8 +75,8 @@ void resolve_complex_types(char *expr) {
                     }
                     if (strlen(single) > 0) strcpy(rawArgs[rArgCount++], single);
                     
-                    float res = bfunc->handler(rawArgs, rArgCount);
-                    sprintf(tokens[i], "%f", res);
+                    struct Value res = bfunc->handler(rawArgs, rArgCount);
+                    sprintf(tokens[i], "%f", res.f);
                     int shift = j - (i + 1);
                     for (int k = i + 1; k < tokenCount - shift; k++) {
                         strcpy(tokens[k], tokens[k + shift]);
@@ -84,7 +84,7 @@ void resolve_complex_types(char *expr) {
                     tokenCount -= shift;
                 } else if (func != NULL) {
                     // Evaluate arguments
-                    float argVals[10];
+                    struct Value argVals[10];
                     int argCount = 0;
                     
                     if (strlen(argExpr) > 0) {
@@ -123,10 +123,12 @@ void resolve_complex_types(char *expr) {
                     struct callFrame *frame = &callStack[callStackTop];
                     frame->saved_envTop = envTop;
                     frame->hasReturn = 0;
-                    frame->returnValue = 0.0;
+                      frame->returnValue.type = VAL_FLOAT;
+                      frame->returnValue.f = 0.0;
                     
                     // Setup new environment
                     envTop++;
+                    if (envTop % 100 == 0) { printf("Recursion depth: %d\n", envTop); fflush(stdout); }
                     envStack[envTop].IV = NULL;
                     envStack[envTop].FV = NULL;
                     envStack[envTop].CV = NULL;
@@ -139,10 +141,29 @@ void resolve_complex_types(char *expr) {
                     
                     // Assign arguments to params
                     for (int p = 0; p < argCount && p < func->paramCount; p++) {
+                        // printf("Passing %s\n", func->params[p].name); fflush(stdout);
                         if (func->params[p].type == 1) {
-                            appendI(&envStack[envTop].IV, func->params[p].name, (int)argVals[p]);
+                            appendI(&envStack[envTop].IV, func->params[p].name, (int)argVals[p].f);
                         } else if (func->params[p].type == 2) {
-                            appendF(&envStack[envTop].FV, func->params[p].name, argVals[p]);
+                            appendF(&envStack[envTop].FV, func->params[p].name, argVals[p].f);
+                        } else if (func->params[p].type == 3) {
+                            appendC(&envStack[envTop].CV, func->params[p].name, (char)argVals[p].f);
+                        } else if (func->params[p].type == 4) {
+                            appendB(&envStack[envTop].BV, func->params[p].name, (int)argVals[p].f);
+                        } else if (func->params[p].type == 5) {
+                            appendS(&envStack[envTop].SV, func->params[p].name, argVals[p].s);
+                        } else if (func->params[p].type == 6) {
+                            appendIA_copy(&envStack[envTop].IA, func->params[p].name, (struct iA*)argVals[p].ptr);
+                        } else if (func->params[p].type == 7) {
+                            appendFA_copy(&envStack[envTop].FA, func->params[p].name, (struct fA*)argVals[p].ptr);
+                        } else if (func->params[p].type == 8) {
+                            appendCA_copy(&envStack[envTop].CA, func->params[p].name, (struct cA*)argVals[p].ptr);
+                        } else if (func->params[p].type == 9) {
+                            appendBA_copy(&envStack[envTop].BA, func->params[p].name, (struct bA*)argVals[p].ptr);
+                        } else if (func->params[p].type == 10) {
+                            appendL_copy(&envStack[envTop].LV, func->params[p].name, (struct lV*)argVals[p].ptr);
+                        } else if (func->params[p].type == 11) {
+                            appendM_copy(&envStack[envTop].MV, func->params[p].name, (struct mV*)argVals[p].ptr);
                         }
                     }
                     
@@ -151,19 +172,22 @@ void resolve_complex_types(char *expr) {
                     long savedPos = ftell(current_fp);
                     fseek(current_fp, func->bodyPos, SEEK_SET);
                     
-                    float retVal = run_interpreter_loop(current_fp);
+                    struct Value retVal = run_interpreter_loop(current_fp, NULL);
     
                     
                     // Restore state
                     fseek(current_fp, savedPos, SEEK_SET);
-                    while (envTop > frame->saved_envTop) {
+                    if (frame->saved_envTop >= 0) {
+                        envTop = frame->saved_envTop;
+                        // Should theoretically cleanup local env variables here, but omitting for brevity
+                    } else {
                         envTop--;
                     }
                     callStackTop--;
                     
                     // Replace tokens with result
                     char resStr[100];
-                    sprintf(resStr, "%f", retVal);
+                    sprintf(resStr, "%f", retVal.f);
                     strcpy(tokens[i], resStr);
                     
                     // Shift tokens
@@ -175,7 +199,7 @@ void resolve_complex_types(char *expr) {
                 }
         }
     }
-}
+
     
     // Array and Map resolution
     for (int i = 0; i < tokenCount; i++) {
@@ -197,9 +221,11 @@ void resolve_complex_types(char *expr) {
                 strcat(argExpr, ";");
                 float res = 0.0;
                 if (type == 6) { 
-                    res = (float)getIA(envStack[envTop].IA, tokens[i], (int)val(argExpr));
+                    res = (float)getIA(envStack[envTop].IA, tokens[i], (int)val(argExpr).f);
                 } else if (type == 7) { 
-                    res = getFA(envStack[envTop].FA, tokens[i], (int)val(argExpr));
+                    res = getFA(envStack[envTop].FA, tokens[i], (int)val(argExpr).f);
+                } else if (type == 10) { 
+                    res = getL(envStack[envTop].LV, tokens[i], (int)val(argExpr).f);
                 } else if (type == 11) { 
                     char key[100] = "";
                     sscanf(argExpr, "%s", key);
@@ -231,14 +257,16 @@ void resolve_complex_types(char *expr) {
     }
 }
 
-float val( char *buff)
+}
+
+struct Value val(char *buff)
 {
     Stack = NULL;
     PFEval = NULL;
     resolve_complex_types(buff);
 
     int c;
-    float tot;
+    struct Value tot;
     
     char postfix[1000]="", *pf, opr;
     pf= &postfix[0];
@@ -249,7 +277,7 @@ float val( char *buff)
     char *t, temp[100];
     t= &temp[0];
 
-    float x, n1, n2;
+    float x; struct Value n1, n2;
 
     // removed buff skip
 
@@ -260,8 +288,9 @@ float val( char *buff)
             push( &Stack, *buff);
             buff++;
         }
-        // removed = skip
-        else if( *buff == ' ' || *buff == '\t')
+        else if (*buff == '=' && *(buff+1) == '=') { *buff = 'E'; strcpy(buff+1, buff+2); continue; }
+        // skip spaces and =
+        else if( *buff == ' ' || *buff == '\t' || *buff == '\r' || *buff == '=')
         {
             if (pf > &postfix[0] && *(pf-1) != ' ')
             {
@@ -271,7 +300,6 @@ float val( char *buff)
             buff++;
             continue;
         }
-        else if (*buff == '=' && *(buff+1) == '=') { *buff = 'E'; strcpy(buff+1, buff+2); continue; }
         else if (*buff == '!' && *(buff+1) == '=') { *buff = 'N'; strcpy(buff+1, buff+2); continue; }
         else if (*buff == '<' && *(buff+1) == '=') { *buff = 'L'; strcpy(buff+1, buff+2); continue; }
         else if (*buff == '>' && *(buff+1) == '=') { *buff = 'G'; strcpy(buff+1, buff+2); continue; }
@@ -315,7 +343,7 @@ float val( char *buff)
             }
 
 			buff++ ;
-            if( *buff == ' ' || *buff == '\t')
+            if( *buff == ' ' || *buff == '\t' || *buff == '\r')
                 buff++;
         }
         else if( *buff == ')')
@@ -364,15 +392,19 @@ float val( char *buff)
             *t= '\0';
             
             if (strlen(temp) > 0) {
-                if (!strcmp(temp, "true")) { pushF(1.0, &PFEval); }
-                else if (!strcmp(temp, "false")) { pushF(0.0, &PFEval); }
+                if (!strcmp(temp, "true")) { { struct Value v; v.type=VAL_FLOAT; v.f=1.0; pushV(v, &PFEval); } }
+                else if (!strcmp(temp, "false")) { { struct Value v; v.type=VAL_FLOAT; v.f=0.0; pushV(v, &PFEval); } }
                 else {
                     c= typeFetcher(temp);
-                    
-                    if (c == 1) { x= valFetcherGlobal(temp); pushF( x, &PFEval); }
-                    else if (c == 2) { x= valFetcherGlobal(temp); pushF( x, &PFEval); }
-                    else if(c == 3) { x= valFetcherGlobal(temp); pushF( x, &PFEval); }
-                    else if(isdigit(temp[0])) { x= atof(temp);  pushF( x, &PFEval); }
+                    // printf("Processing token: '%s' (%x %x), type: %d\n", temp, temp[0], temp[1], c);
+                    if (c >= 1 && c <= 11) { pushV(valFetcherGlobal(temp), &PFEval); }
+                    else if (temp[0] == '"') {
+                        struct Value v; v.type = VAL_STRING;
+                        strcpy(v.s, temp + 1);
+                        if (strlen(v.s) > 0 && v.s[strlen(v.s)-1] == '"') v.s[strlen(v.s)-1] = '\0';
+                        pushV(v, &PFEval);
+                    }
+                    else if(isdigit(temp[0]) || (temp[0] == '-' && isdigit(temp[1]))) { x= atof(temp);  { struct Value v; v.type=VAL_FLOAT; v.f=x; pushV(v, &PFEval); } }
                 }
             }
             t= &temp[0];
@@ -380,28 +412,47 @@ float val( char *buff)
         }
         else if (priority(*pf))
         {
-            n1= popF(&PFEval);
-            n2= popF(&PFEval);
+            n1= popV(&PFEval);
+            n2= popV(&PFEval);
+            tot.type = VAL_FLOAT;
+            tot.f = 0.0;
+            // printf("eval: '%c', n1.type=%d (f=%f), n2.type=%d (f=%f)\n", *pf, n1.type, n1.f, n2.type, n2.f);
+            if (n1.type >= VAL_INT_ARRAY || n2.type >= VAL_INT_ARRAY) {
+                printf("Error: Syntax error on complex type arithmetic (n1.type=%d, n2.type=%d, op=%c)\n", n1.type, n2.type, *pf);
+                exit(1);
+            }
             switch(*pf)
             {
-                case '$': tot= pow(n2,n1); break;
-                case '%': tot= remainder(n2,n1); break;
-                case '/': tot= n2/n1; break;
-                case '*': tot= n2*n1; break;
-                case '+': tot= n2+n1; break;
-                case '-': tot= n2-n1; break;
-                case '<': tot= n2<n1; break;
-                case '>': tot= n2>n1; break;
-                case '&': tot= n2&&n1; break;
-                case '|': tot= n2||n1; break;
-                case '~': tot= n2==n1; break;
-                case '!': tot= n2!=n1; break;
-                case 'L': tot= n2<=n1; break;
-                case 'G': tot= n2>=n1; break;
-                case 'E': tot= n2==n1; break;
-                case 'N': tot= n2!=n1; break;
+                case '$': tot.f= pow(n2.f,n1.f); break;
+                case '%': tot.f= remainder(n2.f,n1.f); break;
+                case '/': tot.f= n2.f/n1.f; break;
+                case '*': tot.f= n2.f*n1.f; break;
+                case '+': tot.f= n2.f+n1.f; break;
+                case '-': tot.f= n2.f-n1.f; break;
+                case '<': tot.f= n2.f<n1.f; break;
+                case '>': tot.f= n2.f>n1.f; break;
+                case '&': tot.f= n2.f&&n1.f; break;
+                case '|': tot.f= n2.f||n1.f; break;
+                case '~':
+                case 'E':
+                    if (n1.type == VAL_STRING && n2.type == VAL_STRING) {
+                        tot.f = (strcmp(n2.s, n1.s) == 0);
+                    } else {
+                        tot.f = (n2.f == n1.f);
+                    }
+                    break;
+                case '!':
+                case 'N':
+                    if (n1.type == VAL_STRING && n2.type == VAL_STRING) {
+                        tot.f = (strcmp(n2.s, n1.s) != 0);
+                    } else {
+                        tot.f = (n2.f != n1.f);
+                    }
+                    break;
+                case 'L': tot.f= n2.f<=n1.f; break;
+                case 'G': tot.f= n2.f>=n1.f; break;
             }
-            pushF( tot, &PFEval);
+            pushV(tot, &PFEval);
         }
         else
         {
@@ -411,8 +462,8 @@ float val( char *buff)
         pf++;
     }
 
-    float final_val = 0.0;
-    if (PFEval != NULL) final_val = popF(&PFEval);
+    struct Value final_val; final_val.type = VAL_FLOAT; final_val.f = 0.0;
+    if (PFEval != NULL) final_val = popV(&PFEval);
     
     return final_val;
 }

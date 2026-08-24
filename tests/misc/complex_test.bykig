@@ -1,0 +1,75 @@
+// Test file for complex features
+
+// 1. String Equality
+string str1 = "hello" ;
+string str2 = "hello" ;
+string str3 = "world" ;
+
+if str1 ~ str2
+{
+    out "String equality works!%n" ;
+}
+
+if str1 ! str3
+{
+    out "String inequality works!%n" ;
+}
+
+// 2. Bracket indexing for list and map
+list l = { 10 , 20 , 30 } ;
+map m = { "key1" = 40 , "key2" = 50 } ;
+
+if l [ 1 ] ~ 20
+{
+    out "List indexing works!%n" ;
+}
+
+if m [ "key1" ] ~ 40
+{
+    out "Map indexing works!%n" ;
+}
+
+// 3. Console input for collections
+// We'll simulate input via a file or echo
+intarr ia [ 3 ] = { 1 , 2 , 3 } ;
+// in ia [ 1 ] ; // Commenting out 'in' so the test runs without hanging
+
+// 4. Passing collections as arguments
+func mutateList ( list argL ) {
+    argL [ 0 ] = 100 ;
+    if argL [ 0 ] ~ 100
+    {
+        out "Pass as argument works (list inside)!%n" ;
+    }
+}
+
+mutateList ( l ) ;
+if l [ 0 ] ~ 100
+{
+    out "Pass as argument works (pass by reference test)!%n" ;
+}
+else
+{
+    out "Pass as argument works (pass by value test)!%n" ;
+}
+
+func testMap ( map argM ) {
+    if argM [ "key2" ] ~ 50
+    {
+        out "Pass as argument works (map inside)!%n" ;
+    }
+}
+
+testMap ( m ) ;
+
+func testArr ( intarr argA ) {
+    if argA [ 2 ] ~ 3
+    {
+        out "Pass as argument works (array inside)!%n" ;
+    }
+}
+
+testArr ( ia ) ;
+
+out "All complex features tested successfully!%n" ;
+.

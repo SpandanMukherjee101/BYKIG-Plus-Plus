@@ -14,21 +14,21 @@ The following tables detail exactly what features are supported and in what cont
 
 ### 1. Operations & Built-ins vs. Data Types
 
-| Operation / Feature (What's Supported) | `int` / `float` / `char` / `bool` | `string` | Primitive Arrays | `list` / `map` | Functions |
+| Operation / Feature (What's Supported) | `int` / `float` / `char` / `bool` | `string` | Primitive Arrays (Elements) | `list` / `map` (Elements) | Functions |
 | --- | :---: | :---: | :---: | :---: | :---: |
 | **Declaration** (`type x ;`) | ✅ | ✅ | ✅ | ✅ | ✅ (`func`) |
-| **Assignment** (`x = ... ;`) | ✅ | ✅ | ❌ (Index only) | ❌ | ❌ |
-| **Console Output** (`out x ;`) | ✅ (Except `bool`) | ✅ | ❌ | ❌ | ❌ |
-| **Console Input** (`in x ;`) | ✅ (Except `bool`) | ❌ | ❌ | ❌ | ❌ |
-| **Arithmetic** (`+`, `-`, `*`, `/`, `%`) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **Logical/Relational** (`~`, `!`, `<`, `>`) | ✅ | ❌ | ❌ | ❌ | ❌ |
-| **String Concatenation** (`+`) | ❌ | ✅ (In `out` only) | ❌ | ❌ | ❌ |
-| **Bracket Indexing** (`arr[0]`) | ❌ | ❌ | ✅ | ❌ | ❌ |
+| **Assignment** (`x = ... ;`) | ✅ | ✅ | ✅ | ✅ (via `push`) | ❌ |
+| **Console Output** (`out x ;`) | ✅ (Except `bool`) | ✅ | ✅ | ✅ | ❌ |
+| **Console Input** (`in x ;`) | ✅ (Except `bool`) | ✅ | ✅ | ✅ | ❌ |
+| **Arithmetic** (`+`, `-`, `*`, `/`, `%`) | ✅ | ❌ | ✅ | ✅ | ❌ |
+| **Logical/Relational** (`~`, `!`, `<`, `>`) | ✅ | ✅ | ✅ | ✅ | ❌ |
+| **String Concatenation** (`+`) | ❌ | ✅ | ✅ | ✅ | ❌ |
+| **Bracket Indexing** (`arr[0]`) | ❌ | ❌ | ✅ | ✅ | ❌ |
 | **`len()` Built-in** | ❌ | ✅ | ✅ | ✅ | ❌ |
 | **`push()` / `pop()`** | ❌ | ❌ | ❌ | ✅ | ❌ |
 | **`exists()` / `delete()`** | ✅ | ✅ | ✅ | ✅ | ❌ |
-| **Returnable** (`return x ;`) | ✅ | ✅ | ❌ | ❌ | ❌ |
-| **Pass as Argument** | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Returnable** (`return x ;`) | ✅ | ✅ | ✅ | ✅ | ❌ |
+| **Pass as Argument** | ✅ | ✅ | ✅ | ✅ | ❌ |
 
 ### 2. Statements & Features vs. Scopes
 
@@ -44,6 +44,7 @@ The following tables detail exactly what features are supported and in what cont
 | **Assigned Built-ins** (`pop`, `len`) | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
 | **Control Flow** (`if`, `while`) | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
 | **`return` Statement** | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Module Import (`use`)** | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
 | **String Concatenation** (`+`) | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 
 ---
@@ -57,6 +58,7 @@ BYKIG has very strict syntax rules regarding spacing and program termination.
     *   *Incorrect:* `int x=5;`
 *   **Termination:** Every statement must end with a spaced semicolon ` ;`.
 *   **End of File:** The entire program MUST end with a single dot `.`.
+*   **Strict Errors:** Syntax errors, missing tokens, or unexpected end-of-files will trigger a fatal error and immediately halt the interpreter with a non-zero exit code.
 *   **Comments:** Use `//` for single-line comments.
     *   `// This is a comment`
 
@@ -120,6 +122,19 @@ while i < 5
 }
 ```
 
+Loop execution can be stopped early using the `break` keyword:
+```bykig
+int j = 0 ;
+while j < 10
+{
+    if j > 5
+    {
+        break ;
+    }
+    j = j + 1 ;
+}
+```
+
 ## 6. Functions & Recursion
 
 Declare functions using the `func` keyword. Functions can take arguments and return values using `return`. Functions can be executed as part of an assignment or as standalone global calls.
@@ -139,7 +154,7 @@ main ( ) ;
 ```
 
 ### Recursion & Stack Overflow
-Recursion is fully supported. However, to prevent hanging or memory leaks, BYKIG enforces a `MAX_CALL_STACK` limit of 999 frames. Exceeding this triggers a runtime `Error: Stack Overflow`.
+Recursion is fully supported. However, to prevent hanging or memory leaks, BYKIG enforces a `MAX_CALL_STACK` limit of 10000 frames. Exceeding this triggers a runtime `Error: Stack Overflow`.
 
 ## 7. Scopes
 
@@ -182,21 +197,26 @@ in num ;
 
 ## 10. Collections (Lists & Maps)
 
-BYKIG implements dynamic linked-lists (`list`) and key-value maps (`map`). These are manipulated via built-in API functions rather than bracket notation.
+BYKIG implements dynamic linked-lists (`list`) and key-value maps (`map`). These can be manipulated via bracket notation or built-in API functions.
 
 ### Lists
 ```bykig
-list myList ;
-push ( "myList" , 100 ) ;
+list myList = { 10 , 20 , 30 } ;
+myList [ 0 ] = 100 ;
+float val = myList [ 1 ] ;
+
 push ( "myList" , 200 ) ;
 pop ( "myList" ) ;
 ```
 
 ### Maps
 ```bykig
-map myMap ;
-push ( "myMap" , "key1" , 500 ) ;
-float val = pop ( "myMap" , "key1" ) ;
+map myMap = { "key1" = 40 , "key2" = 50 } ;
+myMap [ "key3" ] = 60 ;
+float val = myMap [ "key1" ] ;
+
+push ( "myMap" , "key4" , 500 ) ;
+pop ( "myMap" , "key4" ) ;
 ```
 
 ## 11. Built-in Functions
@@ -224,10 +244,13 @@ float check = file_exists ( "test.txt" ) ;
 
 ## 13. Modules
 
-Import other `.bykig` files using the `use` keyword. This evaluates the file and imports its global variables and functions into your current environment.
+Import other `.bykig` files using the `use` keyword. This evaluates the file and imports its global variables and functions into your current environment. 
+
+Module paths can be either absolute or **relative** to the location of the currently executing script.
 
 ```bykig
 use "mathlib.bykig" ;
+use "../common/utils.bykig" ;
 ```
 
 ## 14. CLI Usage
