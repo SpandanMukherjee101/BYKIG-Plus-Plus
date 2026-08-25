@@ -1,0 +1,70 @@
+// evaluator.bykig
+// Evaluates basic expressions in mini-bykig
+
+use "memory.bykig" ;
+
+// Resolves a token to its numeric value (either a variable or a direct number)
+func resolveToken ( string t ) {
+    
+    
+    float isVar = exists ( env , t ) ;
+    if isVar == 1
+    {
+        float v = getVar ( t ) ;
+        return v ;
+    }
+    else
+    {
+        float v = parse_float ( t ) ;
+        return v ;
+    }
+}
+
+// Evaluates assignment: varName = op1 + op2 ;
+// Takes the first operand that was already read
+func evalAssignRHS ( string varName , string op1 ) {
+    string operator ;
+    operator = file_scan_next ( ) ;
+    
+    if operator ~ ";"
+    {
+        
+        float val = resolveToken ( op1 ) ;
+        setVar ( varName , val ) ;
+    }
+    else
+    {
+        string op2 ;
+        op2 = file_scan_next ( ) ;
+        
+        string endToken ;
+        endToken = file_scan_next ( ) ; // reads ";"
+        
+        float v1 = resolveToken ( op1 ) ;
+        float v2 = resolveToken ( op2 ) ;
+        float res = 0.0 ;
+        
+        if operator ~ "+"
+        {
+            res = v1 + v2 ;
+        }
+        
+        if operator ~ "-"
+        {
+            res = v1 - v2 ;
+        }
+        
+        if operator ~ "*"
+        {
+            res = v1 * v2 ;
+        }
+        
+        if operator ~ "/"
+        {
+            res = v1 / v2 ;
+        }
+        
+        setVar ( varName , res ) ;
+    }
+}
+.

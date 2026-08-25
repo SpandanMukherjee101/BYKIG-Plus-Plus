@@ -64,23 +64,33 @@ static inline struct Value builtin_map_exists(char args[][1000], int argCount) {
     char name[100];
     strcpy(name, args[0]);
     trim_spaces(name);
-    char key[1000];
-    strcpy(key, args[1]);
-    trim_spaces(key);
-    strip_quotes(key);
-    struct Value retV; retV.type=VAL_FLOAT; retV.f=scopeMapExists(name, key); return retV;
+    struct Value keyVal = val(args[1]);
+    char key[1000] = "";
+    if (keyVal.type == 1) { // VAL_STRING
+        strcpy(key, keyVal.s);
+    } else {
+        strcpy(key, args[1]);
+        trim_spaces(key);
+        strip_quotes(key);
+    }
+    struct Value retV; retV.type=0; retV.f=scopeMapExists(name, key); return retV;
 }
 
 static inline struct Value builtin_map_delete(char args[][1000], int argCount) {
     char name[100];
     strcpy(name, args[0]);
     trim_spaces(name);
-    char key[1000];
-    strcpy(key, args[1]);
-    trim_spaces(key);
-    strip_quotes(key);
+    struct Value keyVal = val(args[1]);
+    char key[1000] = "";
+    if (keyVal.type == 1) { // VAL_STRING
+        strcpy(key, keyVal.s);
+    } else {
+        strcpy(key, args[1]);
+        trim_spaces(key);
+        strip_quotes(key);
+    }
     scopeMapDelete(name, key);
-    struct Value retV; retV.type=VAL_FLOAT; retV.f=0.0; return retV;
+    struct Value retV; retV.type=0; retV.f=0.0; return retV;
 }
 
 static inline struct Value builtin_file_exists(char args[][1000], int argCount) {
@@ -152,6 +162,59 @@ static inline struct Value builtin_file_read(char args[][1000], int argCount) {
     struct Value retV; retV.type=VAL_FLOAT; retV.f=0.0; return retV;
 }
 
+static FILE *scanner_fp = NULL;
+
+static inline struct Value builtin_file_scan_open(char args[][1000], int argCount) {
+    if (scanner_fp != NULL) {
+        fclose(scanner_fp);
+        scanner_fp = NULL;
+    }
+    struct Value argVal = val(args[0]);
+    char filename[1000] = "";
+    if (argVal.type == 1) { // VAL_STRING
+        strcpy(filename, argVal.s);
+    } else {
+        strcpy(filename, args[0]);
+        trim_spaces(filename);
+        strip_quotes(filename);
+    }
+    scanner_fp = fopen(filename, "r");
+    struct Value retV; retV.type=VAL_FLOAT; 
+    retV.f = (scanner_fp != NULL) ? 1.0 : 0.0;
+    return retV;
+}
+
+static inline struct Value builtin_file_scan_next(char args[][1000], int argCount) {
+    if (scanner_fp != NULL) {
+        char token[1000];
+        if (fscanf(scanner_fp, "%s", token) == 1) {
+            strcpy(builtin_string_return, token);
+            struct Value retV; retV.type=VAL_FLOAT; retV.f=1.0; return retV;
+        }
+    }
+    strcpy(builtin_string_return, "EOF");
+    struct Value retV; retV.type=VAL_FLOAT; retV.f=0.0; return retV;
+}
+
+static inline struct Value builtin_file_scan_close(char args[][1000], int argCount) {
+    if (scanner_fp != NULL) {
+        fclose(scanner_fp);
+        scanner_fp = NULL;
+    }
+    struct Value retV; retV.type=VAL_FLOAT; retV.f=1.0; return retV;
+}
+
+static inline struct Value builtin_parse_float(char args[][1000], int argCount) {
+    struct Value arg = val(args[0]);
+    float parsed = 0.0;
+    if (arg.type == 1) { // VAL_STRING
+        parsed = atof(arg.s);
+    } else if (arg.type == 0) { // VAL_FLOAT
+        parsed = arg.f;
+    }
+    struct Value retV; retV.type=0; retV.f=parsed; return retV;
+}
+
 static struct BuiltinFunc builtins[] = {
     {"len", 1, builtin_len},
     {"push", 2, builtin_push},
@@ -162,6 +225,10 @@ static struct BuiltinFunc builtins[] = {
     {"file_write", 2, builtin_file_write},
     {"file_append", 2, builtin_file_append},
     {"file_read", 1, builtin_file_read},
+    {"file_scan_open", 1, builtin_file_scan_open},
+    {"file_scan_next", 0, builtin_file_scan_next},
+    {"file_scan_close", 0, builtin_file_scan_close},
+    {"parse_float", 1, builtin_parse_float},
     {"", 0, NULL}
 };
 

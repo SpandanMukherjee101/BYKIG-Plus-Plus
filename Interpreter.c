@@ -27,7 +27,7 @@ FILE *global_fp = NULL;
 struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
 
     char buffer[1000], tempS[1000], name[100], tD[100], dataC, ch;
-    int mode, dataI, i, j, type, c[1000], k, p= -1, b1, b2, w[1000], l= 0;
+    int mode, dataI, i, j, type, c[1000] = {0}, k, p= -1, b1, b2, w[1000] = {0}, l= 0;
     float dataF;
 
     int break_loop = 0;
@@ -592,10 +592,15 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                 int idx = 0;
                 
                 if (type == 11) {
-                    strcpy(keyStr, buffer);
-                    if (keyStr[0] == '"') {
-                        keyStr[strlen(keyStr)-1] = '\0';
-                        memmove(keyStr, keyStr+1, strlen(keyStr));
+                    struct Value kV = val(buffer);
+                    if (kV.type == 1) { // VAL_STRING
+                        strcpy(keyStr, kV.s);
+                    } else {
+                        strcpy(keyStr, buffer);
+                        if (keyStr[0] == '"') {
+                            keyStr[strlen(keyStr)-1] = '\0';
+                            memmove(keyStr, keyStr+1, strlen(keyStr));
+                        }
                     }
                 } else {
                     idx = (int)val(buffer).f;
@@ -634,7 +639,7 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
             
             if (type == 0)
             {
-                if (findFunc(FN, buffer) != NULL || (!strcmp(buffer, "push")) || (!strcmp(buffer, "pop")) || (!strcmp(buffer, "delete")) || (!strcmp(buffer, "exists")) || (!strcmp(buffer, "len")) || (!strcmp(buffer, "file_write")) || (!strcmp(buffer, "file_append")) || (!strcmp(buffer, "file_read")) || (!strcmp(buffer, "file_exists"))) {
+                if (findFunc(FN, buffer) != NULL || (!strcmp(buffer, "push")) || (!strcmp(buffer, "pop")) || (!strcmp(buffer, "delete")) || (!strcmp(buffer, "exists")) || (!strcmp(buffer, "len")) || (!strcmp(buffer, "file_write")) || (!strcmp(buffer, "file_append")) || (!strcmp(buffer, "file_read")) || (!strcmp(buffer, "file_exists")) || (!strcmp(buffer, "file_scan_open")) || (!strcmp(buffer, "file_scan_next")) || (!strcmp(buffer, "file_scan_close"))) {
                     char exprBuf[1000] = "";
                     strcpy(exprBuf, buffer);
                     strcat(exprBuf, " ");
@@ -662,10 +667,15 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                 safe_fscanf(fp, "%s", buffer); safe_fscanf(fp, "%s", buffer); int idx = 0;
                 char keyStr[1000] = "";
                 if (type == 11) {
-                    strcpy(keyStr, buffer);
-                    if (keyStr[0] == '"') {
-                        keyStr[strlen(keyStr)-1] = '\0';
-                        memmove(keyStr, keyStr+1, strlen(keyStr));
+                    struct Value kV = val(buffer);
+                    if (kV.type == 1) { // VAL_STRING
+                        strcpy(keyStr, kV.s);
+                    } else {
+                        strcpy(keyStr, buffer);
+                        if (keyStr[0] == '"') {
+                            keyStr[strlen(keyStr)-1] = '\0';
+                            memmove(keyStr, keyStr+1, strlen(keyStr));
+                        }
                     }
                 } else {
                     idx = (int)val(buffer).f; // read index
@@ -926,10 +936,12 @@ case 15: // intarr
                     }
                     safe_fscanf(fp, "%s", buffer); }
                 
-                safe_fscanf(fp, "%s", buffer); long bodyPos = ftell(fp);
-                
+                safe_fscanf(fp, "%s", buffer); // read '{'
+                long bodyPos = ftell(fp);
                 if (!isDuplicate) {
-                    if (appendFunc(&FN, funcName, paramCount, params, bodyPos, fp) != 0) {
+                    char tempPath[1000] = "";
+                    if (current_filepath != NULL) strcpy(tempPath, current_filepath);
+                    if (appendFunc(&FN, funcName, paramCount, params, bodyPos, tempPath) != 0) {
                         printf("Error: Failed to register function '%s'\\n", funcName);
                     }
                 }
@@ -1102,7 +1114,7 @@ case 15: // intarr
   int main(int argc, char const *argv[])
 {
     char buffer[1000], tempS[1000], name[100], tD[100], dataC, ch;
-    int mode, dataI, i, j, type, c[1000], k, p= -1, b1, b2, w[1000], l= 0;
+    int mode, dataI, i, j, type, c[1000] = {0}, k, p= -1, b1, b2, w[1000] = {0}, l= 0;
     float dataF;
 
     FILE* fp;

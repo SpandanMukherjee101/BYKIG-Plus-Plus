@@ -18,7 +18,7 @@ struct lV { char name[100]; int size; int capacity; float *data; struct lV *next
 struct mV { char name[100]; char keys[100][100]; float values[100]; int count; struct mV *next; };
 
 struct funcParam { int type; char name[100]; };
-struct funcDef { char name[100]; int paramCount; struct funcParam params[10]; long bodyPos; struct funcDef *next; };
+struct funcDef { char name[100]; int paramCount; struct funcParam params[10]; long bodyPos; char filepath[1000]; struct funcDef *next; };
 
 struct savedVar { char name[100]; int type; int intVal; float floatVal; char charVal; char strVal[1000]; };
 
@@ -245,28 +245,37 @@ void appendM_copy(struct mV **q, char *name, struct mV *ref) {
     nnode->next = *q; *q = nnode;
 }
 void setM_F(struct mV *MV, char *name, char *key, float val) {
-    while (MV) {
-        if (!strcmp(MV->name, name)) {
-            for(int i=0; i<MV->count; i++) {
-                if(!strcmp(MV->keys[i], key)) { MV->values[i] = val; return; }
+    int scopes[] = {envTop, 0};
+    int num = (envTop == 0) ? 1 : 2;
+    for (int idx=0; idx<num; idx++) {
+        struct mV *mv = envStack[scopes[idx]].MV;
+        while (mv) {
+            if (!strcmp(mv->name, name)) {
+                for(int i=0; i<mv->count; i++) {
+                    if(!strcmp(mv->keys[i], key)) { mv->values[i] = val; return; }
+                }
+                if(mv->count < 100) { strcpy(mv->keys[mv->count], key); mv->values[mv->count] = val; mv->count++; }
+                return;
             }
-            if(MV->count < 100) { strcpy(MV->keys[MV->count], key); MV->values[MV->count] = val; MV->count++; }
-            return;
+            mv = mv->next;
         }
-        MV = MV->next;
     }
 }
 float getM_F(struct mV *MV, char *name, char *key) {
-    while(MV) {
-        if(!strcmp(MV->name, name)) {
-            for(int i=0; i<MV->count; i++) {
-                if(!strcmp(MV->keys[i], key)) return MV->values[i];
+    int scopes[] = {envTop, 0};
+    int num = (envTop == 0) ? 1 : 2;
+    for (int idx=0; idx<num; idx++) {
+        struct mV *mv = envStack[scopes[idx]].MV;
+        while (mv) {
+            if(!strcmp(mv->name, name)) {
+                for(int i=0; i<mv->count; i++) {
+                    if(!strcmp(mv->keys[i], key)) return mv->values[i];
+                }
+                return 0.0;
             }
-            return 0.0;
+            mv = mv->next;
         }
-        MV = MV->next;
     }
-    
     return 0.0;
 }
 char* getM_S(struct mV *MV, char *name, char *key) {
@@ -275,11 +284,17 @@ char* getM_S(struct mV *MV, char *name, char *key) {
 }
 
 // Function management
-int appendFunc(struct funcDef **list, char *name, int paramCount, struct funcParam *params, long bodyPos, FILE *fp) {
+int appendFunc(struct funcDef **head, char *name, int paramCount, struct funcParam params[], long bodyPos, char *filepath) {
+    struct funcDef *temp = *head;
+    while (temp) { if (!strcmp(temp->name, name)) { return 1; } temp = temp->next; }
     struct funcDef *nnode = (struct funcDef*)malloc(sizeof(struct funcDef));
-    strcpy(nnode->name, name); nnode->paramCount = paramCount; nnode->bodyPos = bodyPos;
-    for(int i=0; i<paramCount; i++) nnode->params[i] = params[i];
-    nnode->next = *list; *list = nnode;
+    strcpy(nnode->name, name);
+    nnode->paramCount = paramCount;
+    for (int i = 0; i < paramCount; i++) { nnode->params[i] = params[i]; }
+    nnode->bodyPos = bodyPos;
+    if (filepath) strcpy(nnode->filepath, filepath);
+    else strcpy(nnode->filepath, "");
+    nnode->next = *head; *head = nnode;
     return 0;
 }
 struct funcDef* findFunc(struct funcDef *list, char *name) {

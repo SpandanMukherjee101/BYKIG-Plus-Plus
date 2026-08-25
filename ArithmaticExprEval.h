@@ -169,14 +169,25 @@ void resolve_complex_types(char *expr) {
                     
                     
     // Execute function body
-                    long savedPos = ftell(current_fp);
-                    fseek(current_fp, func->bodyPos, SEEK_SET);
+                    FILE *funcFp = current_fp;
+                    int closeFp = 0;
+                    if (strlen(func->filepath) > 0) {
+                        funcFp = fopen(func->filepath, "rb");
+                        if (funcFp) { closeFp = 1; }
+                        else { funcFp = current_fp; }
+                    }
                     
-                    struct Value retVal = run_interpreter_loop(current_fp, NULL);
-    
+                    long savedPos = 0;
+                    if (!closeFp) { savedPos = ftell(funcFp); }
                     
-                    // Restore state
-                    fseek(current_fp, savedPos, SEEK_SET);
+                    fseek(funcFp, func->bodyPos, SEEK_SET);
+                    
+                    // execute function body
+                    struct Value retVal = run_interpreter_loop(funcFp, NULL);
+                    
+                    // restore state
+                    if (closeFp) { fclose(funcFp); }
+                    else { fseek(funcFp, savedPos, SEEK_SET); }
                     if (frame->saved_envTop >= 0) {
                         envTop = frame->saved_envTop;
                         // Should theoretically cleanup local env variables here, but omitting for brevity
@@ -228,10 +239,15 @@ void resolve_complex_types(char *expr) {
                     res = getL(envStack[envTop].LV, tokens[i], (int)val(argExpr).f);
                 } else if (type == 11) { 
                     char key[100] = "";
-                    sscanf(argExpr, "%s", key);
-                    if (key[0] == '"') {
-                        key[strlen(key)-1] = '\0';
-                        memmove(key, key+1, strlen(key));
+                    struct Value kV = val(argExpr);
+                    if (kV.type == 1) { // VAL_STRING
+                        strcpy(key, kV.s);
+                    } else {
+                        sscanf(argExpr, "%s", key);
+                        if (key[0] == '"') {
+                            key[strlen(key)-1] = '\0';
+                            memmove(key, key+1, strlen(key));
+                        }
                     }
                     res = getM_F(envStack[envTop].MV, tokens[i], key);
                 }
@@ -263,10 +279,11 @@ struct Value val(char *buff)
 {
     Stack = NULL;
     PFEval = NULL;
+    struct Value tot;
+    float x; struct Value n1, n2;
     resolve_complex_types(buff);
 
     int c;
-    struct Value tot;
     
     char postfix[1000]="", *pf, opr;
     pf= &postfix[0];
@@ -277,33 +294,30 @@ struct Value val(char *buff)
     char *t, temp[100];
     t= &temp[0];
 
-    float x; struct Value n1, n2;
+
 
     // removed buff skip
 
-    while( *buff != ';' && *buff != '\n' && *buff != '\0')
+    int in_quotes = 0;
+    while( (*buff != ';' || in_quotes) && *buff != '\n' && *buff != '\0')
     {
-        if(*buff == '(')
+        if (*buff == '"') { in_quotes = !in_quotes; }
+        
+        if(*buff == '(' && !in_quotes)
         {
             push( &Stack, *buff);
             buff++;
         }
-        else if (*buff == '=' && *(buff+1) == '=') { *buff = 'E'; strcpy(buff+1, buff+2); continue; }
-        // skip spaces and =
-        else if( *buff == ' ' || *buff == '\t' || *buff == '\r' || *buff == '=')
+        else if (*buff == '=' && *(buff+1) == '=' && !in_quotes) { *buff = '#'; strcpy(buff+1, buff+2); continue; }
+        else if( (*buff == ' ' || *buff == '\t' || *buff == '\r' || *buff == '=') && !in_quotes)
         {
-            if (pf > &postfix[0] && *(pf-1) != ' ')
-            {
-                *pf= ' ';
-                pf++;
-            }
-            buff++;
+            strcpy(buff, buff+1);
             continue;
         }
-        else if (*buff == '!' && *(buff+1) == '=') { *buff = 'N'; strcpy(buff+1, buff+2); continue; }
-        else if (*buff == '<' && *(buff+1) == '=') { *buff = 'L'; strcpy(buff+1, buff+2); continue; }
-        else if (*buff == '>' && *(buff+1) == '=') { *buff = 'G'; strcpy(buff+1, buff+2); continue; }
-        else if( *buff == '$' || *buff == '*' || *buff == '/' || *buff == '%' || *buff == '+' || *buff == '-' || *buff == '<' || *buff == '>' || *buff == '&' || *buff == '|' || *buff == '~' || *buff == '!' || *buff == 'E' || *buff == 'N' || *buff == 'L' || *buff == 'G')
+        else if (*buff == '!' && *(buff+1) == '=' && !in_quotes) { *buff = '@'; strcpy(buff+1, buff+2); continue; }
+        else if (*buff == '<' && *(buff+1) == '=' && !in_quotes) { *buff = '^'; strcpy(buff+1, buff+2); continue; }
+        else if (*buff == '>' && *(buff+1) == '=' && !in_quotes) { *buff = '?'; strcpy(buff+1, buff+2); continue; }
+        else if( (*buff == '$' || *buff == '*' || *buff == '/' || *buff == '%' || *buff == '+' || *buff == '-' || *buff == '<' || *buff == '>' || *buff == '&' || *buff == '|' || *buff == '~' || *buff == '!' || *buff == '#' || *buff == '@' || *buff == '^' || *buff == '?') && !in_quotes)
         {
             *f='\0';
             f= &func[0];
@@ -346,7 +360,7 @@ struct Value val(char *buff)
             if( *buff == ' ' || *buff == '\t' || *buff == '\r')
                 buff++;
         }
-        else if( *buff == ')')
+        else if( *buff == ')' && !in_quotes)
         {
             opr = pop ( &Stack) ;
 			while ( ( opr ) != '(' )
@@ -383,11 +397,11 @@ struct Value val(char *buff)
     *pf = ' '; pf++; *pf = '\0';
 
     pf= &postfix[0];
-    
-
+    int eval_in_quotes = 0;
     while(*pf != '\0')
     {
-        if(*pf == ' ')
+        if (*pf == '"') { eval_in_quotes = !eval_in_quotes; }
+        if(*pf == ' ' && !eval_in_quotes)
         {
             *t= '\0';
             
@@ -396,7 +410,6 @@ struct Value val(char *buff)
                 else if (!strcmp(temp, "false")) { { struct Value v; v.type=VAL_FLOAT; v.f=0.0; pushV(v, &PFEval); } }
                 else {
                     c= typeFetcher(temp);
-                    // printf("Processing token: '%s' (%x %x), type: %d\n", temp, temp[0], temp[1], c);
                     if (c >= 1 && c <= 11) { pushV(valFetcherGlobal(temp), &PFEval); }
                     else if (temp[0] == '"') {
                         struct Value v; v.type = VAL_STRING;
@@ -410,7 +423,7 @@ struct Value val(char *buff)
             t= &temp[0];
             *t = '\0';
         }
-        else if (priority(*pf))
+        else if (priority(*pf) && !eval_in_quotes)
         {
             n1= popV(&PFEval);
             n2= popV(&PFEval);
@@ -434,23 +447,23 @@ struct Value val(char *buff)
                 case '&': tot.f= n2.f&&n1.f; break;
                 case '|': tot.f= n2.f||n1.f; break;
                 case '~':
-                case 'E':
+                case '#':
                     if (n1.type == VAL_STRING && n2.type == VAL_STRING) {
-                        tot.f = (strcmp(n2.s, n1.s) == 0);
+                        tot.f = (strcmp(n1.s, n2.s) == 0) ? 1.0 : 0.0;
                     } else {
-                        tot.f = (n2.f == n1.f);
+                        tot.f= n2.f==n1.f;
                     }
                     break;
                 case '!':
-                case 'N':
+                case '@':
                     if (n1.type == VAL_STRING && n2.type == VAL_STRING) {
-                        tot.f = (strcmp(n2.s, n1.s) != 0);
+                        tot.f = (strcmp(n1.s, n2.s) != 0) ? 1.0 : 0.0;
                     } else {
-                        tot.f = (n2.f != n1.f);
+                        tot.f= n2.f!=n1.f;
                     }
                     break;
-                case 'L': tot.f= n2.f<=n1.f; break;
-                case 'G': tot.f= n2.f>=n1.f; break;
+                case '^': tot.f= n2.f<=n1.f; break;
+                case '?': tot.f= n2.f>=n1.f; break;
             }
             pushV(tot, &PFEval);
         }
@@ -483,14 +496,10 @@ int priority(char Op)
     {
         return 5;
     }
-    else if (Op == '>' || Op == '<' || Op == 'G' || Op == 'L')
-    {
+    else if (Op == '>' || Op == '<' || Op == '?' || Op == '^')
+        return 5;
+    else if (Op == '~' || Op == '!' || Op == '#' || Op == '@')
         return 4;
-    }
-    else if (Op == '~' || Op == '!' || Op == 'E' || Op == 'N')
-    {
-        return 3;
-    }
     else if (Op == '&')
     {
         return 2;

@@ -1,0 +1,63 @@
+// main.bykig
+// Main interpreter loop for mini-bykig
+
+use "evaluator.bykig" ;
+
+out "Enter filename to scan: " ;
+string filename ;
+in filename ;
+
+float ok ;
+ok = file_scan_open ( filename ) ;
+if ok == 0
+{
+    out "Failed to open file!%n" ;
+    // exit
+}
+else
+{
+    out "mini-bykig scanner started on " + filename + "%n" ;
+
+    while 1 < 2
+    {
+        string token ;
+        token = file_scan_next ( ) ;
+        
+        if token ~ "EOF"
+        {
+            break ;
+        }
+        
+        if token ~ "var"
+        {
+            string varName ;
+            varName = file_scan_next ( ) ;
+            string eq ;
+            eq = file_scan_next ( ) ;
+            string op1 ;
+            op1 = file_scan_next ( ) ;
+            
+            evalAssignRHS ( varName , op1 ) ;
+        }
+        
+        if token ~ "out"
+        {
+            string varName ;
+            varName = file_scan_next ( ) ;
+            string semi ;
+            semi = file_scan_next ( ) ;
+            
+            float v = resolveToken ( varName ) ;
+            out "mini-bykig output: " + v + "%n" ;
+        }
+        
+        if token ~ "."
+        {
+            out "mini-bykig finished execution.%n" ;
+            break ;
+        }
+    }
+    
+    file_scan_close ( ) ;
+}
+.
