@@ -1,0 +1,38 @@
+// loop_break_edge.bykig
+// Tests breaking out of nested loops and ensuring variables are handled
+
+out "--- Loop Break Edge Test ---%n" ;
+
+int i = 0 ;
+int j = 0 ;
+
+while i < 5
+{
+    j = 0 ;
+    while j < 5
+    {
+        if i == 3
+        {
+            if j == 2
+            {
+                out "Breaking inner loop at i=" + i + ", j=" + j + "%n" ;
+                break ;
+            }
+        }
+        j = j + 1 ;
+    }
+    i = i + 1 ;
+}
+
+out "Final i=" + i + ", j=" + j + "%n" ;
+
+if i == 5
+{
+    out "Outer loop finished correctly.%n" ;
+}
+else
+{
+    out "Outer loop broke prematurely!%n" ;
+}
+
+out "--- Loop Break Edge Test Complete ---%n" ;

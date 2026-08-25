@@ -4,6 +4,7 @@
 void safe_fscanf(FILE* fp, const char* fmt, char* buf) {
     if (fscanf(fp, fmt, buf) <= 0) {
         printf("Error: Unexpected EOF or read error.\n");
+        fflush(stdout);
         exit(1);
     }
 }
@@ -47,7 +48,6 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
         if (!(strcmp(buffer, ".")))
         {
             
-            fclose( fp);
             break;
         }
 
@@ -487,6 +487,7 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                     tempS[i]='\0';
                     j+=2;
                     printf("%s", tempS);
+                    fflush(stdout);
                     
                     for(int t = 0; t < i; t++)
                         tempS[t]= '\0';
@@ -639,7 +640,7 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
             
             if (type == 0)
             {
-                if (findFunc(FN, buffer) != NULL || (!strcmp(buffer, "push")) || (!strcmp(buffer, "pop")) || (!strcmp(buffer, "delete")) || (!strcmp(buffer, "exists")) || (!strcmp(buffer, "len")) || (!strcmp(buffer, "file_write")) || (!strcmp(buffer, "file_append")) || (!strcmp(buffer, "file_read")) || (!strcmp(buffer, "file_exists")) || (!strcmp(buffer, "file_scan_open")) || (!strcmp(buffer, "file_scan_next")) || (!strcmp(buffer, "file_scan_close"))) {
+                if (findFunc(FN, buffer) != NULL || (!strcmp(buffer, "push")) || (!strcmp(buffer, "pop")) || (!strcmp(buffer, "delete")) || (!strcmp(buffer, "exists")) || (!strcmp(buffer, "len")) || (!strcmp(buffer, "file_write")) || (!strcmp(buffer, "file_append")) || (!strcmp(buffer, "file_read")) || (!strcmp(buffer, "file_exists")) || (!strcmp(buffer, "file_scan_open")) || (!strcmp(buffer, "file_scan_next")) || (!strcmp(buffer, "file_scan_close")) || (!strcmp(buffer, "file_scan_get_pos")) || (!strcmp(buffer, "file_scan_set_pos"))) {
                     char exprBuf[1000] = "";
                     strcpy(exprBuf, buffer);
                     strcat(exprBuf, " ");
@@ -942,7 +943,7 @@ case 15: // intarr
                     char tempPath[1000] = "";
                     if (current_filepath != NULL) strcpy(tempPath, current_filepath);
                     if (appendFunc(&FN, funcName, paramCount, params, bodyPos, tempPath) != 0) {
-                        printf("Error: Failed to register function '%s'\\n", funcName);
+                        printf("Error: Failed to register function '%s'\n", funcName);
                     }
                 }
                 
@@ -954,8 +955,8 @@ case 15: // intarr
                         fgets(buffer, 1000, fp);
                         continue;
                     }
-                    if (strchr(buffer, '{')) b1++;
-                    if (strchr(buffer, '}')) b2++;
+                    if (!strcmp(buffer, "{")) b1++;
+                    if (!strcmp(buffer, "}")) b2++;
                 }
             }
             break;
@@ -1104,7 +1105,8 @@ case 15: // intarr
             ERROR:
 
                     printf("Neither variable nor keyword nor function: \"%s\" (eof=%d, err=%d, ftell=%ld)!!!\n", buffer, feof(fp), ferror(fp), ftell(fp));
-                    fgets( buffer, 1000000, fp);
+                    fflush(stdout);
+                    fgets( buffer, sizeof(buffer), fp);
                     break;
           }
       }

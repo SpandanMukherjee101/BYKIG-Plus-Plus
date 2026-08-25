@@ -204,6 +204,22 @@ static inline struct Value builtin_file_scan_close(char args[][1000], int argCou
     struct Value retV; retV.type=VAL_FLOAT; retV.f=1.0; return retV;
 }
 
+static inline struct Value builtin_file_scan_get_pos(char args[][1000], int argCount) {
+    float pos = -1.0;
+    if (scanner_fp != NULL) {
+        pos = (float)ftell(scanner_fp);
+    }
+    struct Value retV; retV.type=VAL_FLOAT; retV.f=pos; return retV;
+}
+
+static inline struct Value builtin_file_scan_set_pos(char args[][1000], int argCount) {
+    if (scanner_fp != NULL) {
+        float pos = val(args[0]).f;
+        fseek(scanner_fp, (long)pos, SEEK_SET);
+    }
+    struct Value retV; retV.type=VAL_FLOAT; retV.f=1.0; return retV;
+}
+
 static inline struct Value builtin_parse_float(char args[][1000], int argCount) {
     struct Value arg = val(args[0]);
     float parsed = 0.0;
@@ -228,6 +244,8 @@ static struct BuiltinFunc builtins[] = {
     {"file_scan_open", 1, builtin_file_scan_open},
     {"file_scan_next", 0, builtin_file_scan_next},
     {"file_scan_close", 0, builtin_file_scan_close},
+    {"file_scan_get_pos", 0, builtin_file_scan_get_pos},
+    {"file_scan_set_pos", 1, builtin_file_scan_set_pos},
     {"parse_float", 1, builtin_parse_float},
     {"", 0, NULL}
 };

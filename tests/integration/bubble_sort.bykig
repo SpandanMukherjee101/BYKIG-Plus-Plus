@@ -1,0 +1,56 @@
+// bubble_sort.bykig
+// Complex integration test: Sorting a list of numbers using Bubble Sort
+
+out "--- Integration Test: Bubble Sort ---%n" ;
+
+list arr ;
+push ( arr , 64 ) ;
+push ( arr , 34 ) ;
+push ( arr , 25 ) ;
+push ( arr , 12 ) ;
+push ( arr , 22 ) ;
+push ( arr , 11 ) ;
+push ( arr , 90 ) ;
+
+int n = len ( arr ) ;
+out "Original List Length: " + n + "%n" ;
+
+int i = 0 ;
+while i < n - 1
+{
+    int j = 0 ;
+    while j < n - i - 1
+    {
+        float val1 = arr [ j ] ;
+        float val2 = arr [ j + 1 ] ;
+        
+        if val1 > val2
+        {
+            // Swap
+            arr [ j ] = val2 ;
+            arr [ j + 1 ] = val1 ;
+        }
+        j = j + 1 ;
+    }
+    i = i + 1 ;
+}
+
+out "Sorted List:%n" ;
+int k = 0 ;
+while k < n
+{
+    out arr [ k ] + " " ;
+    k = k + 1 ;
+}
+out "%n" ;
+
+// Verification
+if arr [ 0 ] == 11
+{
+    if arr [ 6 ] == 90
+    {
+        out "Bubble sort executed successfully!%n" ;
+    }
+}
+
+out "--- Bubble Sort Complete ---%n" ;

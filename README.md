@@ -94,8 +94,9 @@ int result = ( 10 + 5 ) * 2 ;
 
 ## 4. Conditions
 
-Use `if` and `else`. Note the required curly braces on new lines.
+Use `if` and `else`. Note that the required curly braces **must be placed on new lines**. Placing braces on the same line as the condition will cause them to be evaluated as part of the expression and skipped.
 
+*Correct:*
 ```bykig
 int a = 10 ;
 if a > 5
@@ -108,9 +109,14 @@ else
 }
 ```
 
+*Incorrect:*
+```bykig
+if a > 5 { out "Greater%n" ; }
+```
+
 ## 5. Loops
 
-BYKIG supports `while` loops. 
+BYKIG supports `while` loops. Just like `if` conditions, the `{` bracket **must be on a new line**.
 *Note: `for` loops are not implemented.*
 
 ```bykig
@@ -242,6 +248,25 @@ out data + "%n" ;
 float check = file_exists ( "test.txt" ) ;
 ```
 
+### Streaming File I/O (Scanner)
+You can scan a file token by token (separated by whitespace) instead of reading the entire file into memory:
+
+```bykig
+float fp = file_scan_open ( "test.txt" ) ;
+if fp ~ 1
+{
+    string token = file_scan_next ( ) ;
+    out "First token: " + token + "%n" ;
+    
+    // Position manipulation
+    float pos = file_scan_get_pos ( ) ; 
+    file_scan_set_pos ( pos ) ;         
+    
+    file_scan_close ( ) ;
+}
+```
+*Note: `file_scan_next()` returns `"EOF"` when the end of file is reached.*
+
 ## 13. Modules
 
 Import other `.bykig` files using the `use` keyword. This evaluates the file and imports its global variables and functions into your current environment. 
@@ -294,3 +319,9 @@ while i < max + 1
 }
 .
 ```
+
+## 16. Projects & Showcases
+
+The BYKIG++ repository contains tests and projects showcasing the capabilities of the language:
+*   **`tests/integration/file_io_analyzer.bykig`**: A complex integration test combining file I/O scanning, strings, math, loops, and conditions.
+*   **`mini-bykig/`**: A complete mini-interpreter written *entirely in BYKIG++*! It reads `.mini` script files using the file scanner, parses variables and expressions, and features its own fully working `while` loops and `if` conditions with correct scoping and block skipping. Run it via `.\Interpreter.exe mini-bykig\main.bykig < test_input.txt`.

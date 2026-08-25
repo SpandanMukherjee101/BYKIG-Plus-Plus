@@ -7,17 +7,7 @@ out "Enter filename to scan: " ;
 string filename ;
 in filename ;
 
-float ok ;
-ok = file_scan_open ( filename ) ;
-if ok == 0
-{
-    out "Failed to open file!%n" ;
-    // exit
-}
-else
-{
-    out "mini-bykig scanner started on " + filename + "%n" ;
-
+func execute_block ( float stopAtBrace ) {
     while 1 < 2
     {
         string token ;
@@ -28,6 +18,14 @@ else
             break ;
         }
         
+        if token ~ "}"
+        {
+            if stopAtBrace ~ 1
+            {
+                break ;
+            }
+        }
+        
         if token ~ "var"
         {
             string varName ;
@@ -36,7 +34,6 @@ else
             eq = file_scan_next ( ) ;
             string op1 ;
             op1 = file_scan_next ( ) ;
-            
             evalAssignRHS ( varName , op1 ) ;
         }
         
@@ -46,9 +43,56 @@ else
             varName = file_scan_next ( ) ;
             string semi ;
             semi = file_scan_next ( ) ;
-            
             float v = resolveToken ( varName ) ;
             out "mini-bykig output: " + v + "%n" ;
+        }
+        
+        if token ~ "if"
+        {
+            string op1 ;
+            op1 = file_scan_next ( ) ;
+            string comp ;
+            comp = file_scan_next ( ) ;
+            string op2 ;
+            op2 = file_scan_next ( ) ;
+            
+            string brace ;
+            brace = file_scan_next ( ) ;
+            
+            float cond = evalCondition ( op1 , comp , op2 ) ;
+            if cond ~ 1
+            {
+                execute_block ( 1 ) ;
+            }
+            else
+            {
+                skip_block ( ) ;
+            }
+        }
+        
+        if token ~ "while"
+        {
+            float cond_pos = file_scan_get_pos ( ) ;
+            string op1 ;
+            op1 = file_scan_next ( ) ;
+            string comp ;
+            comp = file_scan_next ( ) ;
+            string op2 ;
+            op2 = file_scan_next ( ) ;
+            
+            string brace ;
+            brace = file_scan_next ( ) ;
+            
+            float cond = evalCondition ( op1 , comp , op2 ) ;
+            if cond ~ 1
+            {
+                execute_block ( 1 ) ;
+                file_scan_set_pos ( cond_pos ) ; // jump back!
+            }
+            else
+            {
+                skip_block ( ) ;
+            }
         }
         
         if token ~ "."
@@ -57,7 +101,18 @@ else
             break ;
         }
     }
-    
+}
+
+float ok ;
+ok = file_scan_open ( filename ) ;
+if ok ~ 0
+{
+    out "Failed to open file!%n" ;
+}
+else
+{
+    out "mini-bykig scanner started on " + filename + "%n" ;
+    execute_block ( 0 ) ;
     file_scan_close ( ) ;
 }
 .

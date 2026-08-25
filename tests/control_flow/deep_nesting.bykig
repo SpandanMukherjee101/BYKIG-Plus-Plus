@@ -1,0 +1,44 @@
+// deep_nesting.bykig
+// Tests deep loop and condition nesting to check the `c` and `w` array boundaries in Interpreter.c
+
+out "--- Deep Nesting Test ---%n" ;
+
+int d = 0 ;
+int max = 10 ;
+
+if 1 == 1
+{
+    if 2 == 2
+    {
+        if 3 == 3
+        {
+            if 4 == 4
+            {
+                if 5 == 5
+                {
+                    while d < max
+                    {
+                        d = d + 1 ;
+                        if d == 5
+                        {
+                            out "Middle of deep loop, d = " + d + "%n" ;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+out "End of deep loop, d = " + d + "%n" ;
+
+if d == max
+{
+    out "Deep nesting passed!%n" ;
+}
+else
+{
+    out "Deep nesting failed! d is " + d + "%n" ;
+}
+
+out "--- Deep Nesting Test Complete ---%n" ;

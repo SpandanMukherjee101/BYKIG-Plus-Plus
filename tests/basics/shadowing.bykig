@@ -1,0 +1,26 @@
+// shadowing.bykig
+// Tests variable shadowing
+
+out "--- Shadowing Test ---%n" ;
+
+int x = 10 ;
+out "Global x: " + x + "%n" ;
+
+func shadow_test ( ) {
+    out "Inside func, before shadowing: x should be 10, is " + x + "%n" ;
+    int x = 20 ; // Local shadowing
+    out "Inside func, after shadowing: x should be 20, is " + x + "%n" ;
+}
+
+shadow_test ( ) ;
+out "Global x after func: " + x + "%n" ;
+
+if 1 < 2
+{
+    int x = 30 ;
+    out "Inside block, after shadowing: x should be 30, is " + x + "%n" ;
+}
+
+out "Global x after block: " + x + "%n" ;
+
+out "--- Shadowing Test Complete ---%n" ;

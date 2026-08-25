@@ -1,0 +1,58 @@
+// file_io_analyzer.bykig
+// Complex integration test: Testing file read/write, strings, loops, conditionals, and math.
+
+out "--- Integration Test: File IO Analyzer ---%n" ;
+
+file_write ( "test_data.txt" , "apple 10 20 banana 15 25 orange 8 12 EOF 0 0" ) ;
+
+float fp = file_scan_open ( "test_data.txt" ) ;
+if fp ~ 0
+{
+    out "Failed to open test_data.txt!%n" ;
+}
+else
+{
+    out "Successfully opened test_data.txt.%n" ;
+    
+    float total_q = 0 ;
+    float total_p = 0 ;
+    
+    while 1 < 2
+    {
+        string name ;
+        name = file_scan_next ( ) ;
+        if name ~ "EOF"
+        {
+            break ;
+        }
+        
+        string q_str ;
+        q_str = file_scan_next ( ) ;
+        string p_str ;
+        p_str = file_scan_next ( ) ;
+        
+        float q ;
+        q = parse_float ( q_str ) ;
+        float p ;
+        p = parse_float ( p_str ) ;
+        
+        total_q = total_q + q ;
+        total_p = total_p + p ;
+        
+        out "Read: " + name + ", Q=" + q + ", P=" + p + "%n" ;
+    }
+    
+    file_scan_close ( ) ;
+    
+    out "Total Q: " + total_q + "%n" ;
+    out "Total P: " + total_p + "%n" ;
+    
+    if total_q ~ 33
+    {
+        if total_p ~ 57
+        {
+            out "TEST PASSED: File IO Analyzer%n" ;
+        }
+    }
+}
+.

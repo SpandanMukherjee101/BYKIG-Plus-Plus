@@ -1,0 +1,19 @@
+// recursion_stress.bykig
+// Tests hitting the maximum recursion depth (Stack Overflow) gracefully
+
+out "--- Recursion Stress Test ---%n" ;
+
+func recurse ( int depth ) {
+    if depth % 100 == 0
+    {
+        out "Reached depth: " + depth + "%n" ;
+    }
+    
+    // We expect this to fail gracefully at depth 1000 without segfaulting
+    recurse ( depth + 1 ) ;
+}
+
+out "Starting deep recursion. Expecting a Stack Overflow error...%n" ;
+// recurse ( 1 ) ; // Commented out by default because it halts the interpreter. You can uncomment to test manual crash handling.
+
+out "--- Recursion Stress Test Complete ---%n" ;

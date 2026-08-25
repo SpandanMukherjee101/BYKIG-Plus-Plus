@@ -1,0 +1,55 @@
+// prime_sieve.bykig
+// Complex integration test: Generating prime numbers (simplified brute-force since modulo % is available)
+
+out "--- Integration Test: Prime Number Generator ---%n" ;
+
+list primes ;
+int max_num = 50 ;
+int num = 2 ;
+
+while num <= max_num
+{
+    int is_prime = 1 ;
+    int i = 0 ;
+    int p_count = len ( primes ) ;
+    
+    while i < p_count
+    {
+        float p = primes [ i ] ;
+        float remainder = num % p ;
+        
+        if remainder == 0
+        {
+            is_prime = 0 ;
+            break ;
+        }
+        i = i + 1 ;
+    }
+    
+    if is_prime == 1
+    {
+        push ( primes , num ) ;
+    }
+    num = num + 1 ;
+}
+
+out "Primes up to " + max_num + ":%n" ;
+int k = 0 ;
+int total = len ( primes ) ;
+while k < total
+{
+    out primes [ k ] + " " ;
+    k = k + 1 ;
+}
+out "%n" ;
+
+if total == 15
+{
+    out "Correct number of primes found!%n" ;
+}
+else
+{
+    out "Incorrect number of primes found: " + total + "%n" ;
+}
+
+out "--- Prime Number Generator Complete ---%n" ;

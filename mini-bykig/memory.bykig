@@ -4,12 +4,10 @@
 map env = { "null" = 0 } ;
 
 func setVar ( string name , float val ) {
-    out "setting var: " + name + " = " + val + "%n" ;
     env [ name ] = val ;
 }
 
 func getVar ( string name ) {
-    out "getting var: " + name + "%n" ;
     float val = env [ name ] ;
     return val ;
 }

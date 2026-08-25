@@ -1,0 +1,22 @@
+// edge_types.bykig
+// Tests type coercions and edge cases
+
+out "--- Edge Types Test ---%n" ;
+
+float large = 9999999999999.0 ;
+out "Large float: " + large + "%n" ;
+
+int small = 0 - 2147483648 ;
+out "Small int: " + small + "%n" ;
+
+string s = "Hello" ;
+bool b = 1 ;
+// Boolean + String concatenation
+out "String + Bool: " + s + " " + b + "%n" ;
+
+float f = 0.00001 ;
+float f2 = 0.00002 ;
+float f3 = f + f2 ;
+out "Float precision: " + f3 + "%n" ;
+
+out "--- Edge Types Test Complete ---%n" ;

@@ -1,0 +1,36 @@
+// file_scanner_test.bykig
+// Tests the new file scanner API (file_scan_open, file_scan_next, file_scan_close)
+
+out "--- File Scanner Test ---%n" ;
+
+// Create a dummy file
+file_write ( "scanner_dummy.txt" , "hello world BYKIG" ) ;
+
+float ok = file_scan_open ( "scanner_dummy.txt" ) ;
+
+if ok == 1
+{
+    out "File opened successfully.%n" ;
+    
+    string t1 ;
+    t1 = file_scan_next ( ) ;
+    string t2 ;
+    t2 = file_scan_next ( ) ;
+    string t3 ;
+    t3 = file_scan_next ( ) ;
+    string t4 ;
+    t4 = file_scan_next ( ) ;
+    
+    out "Token 1: " + t1 + "%n" ;
+    out "Token 2: " + t2 + "%n" ;
+    out "Token 3: " + t3 + "%n" ;
+    out "Token 4 (should be EOF): " + t4 + "%n" ;
+    
+    file_scan_close ( ) ;
+}
+else
+{
+    out "Failed to open file!%n" ;
+}
+
+out "--- File Scanner Test Complete ---%n" ;

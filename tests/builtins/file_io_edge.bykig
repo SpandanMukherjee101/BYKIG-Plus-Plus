@@ -1,0 +1,16 @@
+// file_io_edge.bykig
+// Tests file IO edge cases such as missing files
+
+out "--- File IO Edge Test ---%n" ;
+
+float missing = file_exists ( "this_file_does_not_exist.txt" ) ;
+out "Does missing file exist? " + missing + "%n" ;
+
+float ok = file_scan_open ( "this_file_does_not_exist.txt" ) ;
+out "file_scan_open missing file returned: " + ok + "%n" ;
+
+string readMissing = file_read ( "this_file_does_not_exist.txt" ) ;
+out "file_read missing file returned length: " + len ( readMissing ) + "%n" ;
+
+// Clean up
+out "--- File IO Edge Test Complete ---%n" ;

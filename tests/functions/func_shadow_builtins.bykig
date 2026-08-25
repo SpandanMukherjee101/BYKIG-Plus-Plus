@@ -1,0 +1,25 @@
+// func_shadow_builtins.bykig
+// Tests what happens when a user declares a function with the same name as a built-in
+
+out "--- Function Shadowing Built-ins Test ---%n" ;
+
+func len ( string s ) {
+    out "This is a custom len function for: " + s + "%n" ;
+    return 42 ;
+}
+
+string testStr = "BYKIG" ;
+float l = len ( testStr ) ;
+
+out "len() returned: " + l + "%n" ;
+
+if l == 42
+{
+    out "User functions shadow built-ins successfully.%n" ;
+}
+else
+{
+    out "Built-ins take precedence over user functions.%n" ;
+}
+
+out "--- Function Shadowing Built-ins Test Complete ---%n" ;

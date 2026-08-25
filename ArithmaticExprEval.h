@@ -128,7 +128,6 @@ void resolve_complex_types(char *expr) {
                     
                     // Setup new environment
                     envTop++;
-                    if (envTop % 100 == 0) { printf("Recursion depth: %d\n", envTop); fflush(stdout); }
                     envStack[envTop].IV = NULL;
                     envStack[envTop].FV = NULL;
                     envStack[envTop].CV = NULL;

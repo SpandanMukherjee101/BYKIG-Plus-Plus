@@ -8,7 +8,7 @@ func resolveToken ( string t ) {
     
     
     float isVar = exists ( env , t ) ;
-    if isVar == 1
+    if isVar ~ 1
     {
         float v = getVar ( t ) ;
         return v ;
@@ -65,6 +65,81 @@ func evalAssignRHS ( string varName , string op1 ) {
         }
         
         setVar ( varName , res ) ;
+    }
+}
+
+func evalCondition ( string op1 , string comp , string op2 ) {
+    float v1 = resolveToken ( op1 ) ;
+    float v2 = resolveToken ( op2 ) ;
+    
+    if comp ~ "=="
+    {
+        if v1 ~ v2
+        {
+            return 1 ;
+        }
+    }
+    if comp ~ "!="
+    {
+        if v1 ! v2
+        {
+            return 1 ;
+        }
+    }
+    if comp ~ "<"
+    {
+        if v1 < v2
+        {
+            return 1 ;
+        }
+    }
+    if comp ~ ">"
+    {
+        if v1 > v2
+        {
+            return 1 ;
+        }
+    }
+    if comp ~ "<="
+    {
+        if v1 ^ v2
+        {
+            return 1 ;
+        }
+    }
+    if comp ~ ">="
+    {
+        if v1 ? v2
+        {
+            return 1 ;
+        }
+    }
+    
+    return 0 ;
+}
+
+func skip_block ( ) {
+    int depth = 1 ;
+    while depth > 0
+    {
+        string token ;
+        token = file_scan_next ( ) ;
+        
+        if token ~ "EOF"
+        {
+            out "Syntax Error: Unexpected EOF while skipping block%n" ;
+            break ;
+        }
+        
+        if token ~ "{"
+        {
+            depth = depth + 1 ;
+        }
+        
+        if token ~ "}"
+        {
+            depth = depth - 1 ;
+        }
     }
 }
 .

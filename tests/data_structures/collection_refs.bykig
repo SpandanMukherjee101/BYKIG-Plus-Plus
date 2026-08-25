@@ -1,0 +1,28 @@
+// collection_refs.bykig
+// Tests passing collections by reference to functions
+
+out "--- Collection Refs Test ---%n" ;
+
+func modify_list ( list l ) {
+    push ( l , 999 ) ;
+    out "Inside func: lst length is " + len ( l ) + "%n" ;
+}
+
+list myLst ;
+push ( myLst , 1 ) ;
+push ( myLst , 2 ) ;
+
+out "Before func: myLst length is " + len ( myLst ) + "%n" ;
+modify_list ( myLst ) ;
+out "After func: myLst length is " + len ( myLst ) + "%n" ;
+
+if len ( myLst ) == 3
+{
+    out "List was modified (pass by reference).%n" ;
+}
+else
+{
+    out "List was NOT modified (pass by value).%n" ;
+}
+
+out "--- Collection Refs Test Complete ---%n" ;

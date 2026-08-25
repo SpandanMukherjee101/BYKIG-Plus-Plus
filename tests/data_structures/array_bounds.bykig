@@ -1,0 +1,22 @@
+// array_bounds.bykig
+// Tests array and list bounds
+
+out "--- Array Bounds Test ---%n" ;
+
+int arr [ 5 ] ;
+arr [ 0 ] = 10 ;
+arr [ 4 ] = 50 ;
+
+out "arr[0] = " + arr [ 0 ] + "%n" ;
+out "arr[4] = " + arr [ 4 ] + "%n" ;
+
+// Intentionally accessing out of bounds elements, should ideally return 0 or throw
+out "arr[5] (OOB) = " + arr [ 5 ] + "%n" ;
+out "arr[-1] (OOB) = " + arr [ -1 ] + "%n" ;
+
+list lst ;
+push ( lst , 100 ) ;
+out "lst[0] = " + lst [ 0 ] + "%n" ;
+out "lst[1] (OOB) = " + lst [ 1 ] + "%n" ;
+
+out "--- Array Bounds Test Complete ---%n" ;
