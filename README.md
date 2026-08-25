@@ -1,7 +1,7 @@
 # BYKIG++ Documentation
 
 Made by Spandan Mukherjee
-*Completion Date: 22/08/26*
+*Completion Date: 25/08/26*
 *Dedicated to: My mother TANDRA MUKHERJEE*
 
 BYKIG++ is a lightweight, dynamically parsed interpreter built in C entirely using raw Data Structures (Linked Lists and Stacks), bypassing traditional Compiler Design concepts (no ASTs, Lexers, or Parsers). 
@@ -323,5 +323,5 @@ while i < max + 1
 ## 16. Projects & Showcases
 
 The BYKIG++ repository contains tests and projects showcasing the capabilities of the language:
-*   **`tests/integration/file_io_analyzer.bykig`**: A complex integration test combining file I/O scanning, strings, math, loops, and conditions.
 *   **`mini-bykig/`**: A complete mini-interpreter written *entirely in BYKIG++*! It reads `.mini` script files using the file scanner, parses variables and expressions, and features its own fully working `while` loops and `if` conditions with correct scoping and block skipping. Run it via `.\Interpreter.exe mini-bykig\main.bykig < test_input.txt`.
+*   **`tests/integration/`**: Contains several self-contained integration tests that showcase specific features of the language, such as the file I/O scanner, variable scoping, and arithmetic expression evaluation.
