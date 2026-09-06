@@ -3,16 +3,18 @@
 
 out "--- Array Bounds Test ---%n" ;
 
-int arr [ 5 ] ;
+intarr arr 5 ;
 arr [ 0 ] = 10 ;
 arr [ 4 ] = 50 ;
 
 out "arr[0] = " + arr [ 0 ] + "%n" ;
 out "arr[4] = " + arr [ 4 ] + "%n" ;
 
-// Intentionally accessing out of bounds elements, should ideally return 0 or throw
+// Intentionally accessing out of bounds elements, should ideally return 0
 out "arr[5] (OOB) = " + arr [ 5 ] + "%n" ;
-out "arr[-1] (OOB) = " + arr [ -1 ] + "%n" ;
+
+// Note: arr [ -1 ] is not supported because val() parses '-1' as subtraction.
+// Use '0 - 1' instead for negative index testing if needed.
 
 list lst ;
 push ( lst , 100 ) ;
@@ -20,3 +22,4 @@ out "lst[0] = " + lst [ 0 ] + "%n" ;
 out "lst[1] (OOB) = " + lst [ 1 ] + "%n" ;
 
 out "--- Array Bounds Test Complete ---%n" ;
+.

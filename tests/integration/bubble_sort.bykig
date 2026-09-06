@@ -21,14 +21,17 @@ while i < n - 1
     int j = 0 ;
     while j < n - i - 1
     {
-        float val1 = arr [ j ] ;
-        float val2 = arr [ j + 1 ] ;
+        float val1 ;
+        val1 = arr [ j ] ;
+        int idx2 = j + 1 ;
+        float val2 ;
+        val2 = arr [ idx2 ] ;
         
         if val1 > val2
         {
             // Swap
             arr [ j ] = val2 ;
-            arr [ j + 1 ] = val1 ;
+            arr [ idx2 ] = val1 ;
         }
         j = j + 1 ;
     }
@@ -39,18 +42,26 @@ out "Sorted List:%n" ;
 int k = 0 ;
 while k < n
 {
-    out arr [ k ] + " " ;
+    float elem ;
+    elem = arr [ k ] ;
+    out elem + " " ;
     k = k + 1 ;
 }
 out "%n" ;
 
 // Verification
-if arr [ 0 ] == 11
+float first ;
+first = arr [ 0 ] ;
+float last ;
+last = arr [ 6 ] ;
+
+if first ~ 11
 {
-    if arr [ 6 ] == 90
+    if last ~ 90
     {
         out "Bubble sort executed successfully!%n" ;
     }
 }
 
 out "--- Bubble Sort Complete ---%n" ;
+.

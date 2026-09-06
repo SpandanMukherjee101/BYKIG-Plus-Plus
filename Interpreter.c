@@ -537,7 +537,19 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                     }
                     else
                     {
-                        printf("\nVariable not found!!!\n");
+                        // Expression evaluation: handles array/list/map indexing, function calls, etc.
+                        char evalBuf[1000];
+                        int tLen = strlen(tempS);
+                        while (tLen > 0 && (tempS[tLen-1] == ' ' || tempS[tLen-1] == '\t' || tempS[tLen-1] == '\r')) {
+                            tempS[--tLen] = '\0';
+                        }
+                        sprintf(evalBuf, "%s ;", tempS);
+                        struct Value result = val(evalBuf);
+                        if (result.type == VAL_STRING) {
+                            printf("%s", result.s);
+                        } else {
+                            printf("%f", result.f);
+                        }
                     }
 
                     for(int t = 0; t < i; t++)

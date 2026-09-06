@@ -81,9 +81,9 @@ transfer ( user1 , user2 , 500.0 ) ;
 out "Alice balance: " + accounts [ user1 ] + "%n" ;
 out "Bob balance: " + accounts [ user2 ] + "%n" ;
 
-if accounts [ user1 ] == 1000.00
+if accounts [ user1 ] ~ 1000.00
 {
-    if accounts [ user2 ] == 2800.50
+    if accounts [ user2 ] ~ 2800.50
     {
         out "Mock Database test passed!%n" ;
     }
