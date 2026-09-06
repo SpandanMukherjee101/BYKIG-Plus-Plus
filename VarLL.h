@@ -114,10 +114,8 @@ void appendIA(struct iA **q, char *name, int size) {
 
 // Scoped getters
 int typeFetcher(char *name) {
-    int scopes[] = {envTop, 0};
-    int num = (envTop == 0) ? 1 : 2;
-    for (int idx=0; idx<num; idx++) {
-        int i = scopes[idx];
+    for (int idx=envTop; idx>=0; idx--) {
+        int i = idx;
         struct iV *iv = envStack[i].IV; while (iv) { if (!strcmp(iv->name, name)) return 1; iv = iv->next; }
         struct fV *fv = envStack[i].FV; 
         while (fv) { 
@@ -144,10 +142,8 @@ struct Value valFetcherGlobal(char *name) {
     v.f = 0.0;
     v.ptr = NULL;
 
-    int scopes[] = {envTop, 0};
-    int num = (envTop == 0) ? 1 : 2;
-    for (int idx=0; idx<num; idx++) {
-        int i = scopes[idx];
+    for (int idx=envTop; idx>=0; idx--) {
+        int i = idx;
         struct iV *iv = envStack[i].IV; while (iv) { if (!strcmp(iv->name, name)) { v.type=VAL_FLOAT; v.f=(float)iv->data; return v; } iv = iv->next; }
         struct fV *fv = envStack[i].FV; while (fv) { if (!strcmp(fv->name, name)) { v.type=VAL_FLOAT; v.f=fv->data; return v; } fv = fv->next; }
         struct cV *cv = envStack[i].CV; while (cv) { if (!strcmp(cv->name, name)) { v.type=VAL_FLOAT; v.f=(float)cv->data; return v; } cv = cv->next; }
@@ -166,32 +162,32 @@ struct Value valFetcherGlobal(char *name) {
 
 
 int getIA(struct iA *IA, char *name, int idx) {
-    while (IA) { if (!strcmp(name, IA->name)) return IA->data[idx]; IA = IA->next; } return 0;
+    while (IA) { if (!strcmp(name, IA->name)) { if (idx >= 0 && idx < IA->size) return IA->data[idx]; return 0; } IA = IA->next; } return 0;
 }
 float getFA(struct fA *FA, char *name, int idx) {
-    while (FA) { if (!strcmp(name, FA->name)) return FA->data[idx]; FA = FA->next; } return 0.0;
+    while (FA) { if (!strcmp(name, FA->name)) { if (idx >= 0 && idx < FA->size) return FA->data[idx]; return 0.0; } FA = FA->next; } return 0.0;
 }
 char getCA(struct cA *CA, char *name, int idx) {
-    while (CA) { if (!strcmp(name, CA->name)) return CA->data[idx]; CA = CA->next; } return '\0';
+    while (CA) { if (!strcmp(name, CA->name)) { if (idx >= 0 && idx < CA->size) return CA->data[idx]; return '\0'; } CA = CA->next; } return '\0';
 }
 int getBA(struct bA *BA, char *name, int idx) {
-    while (BA) { if (!strcmp(name, BA->name)) return BA->data[idx]; BA = BA->next; } return 0;
+    while (BA) { if (!strcmp(name, BA->name)) { if (idx >= 0 && idx < BA->size) return BA->data[idx]; return 0; } BA = BA->next; } return 0;
 }
 float getL(struct lV *LV, char *name, int idx) {
     while (LV) { if (!strcmp(name, LV->name)) { if (idx >= 0 && idx < LV->size) return LV->data[idx]; } LV = LV->next; } return 0.0;
 }
 
 void setIA(struct iA *IA, char *name, int idx, int val) {
-    while (IA) { if (!strcmp(name, IA->name)) { IA->data[idx] = val; return; } IA = IA->next; }
+    while (IA) { if (!strcmp(name, IA->name)) { if (idx >= 0 && idx < IA->size) IA->data[idx] = val; return; } IA = IA->next; }
 }
 void setFA(struct fA *FA, char *name, int idx, float val) {
-    while (FA) { if (!strcmp(name, FA->name)) { FA->data[idx] = val; return; } FA = FA->next; }
+    while (FA) { if (!strcmp(name, FA->name)) { if (idx >= 0 && idx < FA->size) FA->data[idx] = val; return; } FA = FA->next; }
 }
 void setCA(struct cA *CA, char *name, int idx, char val) {
-    while (CA) { if (!strcmp(name, CA->name)) { CA->data[idx] = val; return; } CA = CA->next; }
+    while (CA) { if (!strcmp(name, CA->name)) { if (idx >= 0 && idx < CA->size) CA->data[idx] = val; return; } CA = CA->next; }
 }
 void setBA(struct bA *BA, char *name, int idx, int val) {
-    while (BA) { if (!strcmp(name, BA->name)) { BA->data[idx] = val; return; } BA = BA->next; }
+    while (BA) { if (!strcmp(name, BA->name)) { if (idx >= 0 && idx < BA->size) BA->data[idx] = val; return; } BA = BA->next; }
 }
 
 void appendFA(struct fA **q, char *name, int size) {

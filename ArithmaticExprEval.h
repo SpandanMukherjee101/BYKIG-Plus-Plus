@@ -1,6 +1,5 @@
 #include <stdio.h>
 extern FILE *current_fp;
-#include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 #include <math.h>
@@ -239,6 +238,10 @@ void resolve_complex_types(char *expr) {
                     res = getFA(envStack[envTop].FA, tokens[i], (int)val(argExpr).f);
                 } else if (type == 10) { 
                     res = getL(envStack[envTop].LV, tokens[i], (int)val(argExpr).f);
+                } else if (type == 8) { 
+                    res = (float)getCA(envStack[envTop].CA, tokens[i], (int)val(argExpr).f);
+                } else if (type == 9) { 
+                    res = (float)getBA(envStack[envTop].BA, tokens[i], (int)val(argExpr).f);
                 } else if (type == 11) { 
                     char key[100] = "";
                     struct Value kV = val(argExpr);
@@ -434,7 +437,11 @@ struct Value val(char *buff)
             // printf("eval: '%c', n1.type=%d (f=%f), n2.type=%d (f=%f)\n", *pf, n1.type, n1.f, n2.type, n2.f);
             if (n1.type >= VAL_INT_ARRAY || n2.type >= VAL_INT_ARRAY) {
                 printf("Error: Syntax error on complex type arithmetic (n1.type=%d, n2.type=%d, op=%c)\n", n1.type, n2.type, *pf);
-                exit(1);
+                tot.type = VAL_ERROR;
+                tot.f = 0.0;
+                pushV(tot, &PFEval);
+                pf++;
+                continue;
             }
             switch(*pf)
             {

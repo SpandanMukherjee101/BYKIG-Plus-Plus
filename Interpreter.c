@@ -9,7 +9,6 @@ void safe_fscanf(FILE* fp, const char* fmt, char* buf) {
     }
 }
 
-#include <stdlib.h>
 #include <string.h>
 
 #include "ArithmaticExprEval.h"
@@ -652,7 +651,7 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
             
             if (type == 0)
             {
-                if (findFunc(FN, buffer) != NULL || (!strcmp(buffer, "push")) || (!strcmp(buffer, "pop")) || (!strcmp(buffer, "delete")) || (!strcmp(buffer, "exists")) || (!strcmp(buffer, "len")) || (!strcmp(buffer, "file_write")) || (!strcmp(buffer, "file_append")) || (!strcmp(buffer, "file_read")) || (!strcmp(buffer, "file_exists")) || (!strcmp(buffer, "file_scan_open")) || (!strcmp(buffer, "file_scan_next")) || (!strcmp(buffer, "file_scan_close")) || (!strcmp(buffer, "file_scan_get_pos")) || (!strcmp(buffer, "file_scan_set_pos"))) {
+                if (findFunc(FN, buffer) != NULL || findBuiltin(buffer) != NULL) {
                     char exprBuf[1000] = "";
                     strcpy(exprBuf, buffer);
                     strcat(exprBuf, " ");
@@ -661,7 +660,6 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                     while (1) {
                         safe_fscanf(fp, "%s", tD);
                         if (!strcmp(tD, ".")) { goto ERROR; }
-                      if (!strcmp(tD, ".")) { goto ERROR; }
                       strcat(exprBuf, tD);
                         strcat(exprBuf, " ");
                         if (!strcmp(tD, "(")) pDepth++;
@@ -767,12 +765,25 @@ case 14:
             }
             else if (!(strcmp(buffer,"=")))
             {
-                safe_fscanf(fp, "%s", tD);
-                if (!strcmp(tD, "true")) dataI = 1;
-                else if (!strcmp(tD, "false")) dataI = 0;
-                else dataI = atoi(tD);
+                char exprBuf[1000] = "";
+                int pDepth = 0;
+                while (1) {
+                    safe_fscanf(fp, "%s", tD);
+                    if (!strcmp(tD, ".")) { goto ERROR; }
+                    if (!strcmp(tD, "(")) pDepth++;
+                    else if (!strcmp(tD, ")")) pDepth--;
+                    
+                    if (pDepth == 0 && (!strcmp(tD, ",") || !strcmp(tD, ";"))) {
+                        strcpy(buffer, tD);
+                        break;
+                    }
+                    strcat(exprBuf, tD);
+                    strcat(exprBuf, " ");
+                }
+                strcat(exprBuf, ";");
+                dataI = (int)val(exprBuf).f;
 
-                safe_fscanf(fp, "%s", buffer); if (!(strcmp(buffer,",")))
+                if (!(strcmp(buffer,",")))
                 {
                     appendB( &envStack[envTop].BV, name, dataI);
                     goto startB;
@@ -811,6 +822,18 @@ case 15: // intarr
                     safe_fscanf(fp, "%s", buffer); }
                 safe_fscanf(fp, "%s", buffer); struct iA *arr = envStack[envTop].IA;
                 while (arr) { if (!strcmp(arr->name, name)) { arr->size = i; break; } arr = arr->next; }
+            } else {
+                int size = (int)val(buffer).f;
+                safe_fscanf(fp, "%s", buffer);
+                appendIA(&envStack[envTop].IA, name, size);
+                if (!strcmp(buffer, "=")) {
+                    safe_fscanf(fp, "%s", buffer); int i = 0;
+                    safe_fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
+                        if (strcmp(buffer, ",")) {
+                            setIA(envStack[envTop].IA, name, i++, (int)val(buffer).f);
+                        }
+                        safe_fscanf(fp, "%s", buffer); }
+                    safe_fscanf(fp, "%s", buffer); }
             }
             break;
 
@@ -837,6 +860,18 @@ case 15: // intarr
                     safe_fscanf(fp, "%s", buffer); }
                 safe_fscanf(fp, "%s", buffer); struct fA *arr = envStack[envTop].FA;
                 while (arr) { if (!strcmp(arr->name, name)) { arr->size = i; break; } arr = arr->next; }
+            } else {
+                int size = (int)val(buffer).f;
+                safe_fscanf(fp, "%s", buffer);
+                appendFA(&envStack[envTop].FA, name, size);
+                if (!strcmp(buffer, "=")) {
+                    safe_fscanf(fp, "%s", buffer); int i = 0;
+                    safe_fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
+                        if (strcmp(buffer, ",")) {
+                            setFA(envStack[envTop].FA, name, i++, val(buffer).f);
+                        }
+                        safe_fscanf(fp, "%s", buffer); }
+                    safe_fscanf(fp, "%s", buffer); }
             }
             break;
 
@@ -863,6 +898,18 @@ case 15: // intarr
                     safe_fscanf(fp, "%s", buffer); }
                 safe_fscanf(fp, "%s", buffer); struct cA *arr = envStack[envTop].CA;
                 while (arr) { if (!strcmp(arr->name, name)) { arr->size = i; break; } arr = arr->next; }
+            } else {
+                int size = (int)val(buffer).f;
+                safe_fscanf(fp, "%s", buffer);
+                appendCA(&envStack[envTop].CA, name, size);
+                if (!strcmp(buffer, "=")) {
+                    safe_fscanf(fp, "%s", buffer); int i = 0;
+                    safe_fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
+                        if (strcmp(buffer, ",")) {
+                            setCA(envStack[envTop].CA, name, i++, buffer[1] == '\'' ? buffer[1] : buffer[0]);
+                        }
+                        safe_fscanf(fp, "%s", buffer); }
+                    safe_fscanf(fp, "%s", buffer); }
             }
             break;
 
@@ -889,6 +936,18 @@ case 15: // intarr
                     safe_fscanf(fp, "%s", buffer); }
                 safe_fscanf(fp, "%s", buffer); struct bA *arr = envStack[envTop].BA;
                 while (arr) { if (!strcmp(arr->name, name)) { arr->size = i; break; } arr = arr->next; }
+            } else {
+                int size = (int)val(buffer).f;
+                safe_fscanf(fp, "%s", buffer);
+                appendBA(&envStack[envTop].BA, name, size);
+                if (!strcmp(buffer, "=")) {
+                    safe_fscanf(fp, "%s", buffer); int i = 0;
+                    safe_fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
+                        if (strcmp(buffer, ",")) {
+                            setBA(envStack[envTop].BA, name, i++, (int)val(buffer).f);
+                        }
+                        safe_fscanf(fp, "%s", buffer); }
+                    safe_fscanf(fp, "%s", buffer); }
             }
             break;
 
@@ -1053,6 +1112,24 @@ case 15: // intarr
             }
             break;
 
+        case 26: // continue
+            {
+                int target_p = p;
+                while (target_p >= 0 && c[target_p] != 2) {
+                    target_p--;
+                }
+                if (target_p < 0) {
+                    printf("Error: continue outside of loop\n");
+                    break;
+                }
+                
+                fseek(fp, w[target_p], SEEK_SET);
+                w[target_p] = 0;
+                p = target_p - 1;
+                k = p;
+            }
+            break;
+
         case 24: // use
             safe_fscanf(fp, "%s", buffer); {
                 char *start = strchr(buffer, '"');
@@ -1138,16 +1215,16 @@ case 15: // intarr
         printf("Enter the file name to run: ");
         scanf("%s", buffer);
         fp= fopen( buffer, "rb");
-        setvbuf(fp, NULL, _IOFBF, 1048576);
     } else {
         fp= fopen( argv[1], "rb");
-        setvbuf(fp, NULL, _IOFBF, 1048576);
     }
 
     if (fp == NULL) {
         printf("Error: Could not open file.\n");
         exit(1);
     }
+    
+    setvbuf(fp, NULL, _IOFBF, 1048576);
     global_fp = fp;
     current_fp = fp;
     
