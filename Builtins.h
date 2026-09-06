@@ -26,7 +26,7 @@ static inline void trim_spaces(char *s) {
     memmove(s, p, l + 1);
 }
 
-// In BYKIG v2 string literals often come with quotes in args
+ 
 static inline void strip_quotes(char *s) {
     if (s[0] == '"') {
         int l = strlen(s);
@@ -66,7 +66,7 @@ static inline struct Value builtin_map_exists(char args[][1000], int argCount) {
     trim_spaces(name);
     struct Value keyVal = val(args[1]);
     char key[1000] = "";
-    if (keyVal.type == 1) { // VAL_STRING
+    if (keyVal.type == 1) {  
         strcpy(key, keyVal.s);
     } else {
         strcpy(key, args[1]);
@@ -82,7 +82,7 @@ static inline struct Value builtin_map_delete(char args[][1000], int argCount) {
     trim_spaces(name);
     struct Value keyVal = val(args[1]);
     char key[1000] = "";
-    if (keyVal.type == 1) { // VAL_STRING
+    if (keyVal.type == 1) {  
         strcpy(key, keyVal.s);
     } else {
         strcpy(key, args[1]);
@@ -171,7 +171,7 @@ static inline struct Value builtin_file_scan_open(char args[][1000], int argCoun
     }
     struct Value argVal = val(args[0]);
     char filename[1000] = "";
-    if (argVal.type == 1) { // VAL_STRING
+    if (argVal.type == 1) {  
         strcpy(filename, argVal.s);
     } else {
         strcpy(filename, args[0]);
@@ -223,9 +223,9 @@ static inline struct Value builtin_file_scan_set_pos(char args[][1000], int argC
 static inline struct Value builtin_parse_float(char args[][1000], int argCount) {
     struct Value arg = val(args[0]);
     float parsed = 0.0;
-    if (arg.type == 1) { // VAL_STRING
+    if (arg.type == 1) {  
         parsed = atof(arg.s);
-    } else if (arg.type == 0) { // VAL_FLOAT
+    } else if (arg.type == 0) {  
         parsed = arg.f;
     }
     struct Value retV; retV.type=0; retV.f=parsed; return retV;

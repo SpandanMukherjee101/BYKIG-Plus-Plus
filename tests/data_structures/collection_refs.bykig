@@ -1,5 +1,5 @@
-// collection_refs.bykig
-// Tests passing collections by reference to functions
+ 
+ 
 
 out "--- Collection Refs Test ---%n" ;
 

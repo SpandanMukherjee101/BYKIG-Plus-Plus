@@ -1,5 +1,5 @@
-// edge_types.bykig
-// Tests type coercions and edge cases
+ 
+ 
 
 out "--- Edge Types Test ---%n" ;
 
@@ -11,7 +11,7 @@ out "Small int: " + small + "%n" ;
 
 string s = "Hello" ;
 bool b = 1 ;
-// Boolean + String concatenation
+ 
 out "String + Bool: " + s + " " + b + "%n" ;
 
 float f = 0.00001 ;

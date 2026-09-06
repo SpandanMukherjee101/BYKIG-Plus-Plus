@@ -1,9 +1,9 @@
-// file_scanner_test.bykig
-// Tests the new file scanner API (file_scan_open, file_scan_next, file_scan_close)
+ 
+ 
 
 out "--- File Scanner Test ---%n" ;
 
-// Create a dummy file
+ 
 file_write ( "scanner_dummy.txt" , "hello world BYKIG" ) ;
 
 float ok = file_scan_open ( "scanner_dummy.txt" ) ;

@@ -34,7 +34,7 @@ int whichone(char *c)
     else if (!(strcmp(c,__basicFunctions[0]))) return 9;
     else if (!(strcmp(c,__basicFunctions[1]))) return 10;
     
-    // V2 keywords
+     
     else if (!(strcmp(c, "bool"))) return 14;
     else if (!(strcmp(c, "intarr"))) return 15;
     else if (!(strcmp(c, "floatarr"))) return 16;

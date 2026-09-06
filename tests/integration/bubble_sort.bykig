@@ -1,5 +1,5 @@
-// bubble_sort.bykig
-// Complex integration test: Sorting a list of numbers using Bubble Sort
+ 
+ 
 
 out "--- Integration Test: Bubble Sort ---%n" ;
 
@@ -29,7 +29,7 @@ while i < n - 1
         
         if val1 > val2
         {
-            // Swap
+             
             arr [ j ] = val2 ;
             arr [ idx2 ] = val1 ;
         }
@@ -49,7 +49,7 @@ while k < n
 }
 out "%n" ;
 
-// Verification
+ 
 float first ;
 first = arr [ 0 ] ;
 float last ;

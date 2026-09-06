@@ -1,6 +1,6 @@
-// Test file for complex features
+ 
 
-// 1. String Equality
+ 
 string str1 = "hello" ;
 string str2 = "hello" ;
 string str3 = "world" ;
@@ -15,7 +15,7 @@ if str1 ! str3
     out "String inequality works!%n" ;
 }
 
-// 2. Bracket indexing for list and map
+ 
 list l = { 10 , 20 , 30 } ;
 map m = { "key1" = 40 , "key2" = 50 } ;
 
@@ -29,12 +29,12 @@ if m [ "key1" ] ~ 40
     out "Map indexing works!%n" ;
 }
 
-// 3. Console input for collections
-// We'll simulate input via a file or echo
+ 
+ 
 intarr ia [ 3 ] = { 1 , 2 , 3 } ;
-// in ia [ 1 ] ; // Commenting out 'in' so the test runs without hanging
+ 
 
-// 4. Passing collections as arguments
+ 
 func mutateList ( list argL ) {
     argL [ 0 ] = 100 ;
     if argL [ 0 ] ~ 100

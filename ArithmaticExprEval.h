@@ -31,14 +31,14 @@ void resolve_complex_types(char *expr) {
         token = strtok(NULL, " \t\n");
     }
     
-    // Process tokens
+     
     for (int i = 0; i < tokenCount; i++) {
-        // Function evaluation
+         
         if (i < tokenCount - 1 && strcmp(tokens[i+1], "(") == 0) {
             struct funcDef *func = findFunc(FN, tokens[i]);
             struct BuiltinFunc *bfunc = findBuiltin(tokens[i]);
             if (func != NULL || bfunc != NULL) {
-                // Find closing )
+                 
                 int brackets = 1;
                 int j = i + 2;
                 char argExpr[1000] = "";
@@ -82,7 +82,7 @@ void resolve_complex_types(char *expr) {
                     }
                     tokenCount -= shift;
                 } else if (func != NULL) {
-                    // Evaluate arguments
+                     
                     struct Value argVals[10];
                     int argCount = 0;
                     
@@ -113,7 +113,7 @@ void resolve_complex_types(char *expr) {
                         }
                     }
                     
-                    // Set up call frame
+                     
                     if (callStackTop >= 999) {
                         printf("Error: Stack Overflow\n");
                         return;
@@ -125,7 +125,7 @@ void resolve_complex_types(char *expr) {
                       frame->returnValue.type = VAL_FLOAT;
                       frame->returnValue.f = 0.0;
                     
-                    // Setup new environment
+                     
                     envTop++;
                     envStack[envTop].IV = NULL;
                     envStack[envTop].FV = NULL;
@@ -137,9 +137,9 @@ void resolve_complex_types(char *expr) {
                     envStack[envTop].BA = NULL;
                     envStack[envTop].LV = NULL;
                     
-                    // Assign arguments to params
+                     
                     for (int p = 0; p < argCount && p < func->paramCount; p++) {
-                        // printf("Passing %s\n", func->params[p].name); fflush(stdout);
+                         
                         if (func->params[p].type == 1) {
                             appendI(&envStack[envTop].IV, func->params[p].name, (int)argVals[p].f);
                         } else if (func->params[p].type == 2) {
@@ -166,7 +166,7 @@ void resolve_complex_types(char *expr) {
                     }
                     
                     
-    // Execute function body
+     
                     FILE *funcFp = current_fp;
                     int closeFp = 0;
                     if (strlen(func->filepath) > 0) {
@@ -180,10 +180,10 @@ void resolve_complex_types(char *expr) {
                     
                     fseek(funcFp, func->bodyPos, SEEK_SET);
                     
-                    // execute function body
+                     
                     struct Value retVal = run_interpreter_loop(funcFp, NULL);
                     
-                    // restore state
+                     
                     if (closeFp) { fclose(funcFp); }
                     else { fseek(funcFp, savedPos, SEEK_SET); }
                     if (frame->saved_envTop >= 0) {
@@ -197,12 +197,12 @@ void resolve_complex_types(char *expr) {
                     }
                     callStackTop--;
                     
-                    // Replace tokens with result
+                     
                     char resStr[100];
                     sprintf(resStr, "%f", retVal.f);
                     strcpy(tokens[i], resStr);
                     
-                    // Shift tokens
+                     
                     int shift = j - (i + 1);
                     for (int k = i + 1; k < tokenCount - shift; k++) {
                         strcpy(tokens[k], tokens[k + shift]);
@@ -213,7 +213,7 @@ void resolve_complex_types(char *expr) {
     }
 
     
-    // Array and Map resolution
+     
     for (int i = 0; i < tokenCount; i++) {
         if (i < tokenCount - 3 && strcmp(tokens[i+1], "[") == 0) {
             int type = typeFetcher(tokens[i]);
@@ -245,7 +245,7 @@ void resolve_complex_types(char *expr) {
                 } else if (type == 11) { 
                     char key[100] = "";
                     struct Value kV = val(argExpr);
-                    if (kV.type == 1) { // VAL_STRING
+                    if (kV.type == 1) {  
                         strcpy(key, kV.s);
                     } else {
                         sscanf(argExpr, "%s", key);
@@ -269,7 +269,7 @@ void resolve_complex_types(char *expr) {
     }
 
     if (1) {
-        // Rebuild expr
+         
         expr[0] = '\0';
         for (int i = 0; i < tokenCount; i++) {
             if (i > 0) strcat(expr, " ");
@@ -301,7 +301,7 @@ struct Value val(char *buff)
 
 
 
-    // removed buff skip
+     
 
     int in_quotes = 0;
     while( (*buff != ';' || in_quotes) && *buff != '\n' && *buff != '\0')
@@ -434,7 +434,7 @@ struct Value val(char *buff)
             n2= popV(&PFEval);
             tot.type = VAL_FLOAT;
             tot.f = 0.0;
-            // printf("eval: '%c', n1.type=%d (f=%f), n2.type=%d (f=%f)\n", *pf, n1.type, n1.f, n2.type, n2.f);
+             
             if (n1.type >= VAL_INT_ARRAY || n2.type >= VAL_INT_ARRAY) {
                 printf("Error: Syntax error on complex type arithmetic (n1.type=%d, n2.type=%d, op=%c)\n", n1.type, n2.type, *pf);
                 tot.type = VAL_ERROR;

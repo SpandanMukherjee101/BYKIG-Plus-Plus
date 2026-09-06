@@ -1,9 +1,9 @@
-// evaluator.bykig
-// Evaluates basic expressions in mini-bykig
+ 
+ 
 
 use "memory.bykig" ;
 
-// Resolves a token to its numeric value (either a variable or a direct number)
+ 
 func resolveToken ( string t ) {
     
     
@@ -20,8 +20,8 @@ func resolveToken ( string t ) {
     }
 }
 
-// Evaluates assignment: varName = op1 + op2 ;
-// Takes the first operand that was already read
+ 
+ 
 func evalAssignRHS ( string varName , string op1 ) {
     string operator ;
     operator = file_scan_next ( ) ;
@@ -38,7 +38,7 @@ func evalAssignRHS ( string varName , string op1 ) {
         op2 = file_scan_next ( ) ;
         
         string endToken ;
-        endToken = file_scan_next ( ) ; // reads ";"
+        endToken = file_scan_next ( ) ;  
         
         float v1 = resolveToken ( op1 ) ;
         float v2 = resolveToken ( op2 ) ;

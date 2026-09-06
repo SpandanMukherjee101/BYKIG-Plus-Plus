@@ -1,5 +1,5 @@
-// func_shadow_builtins.bykig
-// Tests what happens when a user declares a function with the same name as a built-in
+ 
+ 
 
 out "--- Function Shadowing Built-ins Test ---%n" ;
 

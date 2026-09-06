@@ -1,5 +1,5 @@
-// mock_database.bykig
-// Complex integration test: Using lists and maps to mock a simple database with functions
+ 
+ 
 
 out "--- Integration Test: Mock Database ---%n" ;
 
@@ -8,8 +8,8 @@ map dbValues ;
 
 func insert_record ( string key , float value ) {
     float exist = exists ( key ) ; 
-    // wait, `exists` checks variable scope, not map keys.
-    // We have to iterate the list to check if key exists.
+     
+     
     
     int found = 0 ;
     int lenKeys = len ( dbKeys ) ;
@@ -17,37 +17,37 @@ func insert_record ( string key , float value ) {
     
     while i < lenKeys
     {
-        // Actually, dbKeys stores strings, but in BYKIG++ list only stores floats right now...
-        // Wait, does `list` store strings? 
-        // According to BYKIG++, list stores floats. 
-        // So we cannot store strings in a list!
-        // We will use integer keys instead.
+         
+         
+         
+         
+         
         float k = dbKeys [ i ] ;
-        // We can't do string comparison on list items easily if they are floats.
+         
         i = i + 1 ;
     }
 }
 
-// Since lists only store floats in BYKIG++, let's adapt our database to use float ID keys.
+ 
 list ids ;
-map balances ; // maps in BYKIG++ have string keys! Wait.
+map balances ;  
 
-// Wait, how do maps work in BYKIG++?
-// map balances ;
-// balances [ "Alice" ] = 100.5 ;
-// balances [ "Bob" ] = 200.0 ;
-// out balances [ "Alice" ] ;
+ 
+ 
+ 
+ 
+ 
 
 func add_balance ( string name , float amount ) {
     float current = 0.0 ;
-    // We don't have a way to check if map key exists cleanly if it defaults to 0.0
-    // So we'll just add to it.
+     
+     
     
-    // BUT we cannot pass strings into maps dynamically like `balances [ name ] = ...` because `name` is a variable.
-    // Wait, `val(argExpr)` in Interpreter evaluates map keys, so `balances [ name ]` evaluates `name` which resolves to the string! Yes, dynamic map keys are supported.
+     
+     
 }
 
-// Let's do a pure map test with dynamic keys
+ 
 map accounts ;
 
 string user1 = "Alice" ;

@@ -1,5 +1,5 @@
-// loop_break_edge.bykig
-// Tests breaking out of nested loops and ensuring variables are handled
+ 
+ 
 
 out "--- Loop Break Edge Test ---%n" ;
 

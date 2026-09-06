@@ -1,5 +1,5 @@
-// prime_sieve.bykig
-// Complex integration test: Generating prime numbers (simplified brute-force since modulo % is available)
+ 
+ 
 
 out "--- Integration Test: Prime Number Generator ---%n" ;
 

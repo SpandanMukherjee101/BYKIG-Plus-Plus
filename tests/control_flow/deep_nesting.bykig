@@ -1,5 +1,5 @@
-// deep_nesting.bykig
-// Tests deep loop and condition nesting to check the `c` and `w` array boundaries in Interpreter.c
+ 
+ 
 
 out "--- Deep Nesting Test ---%n" ;
 

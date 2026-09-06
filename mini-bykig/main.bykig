@@ -1,5 +1,5 @@
-// main.bykig
-// Main interpreter loop for mini-bykig
+ 
+ 
 
 use "evaluator.bykig" ;
 
@@ -87,7 +87,7 @@ func execute_block ( float stopAtBrace ) {
             if cond ~ 1
             {
                 execute_block ( 1 ) ;
-                file_scan_set_pos ( cond_pos ) ; // jump back!
+                file_scan_set_pos ( cond_pos ) ;  
             }
             else
             {

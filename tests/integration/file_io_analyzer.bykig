@@ -1,5 +1,5 @@
-// file_io_analyzer.bykig
-// Complex integration test: Testing file read/write, strings, loops, conditionals, and math.
+ 
+ 
 
 out "--- Integration Test: File IO Analyzer ---%n" ;
 

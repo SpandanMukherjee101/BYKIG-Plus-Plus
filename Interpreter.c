@@ -87,8 +87,8 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                 strcat(exprBuf, ";");
                 dataI = (int)val(exprBuf).f;
                 
-                // Do NOT call safe_fscanf(fp, "%s", buffer) here because the while loop
-                // already put the trailing ',' or ';' into buffer!
+                 
+                 
                 
                 if (!(strcmp(buffer,",")))
                 {
@@ -138,8 +138,8 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                 strcat(exprBuf, ";");
                 dataF = (float)val(exprBuf).f;
                 
-                // Do NOT call safe_fscanf(fp, "%s", buffer) here because the while loop
-                // already put the trailing ',' or ';' into buffer!
+                 
+                 
                 
                 if (!(strcmp(buffer,",")))
                 {
@@ -536,7 +536,7 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                     }
                     else
                     {
-                        // Expression evaluation: handles array/list/map indexing, function calls, etc.
+                         
                         char evalBuf[1000];
                         int tLen = strlen(tempS);
                         while (tLen > 0 && (tempS[tLen-1] == ' ' || tempS[tLen-1] == '\t' || tempS[tLen-1] == '\r')) {
@@ -605,7 +605,7 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                 
                 if (type == 11) {
                     struct Value kV = val(buffer);
-                    if (kV.type == 1) { // VAL_STRING
+                    if (kV.type == 1) {  
                         strcpy(keyStr, kV.s);
                     } else {
                         strcpy(keyStr, buffer);
@@ -674,12 +674,12 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
             DO_ASSIGNMENT:
             strcpy(name, buffer);
 
-            if (type >= 6 && type <= 11) { // Arrays, Lists, Maps
+            if (type >= 6 && type <= 11) {  
                 safe_fscanf(fp, "%s", buffer); safe_fscanf(fp, "%s", buffer); int idx = 0;
                 char keyStr[1000] = "";
                 if (type == 11) {
                     struct Value kV = val(buffer);
-                    if (kV.type == 1) { // VAL_STRING
+                    if (kV.type == 1) {  
                         strcpy(keyStr, kV.s);
                     } else {
                         strcpy(keyStr, buffer);
@@ -689,7 +689,7 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                         }
                     }
                 } else {
-                    idx = (int)val(buffer).f; // read index
+                    idx = (int)val(buffer).f;  
                 }
                 
                 safe_fscanf(fp, "%s", buffer); safe_fscanf(fp, "%s", buffer); char exprBuf[1000] = "";
@@ -799,7 +799,7 @@ case 14:
             }
         break;
 
-case 15: // intarr
+case 15:  
             safe_fscanf(fp, "%s", name);
             safe_fscanf(fp, "%s", buffer); if (!strcmp(buffer, "[")) {
                 safe_fscanf(fp, "%s", buffer); int size = (int)val(buffer).f;
@@ -813,7 +813,7 @@ case 15: // intarr
                         safe_fscanf(fp, "%s", buffer); }
                     safe_fscanf(fp, "%s", buffer); }
             } else if (!strcmp(buffer, "=")) {
-                safe_fscanf(fp, "%s", buffer); appendIA(&envStack[envTop].IA, name, 100); // default large capacity
+                safe_fscanf(fp, "%s", buffer); appendIA(&envStack[envTop].IA, name, 100);  
                 int i = 0;
                 safe_fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
                     if (strcmp(buffer, ",")) {
@@ -837,7 +837,7 @@ case 15: // intarr
             }
             break;
 
-        case 16: // floatarr
+        case 16:  
             safe_fscanf(fp, "%s", name);
             safe_fscanf(fp, "%s", buffer); if (!strcmp(buffer, "[")) {
                 safe_fscanf(fp, "%s", buffer); int size = (int)val(buffer).f;
@@ -875,7 +875,7 @@ case 15: // intarr
             }
             break;
 
-        case 17: // chararr
+        case 17:  
             safe_fscanf(fp, "%s", name);
             safe_fscanf(fp, "%s", buffer); if (!strcmp(buffer, "[")) {
                 safe_fscanf(fp, "%s", buffer); int size = (int)val(buffer).f;
@@ -913,7 +913,7 @@ case 15: // intarr
             }
             break;
 
-        case 18: // boolarr
+        case 18:  
             safe_fscanf(fp, "%s", name);
             safe_fscanf(fp, "%s", buffer); if (!strcmp(buffer, "[")) {
                 safe_fscanf(fp, "%s", buffer); int size = (int)val(buffer).f;
@@ -951,7 +951,7 @@ case 15: // intarr
             }
             break;
 
-        case 19: // string
+        case 19:  
             safe_fscanf(fp, "%s", name);
             fgets(buffer, 1000, fp);
             char *start = strchr(buffer, '"');
@@ -973,7 +973,7 @@ case 15: // intarr
             }
             break;
 
-        case 20: // func
+        case 20:  
             {
                 char funcName[100];
                 safe_fscanf(fp, "%s", funcName);
@@ -1003,12 +1003,12 @@ case 15: // intarr
                         else if (!strcmp(buffer, "map")) pType = 11;
                         
                         params[paramCount].type = pType;
-                        safe_fscanf(fp, "%s", params[paramCount].name); // read param name
+                        safe_fscanf(fp, "%s", params[paramCount].name);  
                         paramCount++;
                     }
                     safe_fscanf(fp, "%s", buffer); }
                 
-                safe_fscanf(fp, "%s", buffer); // read '{'
+                safe_fscanf(fp, "%s", buffer);  
                 long bodyPos = ftell(fp);
                 if (!isDuplicate) {
                     char tempPath[1000] = "";
@@ -1018,8 +1018,8 @@ case 15: // intarr
                     }
                 }
                 
-                // Skip the body
-                b1 = 1; // we just read the first '{'
+                 
+                b1 = 1;  
                 b2 = 0;
                 while (b1 != b2) {
                     safe_fscanf(fp, "%s", buffer); if (buffer[0] == '/' && buffer[1] == '/') {
@@ -1032,7 +1032,7 @@ case 15: // intarr
             }
             break;
 
-        case 21: // return
+        case 21:  
             {
                 struct Value retVal; retVal.type=VAL_FLOAT; retVal.f=0.0;
                 char exprBuf[1000] = "";
@@ -1065,10 +1065,10 @@ case 15: // intarr
             }
             break;
 
-        case 22: // list
+        case 22:  
             {
-                safe_fscanf(fp, "%s", name); // read list name
-                appendL(&envStack[envTop].LV, name, 4); // initialize with capacity 4
+                safe_fscanf(fp, "%s", name);  
+                appendL(&envStack[envTop].LV, name, 4);  
 
                 safe_fscanf(fp, "%s", buffer); if (!(strcmp(buffer, "="))) {
                     safe_fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
@@ -1083,7 +1083,7 @@ case 15: // intarr
 
         
 
-        case 25: // break
+        case 25:  
             {
                 int target_p = p;
                 while (target_p >= 0 && c[target_p] != 2) {
@@ -1112,7 +1112,7 @@ case 15: // intarr
             }
             break;
 
-        case 26: // continue
+        case 26:  
             {
                 int target_p = p;
                 while (target_p >= 0 && c[target_p] != 2) {
@@ -1130,7 +1130,7 @@ case 15: // intarr
             }
             break;
 
-        case 24: // use
+        case 24:  
             safe_fscanf(fp, "%s", buffer); {
                 char *start = strchr(buffer, '"');
                 if (start) {
@@ -1169,10 +1169,10 @@ case 15: // intarr
             }
             safe_fscanf(fp, "%s", buffer); break;
 
-        case 23: // map
+        case 23:  
             {
-                safe_fscanf(fp, "%s", name); // read map name
-                appendM(&envStack[envTop].MV, name); // initialize map
+                safe_fscanf(fp, "%s", name);  
+                appendM(&envStack[envTop].MV, name);  
                 safe_fscanf(fp, "%s", buffer); if (!(strcmp(buffer, "="))) {
                     safe_fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
                         safe_fscanf(fp, "%s", buffer); if (!strcmp(buffer, "}")) break;

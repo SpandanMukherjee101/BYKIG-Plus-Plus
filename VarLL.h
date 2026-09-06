@@ -112,14 +112,14 @@ void appendIA(struct iA **q, char *name, int size) {
     strcpy(nnode->name, name); nnode->size = size; nnode->data = (int*)calloc(size, sizeof(int)); nnode->next = *q; *q = nnode;
 }
 
-// Scoped getters
+ 
 int typeFetcher(char *name) {
     for (int idx=envTop; idx>=0; idx--) {
         int i = idx;
         struct iV *iv = envStack[i].IV; while (iv) { if (!strcmp(iv->name, name)) return 1; iv = iv->next; }
         struct fV *fv = envStack[i].FV; 
         while (fv) { 
-            // printf("typeFetcher('%s':%d) checks FV: '%s':%d\n", name, (int)strlen(name), fv->name, (int)strlen(fv->name));
+             
             if (!strcmp(fv->name, name)) return 2; 
             fv = fv->next; 
         }
@@ -289,11 +289,11 @@ float getM_F(struct mV *MV, char *name, char *key) {
     return 0.0;
 }
 char* getM_S(struct mV *MV, char *name, char *key) {
-    // Stub for strings if they ever get added
+     
     return "";
 }
 
-// Function management
+ 
 int appendFunc(struct funcDef **head, char *name, int paramCount, struct funcParam params[], long bodyPos, char *filepath) {
     struct funcDef *temp = *head;
     while (temp) { if (!strcmp(temp->name, name)) { return 1; } temp = temp->next; }
@@ -329,7 +329,7 @@ char* scopeGetSV(char *name) {
 }
 
 
-// List and Map helpers for builtin operations
+ 
 void setL(struct lV *LV, char *name, int idx, float val) {
     while (LV) {
         if (!strcmp(LV->name, name)) {
