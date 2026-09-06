@@ -188,9 +188,12 @@ void resolve_complex_types(char *expr) {
                     if (closeFp) { fclose(funcFp); }
                     else { fseek(funcFp, savedPos, SEEK_SET); }
                     if (frame->saved_envTop >= 0) {
+                        for (int e = envTop; e > frame->saved_envTop; e--) {
+                            cleanupFrame(&envStack[e]);
+                        }
                         envTop = frame->saved_envTop;
-                        // Should theoretically cleanup local env variables here, but omitting for brevity
                     } else {
+                        cleanupFrame(&envStack[envTop]);
                         envTop--;
                     }
                     callStackTop--;

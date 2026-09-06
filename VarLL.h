@@ -63,6 +63,20 @@ extern struct callFrame envStack[10000];
 extern int envTop;
 extern struct funcDef *FN;
 
+void cleanupFrame(struct callFrame *frame) {
+    struct iV *iv = frame->IV; while(iv) { struct iV *n = iv->next; free(iv); iv = n; } frame->IV = NULL;
+    struct fV *fv = frame->FV; while(fv) { struct fV *n = fv->next; free(fv); fv = n; } frame->FV = NULL;
+    struct cV *cv = frame->CV; while(cv) { struct cV *n = cv->next; free(cv); cv = n; } frame->CV = NULL;
+    struct bV *bv = frame->BV; while(bv) { struct bV *n = bv->next; free(bv); bv = n; } frame->BV = NULL;
+    struct sV *sv = frame->SV; while(sv) { struct sV *n = sv->next; free(sv); sv = n; } frame->SV = NULL;
+    struct iA *ia = frame->IA; while(ia) { struct iA *n = ia->next; free(ia->data); free(ia); ia = n; } frame->IA = NULL;
+    struct fA *fa = frame->FA; while(fa) { struct fA *n = fa->next; free(fa->data); free(fa); fa = n; } frame->FA = NULL;
+    struct cA *ca = frame->CA; while(ca) { struct cA *n = ca->next; free(ca->data); free(ca); ca = n; } frame->CA = NULL;
+    struct bA *ba = frame->BA; while(ba) { struct bA *n = ba->next; free(ba->data); free(ba); ba = n; } frame->BA = NULL;
+    struct lV *lv = frame->LV; while(lv) { struct lV *n = lv->next; free(lv->data); free(lv); lv = n; } frame->LV = NULL;
+    struct mV *mv = frame->MV; while(mv) { struct mV *n = mv->next; free(mv); mv = n; } frame->MV = NULL;
+}
+
 void appendI(struct iV **q, char *name, int n) {
     struct iV *temp = *q;
     while (temp) { if (!strcmp(temp->name, name)) { temp->data = n; return; } temp = temp->next; }
