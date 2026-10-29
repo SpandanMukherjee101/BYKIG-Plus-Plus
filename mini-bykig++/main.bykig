@@ -110,12 +110,193 @@ func execute_block ( float stopAtBrace ) {
             }
         }
         
-        if token ~ "var" || token ~ "list" || token ~ "map"
+        if token ~ "class"
+        {
+            string className = file_scan_next ( ) ;
+            string parentName = "" ;
+            string nextTok = file_scan_next ( ) ;
+            if nextTok ~ "extends"
+            {
+                parentName = file_scan_next ( ) ;
+                string brace = file_scan_next ( ) ;
+            }
+            registerClass ( className , parentName ) ;
+            
+            while 1 < 2
+            {
+                string mTok = file_scan_next ( ) ;
+                if mTok ~ "EOF" || mTok ~ "}"
+                {
+                    break ;
+                }
+                
+                float isPriv = 0 ;
+                if mTok ~ "public"
+                {
+                    isPriv = 0 ;
+                    mTok = file_scan_next ( ) ;
+                }
+                elif mTok ~ "private"
+                {
+                    isPriv = 1 ;
+                    mTok = file_scan_next ( ) ;
+                }
+                
+                float isCtor = 0 ;
+                string methodName = "" ;
+                
+                if mTok ~ "func"
+                {
+                    string subTok = file_scan_next ( ) ;
+                    if subTok ~ "construct"
+                    {
+                        isCtor = 1 ;
+                    }
+                    else
+                    {
+                        methodName = subTok ;
+                    }
+                }
+                elif mTok ~ "construct"
+                {
+                    isCtor = 1 ;
+                }
+                
+                if isCtor ~ 1 || methodName ! ""
+                {
+                    string openP = file_scan_next ( ) ;
+                    float pCount = 0 ;
+                    string p0 = "" ;
+                    string p1 = "" ;
+                    string p2 = "" ;
+                    string p3 = "" ;
+                    while 1 < 2
+                    {
+                        string pTok = file_scan_next ( ) ;
+                        if pTok ~ ")"
+                        {
+                            break ;
+                        }
+                        if pTok ! ","
+                        {
+                            float paramPos = file_scan_get_pos ( ) ;
+                            string nextPTok = file_scan_next ( ) ;
+                            string actualParamName = pTok ;
+                            if nextPTok ! "," && nextPTok ! ")"
+                            {
+                                actualParamName = nextPTok ;
+                            }
+                            else
+                            {
+                                file_scan_set_pos ( paramPos ) ;
+                            }
+                            
+                            if pCount ~ 0
+                            {
+                                p0 = actualParamName ;
+                            }
+                            if pCount ~ 1
+                            {
+                                p1 = actualParamName ;
+                            }
+                            if pCount ~ 2
+                            {
+                                p2 = actualParamName ;
+                            }
+                            if pCount ~ 3
+                            {
+                                p3 = actualParamName ;
+                            }
+                            pCount = pCount + 1 ;
+                        }
+                    }
+                    string brace = file_scan_next ( ) ;
+                    float bodyPos = file_scan_get_pos ( ) ;
+                    if isCtor ~ 1
+                    {
+                        registerClassConstructor ( className , bodyPos , pCount , p0 , p1 , p2 , p3 , isPriv ) ;
+                    }
+                    else
+                    {
+                        registerClassMethod ( className , methodName , bodyPos , pCount , p0 , p1 , p2 , p3 , isPriv ) ;
+                    }
+                    skip_block ( ) ;
+                }
+                else
+                {
+                    float ppos = file_scan_get_pos ( ) ;
+                    string nxt = file_scan_next ( ) ;
+                    string fName = mTok ;
+                    if nxt ~ ";"
+                    {
+                        registerClassField ( className , fName , isPriv ) ;
+                    }
+                    elif nxt ~ "="
+                    {
+                        registerClassField ( className , fName , isPriv ) ;
+                        evalExpressionUntil ( ";" ) ;
+                    }
+                    else
+                    {
+                        fName = nxt ;
+                        registerClassField ( className , fName , isPriv ) ;
+                        string afterF = file_scan_next ( ) ;
+                        if afterF ~ "="
+                        {
+                            evalExpressionUntil ( ";" ) ;
+                        }
+                    }
+                }
+            }
+        }
+        
+        if token ~ "new"
+        {
+            string cName = file_scan_next ( ) ;
+            string openP = file_scan_next ( ) ;
+            float objId = newObjectInstance ( cName ) ;
+            initObjectFields ( objId , cName ) ;
+            if classHasCtor [ cName ] ~ 1
+            {
+                execute_class_constructor ( objId , cName ) ;
+            }
+            else
+            {
+                while 1 < 2
+                {
+                    string t = file_scan_next ( ) ;
+                    if t ~ ")" || t ~ "EOF"
+                    {
+                        break ;
+                    }
+                }
+            }
+            string semi = file_scan_next ( ) ;
+        }
+        
+        float isTypeDecl = 0 ;
+        if token ~ "var" || token ~ "list" || token ~ "map" || token ~ "int" || token ~ "float" || token ~ "string" || token ~ "bool" || token ~ "char"
+        {
+            isTypeDecl = 1 ;
+        }
+        elif classExists [ token ] ~ 1
+        {
+            isTypeDecl = 1 ;
+        }
+        
+        if isTypeDecl ~ 1
         {
             string varName = file_scan_next ( ) ;
-            string eq = file_scan_next ( ) ;
-            evalExpressionUntil ( ";" ) ;
-            defVarVal ( varName , evalResStr , evalResNum , evalResType ) ;
+            string eqOrSemi = file_scan_next ( ) ;
+            if eqOrSemi ~ "="
+            {
+                evalExpressionUntil ( ";" ) ;
+                defVarVal ( varName , evalResStr , evalResNum , evalResType ) ;
+            }
+            elif eqOrSemi ~ ";"
+            {
+                defVarVal ( varName , "" , 0 , 0 ) ;
+            }
         }
         
         if token ~ "out"
@@ -283,7 +464,7 @@ func execute_block ( float stopAtBrace ) {
             }
             
             pushScope ( ) ;
-            if firstTok ~ "var" || firstTok ~ "list" || firstTok ~ "map"
+            if firstTok ~ "var" || firstTok ~ "list" || firstTok ~ "map" || firstTok ~ "int" || firstTok ~ "float"
             {
                 string iName = file_scan_next ( ) ;
                 string eq = file_scan_next ( ) ;
@@ -416,8 +597,54 @@ func execute_block ( float stopAtBrace ) {
             string semi = file_scan_next ( ) ;
         }
         
+        if token ~ "this"
+        {
+            float ppos = file_scan_get_pos ( ) ;
+            string nextTok = file_scan_next ( ) ;
+            if nextTok ~ "."
+            {
+                float targetObj = getThisObj ( ) ;
+                if targetObj ~ 0
+                {
+                    out "Runtime Error: 'this' used outside of instance method%n" ;
+                }
+                string memberName = file_scan_next ( ) ;
+                string afterMember = file_scan_next ( ) ;
+                if afterMember ~ "("
+                {
+                    execute_method_call ( targetObj , memberName ) ;
+                    string semi = file_scan_next ( ) ;
+                }
+                elif afterMember ~ "="
+                {
+                    string targetCls = objClass [ targetObj ] ;
+                    float allowed = canAccessField ( targetCls , memberName ) ;
+                    if allowed ! 1
+                    {
+                        string owner = findFieldDeclClass ( targetCls , memberName ) ;
+                        out "Access Error: Cannot access private field '" + memberName + "' of class " + owner + "%n" ;
+                        evalExpressionUntil ( ";" ) ;
+                    }
+                    else
+                    {
+                        evalExpressionUntil ( ";" ) ;
+                        setObjectField ( targetObj , memberName , evalResStr , evalResNum , evalResType ) ;
+                    }
+                }
+            }
+            elif nextTok ~ "="
+            {
+                out "Error: Cannot assign to read-only variable 'this'%n" ;
+                evalExpressionUntil ( ";" ) ;
+            }
+            else
+            {
+                file_scan_set_pos ( ppos ) ;
+            }
+        }
+        
         float isExistingVar = hasVar ( token ) ;
-        if isExistingVar ~ 1
+        if isExistingVar ~ 1 && token ! "this"
         {
             string varName = token ;
             float ppos = file_scan_get_pos ( ) ;
@@ -430,6 +657,33 @@ func execute_block ( float stopAtBrace ) {
             {
                 evalExpressionUntil ( ";" ) ;
                 setVarVal ( varName , evalResStr , evalResNum , evalResType ) ;
+            }
+            elif nextTok ~ "."
+            {
+                float targetObj = getVarVal ( varName ) ;
+                string memberName = file_scan_next ( ) ;
+                string afterMember = file_scan_next ( ) ;
+                if afterMember ~ "("
+                {
+                    execute_method_call ( targetObj , memberName ) ;
+                    string semi = file_scan_next ( ) ;
+                }
+                elif afterMember ~ "="
+                {
+                    string targetCls = objClass [ targetObj ] ;
+                    float allowed = canAccessField ( targetCls , memberName ) ;
+                    if allowed ! 1
+                    {
+                        string owner = findFieldDeclClass ( targetCls , memberName ) ;
+                        out "Access Error: Cannot access private field '" + memberName + "' of class " + owner + "%n" ;
+                        evalExpressionUntil ( ";" ) ;
+                    }
+                    else
+                    {
+                        evalExpressionUntil ( ";" ) ;
+                        setObjectField ( targetObj , memberName , evalResStr , evalResNum , evalResType ) ;
+                    }
+                }
             }
             else
             {

@@ -35,9 +35,13 @@ BYKIG++/
 │       └── audit/           # Memory safety, cyclic references, capacity bounds
 └── mini-bykig++/            # Self-hosted companion interpreter written in BYKIG++
     ├── main.bykig           # CLI loop, statement dispatch, block execution
-    ├── memory.bykig         # Lexical environments, heap lists/maps, function registry
-    ├── evaluator.bykig      # Expressions, collection literals, nested indexing
-    └── test_*.mini          # Test suites for mini-bykig++
+    ├── memory.bykig         # Lexical environments, heap lists/maps, OOP registry
+    ├── evaluator.bykig      # Expressions, collection literals, nested indexing, OOP dispatch
+    ├── README.md            # Companion interpreter overview and landing page
+    ├── UserGuide.md         # Syntax, types, collections, OOP, and user guide
+    ├── DevGuide.md          # Internal architecture, memory layout, and runtime invariants
+    ├── FeatureMatrix.md     # Feature support and runtime boundaries matrix
+    └── tests/               # Test suites for mini-bykig++
 ```
 
 ### Responsibilities

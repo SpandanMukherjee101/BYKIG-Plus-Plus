@@ -92,6 +92,52 @@ func fib ( n )
 var fib7 = fib ( 7 ) ;
 out fib7 ; // Expected: 13 (0, 1, 1, 2, 3, 5, 8, 13)
 
+out "=== Test 9: Object-Oriented Programming (OOP) ===" ;
+class Shape
+{
+    public string kind ;
+
+    public func construct ( k )
+    {
+        this . kind = k ;
+    }
+
+    public func area ( )
+    {
+        return 0 ;
+    }
+
+    public func getKind ( )
+    {
+        return this . kind ;
+    }
+}
+
+class Rectangle extends Shape
+{
+    public float w ;
+    public float h ;
+
+    public func construct ( w , h )
+    {
+        this . kind = "Rectangle" ;
+        this . w = w ;
+        this . h = h ;
+    }
+
+    public func area ( )
+    {
+        return this . w * this . h ;
+    }
+}
+
+var rect = new Rectangle ( 5 , 8 ) ;
+out rect ;
+out rect . getKind ( ) ; // Inherited: Rectangle
+out rect . area ( ) ; // Overridden: 40
+out is_instance ( rect , "Rectangle" ) ; // 1
+out is_instance ( rect , "Shape" ) ; // 1
+
 out "=== All mini-bykig++ Tests Completed Successfully ===" ;
 .
 

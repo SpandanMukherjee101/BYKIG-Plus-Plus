@@ -71,7 +71,7 @@ BYKIG++ does not build a traditional AST. Functions and control flow rely heavil
 | [`FeatureMatrix.md`](FeatureMatrix.md) | Supported features, runtime structures, built-ins, and current implementation boundaries. |
 | [`UserGuide.md`](UserGuide.md) | Syntax, examples, language usage, CLI usage, I/O, collections, functions, and modules. |
 | [`DevGuide.md`](DevGuide.md) | Runtime architecture, source layout, extension points, memory ownership, functions, expressions, and modules. |
-| [`mini-bykig++/README.md`](mini-bykig++/README.md) | Architecture and user guide for `mini-bykig++`, the self-hosted interpreter written in BYKIG++. |
+| [`mini-bykig++/`](mini-bykig++/README.md) | Self-hosted interpreter written in BYKIG++ with its own documentation suite ([README](mini-bykig++/README.md), [User Guide](mini-bykig++/UserGuide.md), [Dev Guide](mini-bykig++/DevGuide.md), [Feature Matrix](mini-bykig++/FeatureMatrix.md)). |
 
 ## Quick example
 

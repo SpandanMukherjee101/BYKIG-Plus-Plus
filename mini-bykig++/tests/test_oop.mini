@@ -1,0 +1,161 @@
+// test_oop.mini - Object-Oriented Programming test suite for mini-bykig++
+
+// 1. Basic Class with Fields, Constructor, and Methods
+class Point
+{
+    public float x ;
+    public float y ;
+
+    public func construct ( initialX , initialY )
+    {
+        this . x = initialX ;
+        this . y = initialY ;
+    }
+
+    public func getX ( )
+    {
+        return this . x ;
+    }
+
+    public func getY ( )
+    {
+        return this . y ;
+    }
+
+    public func setX ( newX )
+    {
+        this . x = newX ;
+    }
+
+    public func sumCoords ( )
+    {
+        return this . x + this . y ;
+    }
+}
+
+out "=== 1. Class Instantiation & Constructor ===" ;
+var p = new Point ( 10 , 20 ) ;
+out p ;
+out p . x ;
+out p . y ;
+out p . getX ( ) ;
+out p . sumCoords ( ) ;
+
+p . setX ( 42 ) ;
+out p . getX ( ) ;
+out p . sumCoords ( ) ;
+
+// 2. Reference Semantics & Aliasing
+out "=== 2. Reference Semantics & Aliasing ===" ;
+var p2 = p ;
+p2 . x = 100 ;
+out p . x ; // Expected: 100
+
+// 3. Default Zero-Arg Constructor
+out "=== 3. Default Zero-Arg Constructor ===" ;
+class Blank
+{
+    public float val ;
+}
+
+var b = new Blank ( ) ;
+out b ;
+out b . val ; // Expected: 0
+
+// 4. Single Inheritance & Field/Method Inheritance
+out "=== 4. Inheritance & Method Overriding ===" ;
+class Animal
+{
+    public string name ;
+
+    public func construct ( n )
+    {
+        this . name = n ;
+    }
+
+    public func speak ( )
+    {
+        return "Generic animal sound" ;
+    }
+
+    public func getName ( )
+    {
+        return this . name ;
+    }
+}
+
+class Dog extends Animal
+{
+    public string breed ;
+
+    public func construct ( n , b )
+    {
+        this . name = n ;
+        this . breed = b ;
+    }
+
+    public func speak ( )
+    {
+        return "Woof!" ;
+    }
+
+    public func getBreed ( )
+    {
+        return this . breed ;
+    }
+}
+
+var a = new Animal ( "Creature" ) ;
+out a . getName ( ) ;
+out a . speak ( ) ;
+
+var d = new Dog ( "Buddy" , "Golden" ) ;
+out d . getName ( ) ; // Inherited method
+out d . getBreed ( ) ;
+out d . speak ( ) ; // Overridden method
+
+// 5. Polymorphic Dynamic Dispatch
+out "=== 5. Polymorphic Dynamic Dispatch ===" ;
+func makeSound ( animalObj )
+{
+    return animalObj . speak ( ) ;
+}
+
+out makeSound ( a ) ;
+out makeSound ( d ) ;
+
+// 6. Runtime Type Checks: is_instance
+out "=== 6. Runtime Type Checks: is_instance ===" ;
+out is_instance ( d , "Dog" ) ; // 1
+out is_instance ( d , "Animal" ) ; // 1
+out is_instance ( a , "Dog" ) ; // 0
+out is_instance ( a , "Animal" ) ; // 1
+out is_instance ( 42 , "Animal" ) ; // 0
+out is_instance ( "text" , "Animal" ) ; // 0
+out is_instance ( d , "NonExistent" ) ; // 0
+
+// 7. Encapsulation & Private Members
+out "=== 7. Encapsulation & Private Members ===" ;
+class Vault
+{
+    private float secret ;
+
+    public func construct ( s )
+    {
+        this . secret = s ;
+    }
+
+    public func reveal ( )
+    {
+        return this . secret ;
+    }
+}
+
+var v = new Vault ( 777 ) ;
+out v . reveal ( ) ; // Allowed: 777
+v . secret = 999 ; // Denied: Access Error
+out v . secret ; // Denied: Access Error
+
+out "=== OOP Tests Completed Successfully ===" ;
+.
+

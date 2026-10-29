@@ -385,6 +385,16 @@ func formatValue ( string valStr , float valNum , float valType ) {
         s = s + "}" ;
         return s ;
     }
+    if valType ~ 4
+    {
+        float objId = valNum ;
+        if objId ~ 0
+        {
+            return "null" ;
+        }
+        string cname = objClass [ objId ] ;
+        return "<Object " + cname + "#" + objId + ">" ;
+    }
     return "" ;
 }
 
@@ -495,5 +505,325 @@ func getReturnIsStr ( ) {
         return 1 ;
     }
     return 0 ;
+}
+
+// ==========================================
+// OOP: Class Registry and Object Storage
+// ==========================================
+
+map classExists = { "null" = 0 } ;
+map classParent = { "null" = "" } ;
+map classFieldCount = { "null" = 0 } ;
+map classFields = { "null" = "" } ;
+map classFieldPrivate = { "null" = 0 } ;
+map classFieldOwner = { "null" = "" } ;
+
+map classMethodCount = { "null" = 0 } ;
+map classMethods = { "null" = "" } ;
+map classMethodPos = { "null" = 0 } ;
+map classMethodParamCount = { "null" = 0 } ;
+map classMethodParams = { "null" = "" } ;
+map classMethodPrivate = { "null" = 0 } ;
+map classMethodOwner = { "null" = "" } ;
+
+map classHasCtor = { "null" = 0 } ;
+map classCtorPos = { "null" = 0 } ;
+map classCtorParamCount = { "null" = 0 } ;
+map classCtorParams = { "null" = "" } ;
+map classCtorPrivate = { "null" = 0 } ;
+
+func registerClass ( string name , string parentName ) {
+    if parentName ! ""
+    {
+        if parentName ~ name
+        {
+            out "Error: Class '" + name + "' cannot extend itself%n" ;
+            return 0 ;
+        }
+        float pEx = exists ( classExists , parentName ) ;
+        if pEx ! 1
+        {
+            out "Error: Parent class '" + parentName + "' not found%n" ;
+            return 0 ;
+        }
+    }
+    classExists [ name ] = 1 ;
+    classParent [ name ] = parentName ;
+    classFieldCount [ name ] = 0 ;
+    classMethodCount [ name ] = 0 ;
+    classHasCtor [ name ] = 0 ;
+    return 1 ;
+}
+
+func findFieldDeclClass ( string className , string fieldName ) {
+    string curClass = className ;
+    while curClass ! ""
+    {
+        string fk = curClass + "_" + fieldName ;
+        float ex = exists ( classFieldOwner , fk ) ;
+        if ex ~ 1
+        {
+            return curClass ;
+        }
+        curClass = classParent [ curClass ] ;
+    }
+    return "" ;
+}
+
+func canAccessField ( string className , string fieldName ) {
+    string owner = findFieldDeclClass ( className , fieldName ) ;
+    if owner ~ ""
+    {
+        return 1 ;
+    }
+    string fk = owner + "_" + fieldName ;
+    float isPriv = classFieldPrivate [ fk ] ;
+    if isPriv ! 1
+    {
+        return 1 ;
+    }
+    string callerContext = getThisExecClass ( ) ;
+    if callerContext ~ owner
+    {
+        return 1 ;
+    }
+    return 0 ;
+}
+
+func registerClassField ( string className , string fieldName , float isPriv ) {
+    float cnt = classFieldCount [ className ] ;
+    if cnt >= 64
+    {
+        out "Error: Class '" + className + "' exceeds maximum field capacity%n" ;
+        return 0 ;
+    }
+    string parentName = classParent [ className ] ;
+    if parentName ! ""
+    {
+        string pOwner = findFieldDeclClass ( parentName , fieldName ) ;
+        if pOwner ! ""
+        {
+            out "Error: Duplicate field '" + fieldName + "' in class '" + className + "'%n" ;
+            return 0 ;
+        }
+    }
+    string idxK = className + "_" + cnt ;
+    classFields [ idxK ] = fieldName ;
+    classFieldCount [ className ] = cnt + 1 ;
+    
+    string fk = className + "_" + fieldName ;
+    classFieldPrivate [ fk ] = isPriv ;
+    classFieldOwner [ fk ] = className ;
+    return 1 ;
+}
+
+func registerClassMethod ( string className , string methodName , float pos , float pCount , string p0 , string p1 , string p2 , string p3 , float isPriv ) {
+    float cnt = classMethodCount [ className ] ;
+    if cnt >= 64
+    {
+        out "Error: Class '" + className + "' exceeds maximum method capacity%n" ;
+        return 0 ;
+    }
+    string parentName = classParent [ className ] ;
+    if parentName ! ""
+    {
+        string pClass = findMethodClass ( parentName , methodName ) ;
+        if pClass ! ""
+        {
+            string pmk = pClass + "_" + methodName ;
+            float parentPCount = classMethodParamCount [ pmk ] ;
+            if pCount ! parentPCount
+            {
+                out "Error: Overridden method '" + methodName + "' parameter count mismatch in class '" + className + "'%n" ;
+            }
+            float parentPriv = classMethodPrivate [ pmk ] ;
+            if parentPriv ~ 0 && isPriv ~ 1
+            {
+                out "Error: Cannot reduce visibility of inherited method '" + methodName + "' in class '" + className + "'%n" ;
+            }
+        }
+    }
+    string idxK = className + "_" + cnt ;
+    classMethods [ idxK ] = methodName ;
+    classMethodCount [ className ] = cnt + 1 ;
+    
+    string mk = className + "_" + methodName ;
+    classMethodPos [ mk ] = pos ;
+    classMethodParamCount [ mk ] = pCount ;
+    classMethodPrivate [ mk ] = isPriv ;
+    classMethodOwner [ mk ] = className ;
+    if pCount > 0
+    {
+        classMethodParams [ mk + "_0" ] = p0 ;
+    }
+    if pCount > 1
+    {
+        classMethodParams [ mk + "_1" ] = p1 ;
+    }
+    if pCount > 2
+    {
+        classMethodParams [ mk + "_2" ] = p2 ;
+    }
+    if pCount > 3
+    {
+        classMethodParams [ mk + "_3" ] = p3 ;
+    }
+    return 1 ;
+}
+
+func registerClassConstructor ( string className , float pos , float pCount , string p0 , string p1 , string p2 , string p3 , float isPriv ) {
+    classHasCtor [ className ] = 1 ;
+    classCtorPos [ className ] = pos ;
+    classCtorParamCount [ className ] = pCount ;
+    classCtorPrivate [ className ] = isPriv ;
+    string ck = className + "_ctor" ;
+    if pCount > 0
+    {
+        classCtorParams [ ck + "_0" ] = p0 ;
+    }
+    if pCount > 1
+    {
+        classCtorParams [ ck + "_1" ] = p1 ;
+    }
+    if pCount > 2
+    {
+        classCtorParams [ ck + "_2" ] = p2 ;
+    }
+    if pCount > 3
+    {
+        classCtorParams [ ck + "_3" ] = p3 ;
+    }
+    return 1 ;
+}
+
+func findMethodClass ( string className , string methodName ) {
+    string curClass = className ;
+    while curClass ! ""
+    {
+        string mk = curClass + "_" + methodName ;
+        float ex = exists ( classMethodPos , mk ) ;
+        if ex ~ 1
+        {
+            return curClass ;
+        }
+        curClass = classParent [ curClass ] ;
+    }
+    return "" ;
+}
+
+func isSubclass ( string childClass , string parentClass ) {
+    if childClass ~ parentClass
+    {
+        return 1 ;
+    }
+    string cur = classParent [ childClass ] ;
+    while cur ! ""
+    {
+        if cur ~ parentClass
+        {
+            return 1 ;
+        }
+        cur = classParent [ cur ] ;
+    }
+    return 0 ;
+}
+
+// Object Storage (Type 4)
+map objClass = { "null" = "" } ;
+map objFieldVal = { "null" = 0 } ;
+map objFieldValStr = { "null" = "" } ;
+map objFieldType = { "null" = 0 } ;
+
+func newObjectInstance ( string className ) {
+    float id = allocObjId ( ) ;
+    objClass [ id ] = className ;
+    return id ;
+}
+
+func initObjectFields ( float objId , string className ) {
+    string curClass = className ;
+    while curClass ! ""
+    {
+        float fCount = classFieldCount [ curClass ] ;
+        float i = 0 ;
+        while i < fCount
+        {
+            string idxK = curClass + "_" + i ;
+            string fName = classFields [ idxK ] ;
+            string fk = objId + "_" + fName ;
+            float ex = exists ( objFieldType , fk ) ;
+            if ex ! 1
+            {
+                setObjectField ( objId , fName , "" , 0 , 0 ) ;
+            }
+            i = i + 1 ;
+        }
+        curClass = classParent [ curClass ] ;
+    }
+}
+
+func setObjectField ( float objId , string fieldName , string valStr , float valNum , float valType ) {
+    string fk = objId + "_" + fieldName ;
+    objFieldType [ fk ] = valType ;
+    if valType ~ 1
+    {
+        objFieldValStr [ fk ] = valStr ;
+    }
+    else
+    {
+        objFieldVal [ fk ] = valNum ;
+    }
+}
+
+func getObjectFieldVal ( float objId , string fieldName ) {
+    string fk = objId + "_" + fieldName ;
+    float t = objFieldType [ fk ] ;
+    if t ~ 1
+    {
+        return objFieldValStr [ fk ] ;
+    }
+    return objFieldVal [ fk ] ;
+}
+
+func getObjectFieldType ( float objId , string fieldName ) {
+    string fk = objId + "_" + fieldName ;
+    float t = objFieldType [ fk ] ;
+    return t ;
+}
+
+// 'this' Receiver Stack
+float thisStackTop = 0 - 1 ;
+map thisStack = { "null" = 0 } ;
+map thisClassStack = { "null" = "" } ;
+
+func pushThis ( float objId , string execClass ) {
+    thisStackTop = thisStackTop + 1 ;
+    thisStack [ thisStackTop ] = objId ;
+    thisClassStack [ thisStackTop ] = execClass ;
+}
+
+func popThis ( ) {
+    if thisStackTop >= 0
+    {
+        thisStackTop = thisStackTop - 1 ;
+    }
+}
+
+func getThisObj ( ) {
+    if thisStackTop >= 0
+    {
+        float id = thisStack [ thisStackTop ] ;
+        return id ;
+    }
+    return 0 ;
+}
+
+func getThisExecClass ( ) {
+    if thisStackTop >= 0
+    {
+        string c = thisClassStack [ thisStackTop ] ;
+        return c ;
+    }
+    return "" ;
 }
 .

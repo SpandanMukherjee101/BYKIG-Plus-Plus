@@ -88,6 +88,10 @@ func isMiniBuiltin ( string name ) {
     {
         return 1 ;
     }
+    if name ~ "is_instance"
+    {
+        return 1 ;
+    }
     return 0 ;
 }
 
@@ -234,6 +238,20 @@ func execute_builtin_call ( string bName ) {
             builtinResType = 0 ;
         }
     }
+    elif bName ~ "is_instance"
+    {
+        builtinResType = 0 ;
+        builtinResNum = 0 ;
+        if a0_t ~ 4 && a0_n ! 0
+        {
+            string actualCls = objClass [ a0_n ] ;
+            string targetCls = a1_s ;
+            if targetCls ! "" && classExists [ targetCls ] ~ 1
+            {
+                builtinResNum = isSubclass ( actualCls , targetCls ) ;
+            }
+        }
+    }
 }
 
 // Parses List Literals: [ elem1 , elem2 , ... ]
@@ -256,7 +274,30 @@ func parse_list_literal ( ) {
             continue ;
         }
         
-        if tok ~ "["
+        if tok ~ "new"
+        {
+            string cName = file_scan_next ( ) ;
+            string oP = file_scan_next ( ) ;
+            float oId = newObjectInstance ( cName ) ;
+            initObjectFields ( oId , cName ) ;
+            if classHasCtor [ cName ] ~ 1
+            {
+                execute_class_constructor ( oId , cName ) ;
+            }
+            else
+            {
+                while 1 < 2
+                {
+                    string t = file_scan_next ( ) ;
+                    if t ~ ")" || t ~ "EOF"
+                    {
+                        break ;
+                    }
+                }
+            }
+            listPush ( id , "" , oId , 4 ) ;
+        }
+        elif tok ~ "["
         {
             float childId = parse_list_literal ( ) ;
             listPush ( id , "" , childId , 2 ) ;
@@ -354,7 +395,30 @@ func parse_map_literal ( ) {
         string valTok = file_scan_next ( ) ;
         float valIsStr = file_scan_is_str ( ) ;
         
-        if valTok ~ "["
+        if valTok ~ "new"
+        {
+            string cName = file_scan_next ( ) ;
+            string oP = file_scan_next ( ) ;
+            float oId = newObjectInstance ( cName ) ;
+            initObjectFields ( oId , cName ) ;
+            if classHasCtor [ cName ] ~ 1
+            {
+                execute_class_constructor ( oId , cName ) ;
+            }
+            else
+            {
+                while 1 < 2
+                {
+                    string t = file_scan_next ( ) ;
+                    if t ~ ")" || t ~ "EOF"
+                    {
+                        break ;
+                    }
+                }
+            }
+            mapSet ( id , key , "" , oId , 4 ) ;
+        }
+        elif valTok ~ "["
         {
             float childLId = parse_list_literal ( ) ;
             mapSet ( id , key , "" , childLId , 2 ) ;
@@ -530,6 +594,44 @@ func evalArg ( ) {
             }
         }
         
+        if token ~ "new"
+        {
+            string cName = file_scan_next ( ) ;
+            string openP = file_scan_next ( ) ;
+            float objId = newObjectInstance ( cName ) ;
+            initObjectFields ( objId , cName ) ;
+            if classHasCtor [ cName ] ~ 1
+            {
+                execute_class_constructor ( objId , cName ) ;
+            }
+            else
+            {
+                while 1 < 2
+                {
+                    string t = file_scan_next ( ) ;
+                    if t ~ ")" || t ~ "EOF"
+                    {
+                        break ;
+                    }
+                }
+            }
+            soleType = 4 ;
+            soleNum = objId ;
+            soleStr = "" ;
+            expr = "" ;
+            float apos = file_scan_get_pos ( ) ;
+            string aft = file_scan_next ( ) ;
+            if aft ~ ")" || aft ~ ","
+            {
+                lastArgDelim = aft ;
+                break ;
+            }
+            else
+            {
+                file_scan_set_pos ( apos ) ;
+            }
+        }
+        
         if token ~ "["
         {
             float lid = parse_list_literal ( ) ;
@@ -635,12 +737,43 @@ func evalArg ( ) {
                 }
                 else
                 {
+                    float isThis = 0 ;
+                    if token ~ "this"
+                    {
+                        isThis = 1 ;
+                    }
                     float isV = hasVar ( token ) ;
-                    if isV ~ 1
+                    if isThis ~ 1 || isV ~ 1
                     {
                         float ppos = file_scan_get_pos ( ) ;
                         string ntok = file_scan_next ( ) ;
-                        if ntok ~ "["
+                        if ntok ~ "."
+                        {
+                            resolve_member_access ( token ) ;
+                            float rpos = file_scan_get_pos ( ) ;
+                            string raft = file_scan_next ( ) ;
+                            file_scan_set_pos ( rpos ) ;
+                            if ( raft ~ ")" || raft ~ "," ) && expr ~ ""
+                            {
+                                soleType = evalResType ;
+                                soleNum = evalResNum ;
+                                soleStr = evalResStr ;
+                            }
+                            else
+                            {
+                                isSoleTerm = 0 ;
+                                if evalResType ~ 1
+                                {
+                                    string qE = quote ( evalResStr ) ;
+                                    expr = expr + " " + qE + " " ;
+                                }
+                                else
+                                {
+                                    expr = expr + " " + evalResNum + " " ;
+                                }
+                            }
+                        }
+                        elif ntok ~ "["
                         {
                             file_scan_set_pos ( ppos ) ;
                             resolve_indexed_val ( token ) ;
@@ -665,6 +798,25 @@ func evalArg ( ) {
                                 {
                                     expr = expr + " " + evalResNum + " " ;
                                 }
+                            }
+                        }
+                        elif isThis ~ 1
+                        {
+                            file_scan_set_pos ( ppos ) ;
+                            float rpos = file_scan_get_pos ( ) ;
+                            string raft = file_scan_next ( ) ;
+                            file_scan_set_pos ( rpos ) ;
+                            float thisObj = getThisObj ( ) ;
+                            if ( raft ~ ")" || raft ~ "," ) && expr ~ ""
+                            {
+                                soleType = 4 ;
+                                soleNum = thisObj ;
+                                soleStr = "" ;
+                            }
+                            else
+                            {
+                                isSoleTerm = 0 ;
+                                expr = expr + " " + thisObj + " " ;
                             }
                         }
                         else
@@ -850,6 +1002,7 @@ func execute_func_call ( string funcName ) {
     float saved_pos = file_scan_get_pos ( ) ;
     file_scan_set_pos ( getFuncPos ( funcName ) ) ;
     
+    pushThis ( 0 , "" ) ;
     pushScope ( ) ;
     if pCount > 0
     {
@@ -874,7 +1027,295 @@ func execute_func_call ( string funcName ) {
     
     file_scan_set_pos ( saved_pos ) ;
     popScope ( ) ;
+    popThis ( ) ;
     hasReturn = 0 ;
+}
+
+func execute_class_constructor ( float objId , string className ) {
+    float pCount = classCtorParamCount [ className ] ;
+    float isPriv = classCtorPrivate [ className ] ;
+    if isPriv ~ 1
+    {
+        string callerContext = getThisExecClass ( ) ;
+        if callerContext ! className
+        {
+            out "Access Error: Cannot invoke private constructor of class " + className + "%n" ;
+            return 0 ;
+        }
+    }
+    
+    string a0_s = "" ;
+    float a0_n = 0 ;
+    float a0_t = 0 ;
+    string a1_s = "" ;
+    float a1_n = 0 ;
+    float a1_t = 0 ;
+    string a2_s = "" ;
+    float a2_n = 0 ;
+    float a2_t = 0 ;
+    string a3_s = "" ;
+    float a3_n = 0 ;
+    float a3_t = 0 ;
+    
+    if pCount > 0
+    {
+        evalArg ( ) ;
+        a0_s = argValStr ;
+        a0_n = argValNum ;
+        a0_t = argValType ;
+    }
+    if pCount > 1
+    {
+        evalArg ( ) ;
+        a1_s = argValStr ;
+        a1_n = argValNum ;
+        a1_t = argValType ;
+    }
+    if pCount > 2
+    {
+        evalArg ( ) ;
+        a2_s = argValStr ;
+        a2_n = argValNum ;
+        a2_t = argValType ;
+    }
+    if pCount > 3
+    {
+        evalArg ( ) ;
+        a3_s = argValStr ;
+        a3_n = argValNum ;
+        a3_t = argValType ;
+    }
+    if pCount ~ 0
+    {
+        string dummy = file_scan_next ( ) ;
+    }
+    
+    float saved_pos = file_scan_get_pos ( ) ;
+    file_scan_set_pos ( classCtorPos [ className ] ) ;
+    
+    pushThis ( objId , className ) ;
+    pushScope ( ) ;
+    
+    defVarVal ( "this" , "" , objId , 4 ) ;
+    
+    string ck = className + "_ctor" ;
+    if pCount > 0
+    {
+        string pn0 = classCtorParams [ ck + "_0" ] ;
+        defVarVal ( pn0 , a0_s , a0_n , a0_t ) ;
+    }
+    if pCount > 1
+    {
+        string pn1 = classCtorParams [ ck + "_1" ] ;
+        defVarVal ( pn1 , a1_s , a1_n , a1_t ) ;
+    }
+    if pCount > 2
+    {
+        string pn2 = classCtorParams [ ck + "_2" ] ;
+        defVarVal ( pn2 , a2_s , a2_n , a2_t ) ;
+    }
+    if pCount > 3
+    {
+        string pn3 = classCtorParams [ ck + "_3" ] ;
+        defVarVal ( pn3 , a3_s , a3_n , a3_t ) ;
+    }
+    
+    execute_block ( 1 ) ;
+    
+    file_scan_set_pos ( saved_pos ) ;
+    popScope ( ) ;
+    popThis ( ) ;
+    hasReturn = 0 ;
+}
+
+func execute_method_call ( float objId , string methodName ) {
+    string actualClass = objClass [ objId ] ;
+    string declClass = findMethodClass ( actualClass , methodName ) ;
+    if declClass ~ ""
+    {
+        out "Runtime Error: Method '" + methodName + "' not found on class '" + actualClass + "'%n" ;
+        return 0 ;
+    }
+    
+    string mk = declClass + "_" + methodName ;
+    float isPriv = classMethodPrivate [ mk ] ;
+    if isPriv ~ 1
+    {
+        string callerContext = getThisExecClass ( ) ;
+        if callerContext ! declClass
+        {
+            out "Access Error: Cannot invoke private method '" + methodName + "' of class " + declClass + "%n" ;
+            return 0 ;
+        }
+    }
+    
+    float pCount = classMethodParamCount [ mk ] ;
+    
+    string a0_s = "" ;
+    float a0_n = 0 ;
+    float a0_t = 0 ;
+    string a1_s = "" ;
+    float a1_n = 0 ;
+    float a1_t = 0 ;
+    string a2_s = "" ;
+    float a2_n = 0 ;
+    float a2_t = 0 ;
+    string a3_s = "" ;
+    float a3_n = 0 ;
+    float a3_t = 0 ;
+    
+    if pCount > 0
+    {
+        evalArg ( ) ;
+        a0_s = argValStr ;
+        a0_n = argValNum ;
+        a0_t = argValType ;
+    }
+    if pCount > 1
+    {
+        evalArg ( ) ;
+        a1_s = argValStr ;
+        a1_n = argValNum ;
+        a1_t = argValType ;
+    }
+    if pCount > 2
+    {
+        evalArg ( ) ;
+        a2_s = argValStr ;
+        a2_n = argValNum ;
+        a2_t = argValType ;
+    }
+    if pCount > 3
+    {
+        evalArg ( ) ;
+        a3_s = argValStr ;
+        a3_n = argValNum ;
+        a3_t = argValType ;
+    }
+    if pCount ~ 0
+    {
+        string dummy = file_scan_next ( ) ;
+    }
+    
+    float saved_pos = file_scan_get_pos ( ) ;
+    file_scan_set_pos ( classMethodPos [ mk ] ) ;
+    
+    pushThis ( objId , declClass ) ;
+    pushScope ( ) ;
+    
+    defVarVal ( "this" , "" , objId , 4 ) ;
+    
+    if pCount > 0
+    {
+        string pn0 = classMethodParams [ mk + "_0" ] ;
+        defVarVal ( pn0 , a0_s , a0_n , a0_t ) ;
+    }
+    if pCount > 1
+    {
+        string pn1 = classMethodParams [ mk + "_1" ] ;
+        defVarVal ( pn1 , a1_s , a1_n , a1_t ) ;
+    }
+    if pCount > 2
+    {
+        string pn2 = classMethodParams [ mk + "_2" ] ;
+        defVarVal ( pn2 , a2_s , a2_n , a2_t ) ;
+    }
+    if pCount > 3
+    {
+        string pn3 = classMethodParams [ mk + "_3" ] ;
+        defVarVal ( pn3 , a3_s , a3_n , a3_t ) ;
+    }
+    
+    execute_block ( 1 ) ;
+    
+    file_scan_set_pos ( saved_pos ) ;
+    popScope ( ) ;
+    popThis ( ) ;
+    hasReturn = 0 ;
+}
+
+func resolve_member_access ( string baseVarName ) {
+    float curObj = 0 ;
+    if baseVarName ~ "this"
+    {
+        curObj = getThisObj ( ) ;
+        if curObj ~ 0
+        {
+            out "Runtime Error: 'this' used outside of instance method%n" ;
+            evalResType = 0 ;
+            evalResNum = 0 ;
+            evalResStr = "" ;
+            return 0 ;
+        }
+    }
+    else
+    {
+        curObj = getVarVal ( baseVarName ) ;
+    }
+    
+    while 1 < 2
+    {
+        string memberName = file_scan_next ( ) ;
+        float mpos = file_scan_get_pos ( ) ;
+        string aft = file_scan_next ( ) ;
+        
+        if aft ~ "("
+        {
+            execute_method_call ( curObj , memberName ) ;
+            evalResType = getReturnType ( ) ;
+            if evalResType ~ 1
+            {
+                evalResStr = getReturnVal ( ) ;
+                evalResNum = 0 ;
+            }
+            else
+            {
+                evalResNum = getReturnVal ( ) ;
+                evalResStr = "" ;
+                curObj = evalResNum ;
+            }
+        }
+        else
+        {
+            file_scan_set_pos ( mpos ) ;
+            string targetCls = objClass [ curObj ] ;
+            float allowed = canAccessField ( targetCls , memberName ) ;
+            if allowed ! 1
+            {
+                string owner = findFieldDeclClass ( targetCls , memberName ) ;
+                out "Access Error: Cannot access private field '" + memberName + "' of class " + owner + "%n" ;
+                evalResType = 0 ;
+                evalResNum = 0 ;
+                evalResStr = "" ;
+                return 0 ;
+            }
+            evalResType = getObjectFieldType ( curObj , memberName ) ;
+            if evalResType ~ 1
+            {
+                evalResStr = getObjectFieldVal ( curObj , memberName ) ;
+                evalResNum = 0 ;
+            }
+            else
+            {
+                evalResNum = getObjectFieldVal ( curObj , memberName ) ;
+                evalResStr = "" ;
+                curObj = evalResNum ;
+            }
+        }
+        
+        float peekPos = file_scan_get_pos ( ) ;
+        string peekTok = file_scan_next ( ) ;
+        if peekTok ~ "." && evalResType ~ 4
+        {
+            // chained loop continues
+        }
+        else
+        {
+            file_scan_set_pos ( peekPos ) ;
+            break ;
+        }
+    }
+    return 1 ;
 }
 
 func evalExpressionUntil ( string stopToken ) {
@@ -894,6 +1335,44 @@ func evalExpressionUntil ( string stopToken ) {
         }
         if token ~ stopToken
         {
+            break ;
+        }
+        
+        if token ~ "new"
+        {
+            string cName = file_scan_next ( ) ;
+            string openP = file_scan_next ( ) ;
+            float objId = newObjectInstance ( cName ) ;
+            initObjectFields ( objId , cName ) ;
+            if classHasCtor [ cName ] ~ 1
+            {
+                execute_class_constructor ( objId , cName ) ;
+            }
+            else
+            {
+                while 1 < 2
+                {
+                    string t = file_scan_next ( ) ;
+                    if t ~ ")" || t ~ "EOF"
+                    {
+                        break ;
+                    }
+                }
+            }
+            soleType = 4 ;
+            soleNum = objId ;
+            soleStr = "" ;
+            expr = "" ;
+            while 1 < 2
+            {
+                float npos = file_scan_get_pos ( ) ;
+                string t = file_scan_next ( ) ;
+                if t ~ stopToken || t ~ "EOF"
+                {
+                    file_scan_set_pos ( npos ) ;
+                    break ;
+                }
+            }
             break ;
         }
         
@@ -1026,12 +1505,43 @@ func evalExpressionUntil ( string stopToken ) {
                 }
                 else
                 {
+                    float isThis = 0 ;
+                    if token ~ "this"
+                    {
+                        isThis = 1 ;
+                    }
                     float isV = hasVar ( token ) ;
-                    if isV ~ 1
+                    if isThis ~ 1 || isV ~ 1
                     {
                         float ppos = file_scan_get_pos ( ) ;
                         string ntok = file_scan_next ( ) ;
-                        if ntok ~ "["
+                        if ntok ~ "."
+                        {
+                            resolve_member_access ( token ) ;
+                            float rpos = file_scan_get_pos ( ) ;
+                            string raft = file_scan_next ( ) ;
+                            file_scan_set_pos ( rpos ) ;
+                            if raft ~ stopToken && expr ~ ""
+                            {
+                                soleType = evalResType ;
+                                soleNum = evalResNum ;
+                                soleStr = evalResStr ;
+                            }
+                            else
+                            {
+                                isSoleTerm = 0 ;
+                                if evalResType ~ 1
+                                {
+                                    string qE = quote ( evalResStr ) ;
+                                    expr = expr + " " + qE + " " ;
+                                }
+                                else
+                                {
+                                    expr = expr + " " + evalResNum + " " ;
+                                }
+                            }
+                        }
+                        elif ntok ~ "["
                         {
                             file_scan_set_pos ( ppos ) ;
                             resolve_indexed_val ( token ) ;
@@ -1056,6 +1566,25 @@ func evalExpressionUntil ( string stopToken ) {
                                 {
                                     expr = expr + " " + evalResNum + " " ;
                                 }
+                            }
+                        }
+                        elif isThis ~ 1
+                        {
+                            file_scan_set_pos ( ppos ) ;
+                            float rpos = file_scan_get_pos ( ) ;
+                            string raft = file_scan_next ( ) ;
+                            file_scan_set_pos ( rpos ) ;
+                            float thisObj = getThisObj ( ) ;
+                            if raft ~ stopToken && expr ~ ""
+                            {
+                                soleType = 4 ;
+                                soleNum = thisObj ;
+                                soleStr = "" ;
+                            }
+                            else
+                            {
+                                isSoleTerm = 0 ;
+                                expr = expr + " " + thisObj + " " ;
                             }
                         }
                         else

@@ -1,184 +1,142 @@
 # mini-bykig++
 
-**mini-bykig++** is a fully-featured, self-hosting-ready interpreter for the `.mini` programming language, written entirely in **BYKIG++**. It runs on top of the native BYKIG++ runtime (`Interpreter.exe`) and provides a modern, expressive dynamically-typed scripting environment with dynamic collections, generic associative maps, nested indexing, functions, and lexical scoping.
+**mini-bykig++** is a fully-featured, self-hosting-ready interpreter for the `.mini` programming language, written entirely in **BYKIG++**.
+
+It runs on top of the native BYKIG++ runtime (`Interpreter.exe`) and provides a modern, expressive dynamically-typed scripting environment featuring dynamic collections, generic associative maps, multi-level nested indexing, lexical scoping, functions, recursion, and a complete Object-Oriented Programming (OOP) system.
 
 ---
 
-## Architecture
+## Highlights
 
-The interpreter is cleanly modularized into three core BYKIG++ modules:
+- **Primitive Types & Dynamic Typing**: Numbers (int/float), strings, booleans (`true`/`false`), and dynamic runtime values.
+- **Arithmetic & Logical Expressions**: Multi-term infix arithmetic (`+`, `-`, `*`, `/`, `%`), comparison (`==`, `!=`, `<`, `>`, `<=`, `>=`), and boolean logic (`&&`, `||`, `!`).
+- **Control Flow**: Conditional branching (`if`, `elif`, `else`), `while` loops with `break` and `continue`, and three-clause `for` loops.
+- **Lexical Scoping & Shadowing**: Block-level variable isolation (`pushScope` / `popScope`) and automatic variable shadowing.
+- **Functions & Recursion**: First-class procedures, multi-parameter functions, return statements, and recursion (single & double recursion).
+- **Dynamic Heap Lists**: Resizable heterogeneous lists (`[ ... ]`) with in-place index mutation, `push`, `pop`, and `len`.
+- **Generic Associative Maps**: Hash maps (`{ ... }`) with string/numeric keys, in-place key updates, `exists`, `delete`, and `len`.
+- **Multi-Level Nested Indexing**: Arbitrary deep read traversal and index assignment across multi-dimensional collections (`matrix[0][1] = 99 ;`, `data["users"][0]["name"]`).
+- **Object-Oriented Programming**:
+  - Class declarations with fields, explicit constructors (`construct`), and instance methods.
+  - Implicit zero-argument default constructors when omitted.
+  - Instantiation via `new ClassName ( ... )` in expressions, statements, collections, and arguments.
+  - Dynamic receiver binding (`this`) with call frame isolation across nested/recursive calls.
+  - Member access and mutation via standard dot notation (`obj . field = ...`, `obj . method ( ... )`).
+  - Single inheritance (`class Dog extends Animal`), inherited member access, and duplicate field collision guards.
+  - Virtual method overriding and dynamic runtime polymorphic dispatch.
+  - Access control and encapsulation with `public` and `private` modifiers enforced against declaring class context.
+  - Runtime object type inspection predicate: `is_instance ( obj , "ClassName" )`.
+  - Standard object string representation: `<Object ClassName#id>`.
+- **100% Pure BYKIG++**: Implemented entirely in BYKIG++ across three decoupled modules without external runtime dependencies.
 
-| Module | Purpose |
+---
+
+## Architecture at a Glance
+
+```text
+                     .mini Source Code
+                            │
+                            ▼
+                  ┌───────────────────┐
+                  │    main.bykig     │  Token Scanner & CLI Loop
+                  │  Statement Engine │  Control Flow (if, while, for)
+                  └─────────┬─────────┘
+                            │
+         ┌──────────────────┴──────────────────┐
+         ▼                                     ▼
+┌───────────────────┐                 ┌───────────────────┐
+│  evaluator.bykig  │                 │   memory.bykig    │
+│  Infix Evaluator  │                 │  Lexical Scopes   │
+│ Collection Parser │◄───────────────►│ List & Map Heaps  │
+│    OOP Dispatch   │                 │ Class & Heap Reg  │
+│  Member Dot Access│                 │ Receiver Stack    │
+└───────────────────┘                 └───────────────────┘
+```
+
+### Module Responsibilities
+
+| Module | File | Purpose |
+|---|---|---|
+| **Memory & Heap** | [`memory.bykig`](memory.bykig) | **Scoped Lexical Environment, Heap Storage & OOP Registry**: Manages lexical block scopes (`pushScope`, `popScope`), variable resolution, variable assignment, shadowing, heap-allocated dynamic lists, generic associative maps, class registry (`registerClass`, `registerClassField`, `registerClassMethod`, `registerClassConstructor`), instance storage (`newObjectInstance`, `setObjectField`, `getObjectFieldVal`), inheritance lookup (`findMethodClass`, `isSubclass`), member encapsulation checks (`canAccessField`), receiver stack (`pushThis`, `popThis`, `getThisObj`), and recursive `Value` formatting (`formatValue`) supporting `<Object ClassName#id>`. |
+| **Evaluator** | [`evaluator.bykig`](evaluator.bykig) | **Expression, Collection, OOP & Call Evaluator**: Evaluates multi-term infix arithmetic, boolean logic, string concatenation, collection literals (`[ ... ]` and `{ ... }`), multi-level nested index resolution (`resolve_indexed_val`), built-in collection operations (`len`, `push`, `pop`, `exists`, `delete`, `is_instance`), constructor execution (`execute_class_constructor`), method invocation (`execute_method_call`), chained member dot resolution (`resolve_member_access`), instantiation (`new ClassName ( ... )`), receiver binding (`this`), function argument lists, and user function execution. |
+| **Execution Loop** | [`main.bykig`](main.bykig) | **Execution Loop & CLI**: Interactive CLI entry point, statement dispatch, block execution, control flow handling (`if`, `elif`, `else`, `while`, `for`, `break`, `continue`), class definition parsing (`class <Name> [extends <Parent>]`), member assignment statements (`obj . field = ...`, `this . field = ...`), standalone method calls, typed variable declarations, nested index assignment (`execute_index_assignment`), standalone built-in execution, and I/O. |
+
+---
+
+## Documentation
+
+| Document | Purpose |
 |---|---|
-| [`memory.bykig`](file:///c:/Users/spand/OneDrive/Documents/MyFiles/BYKIG++/mini-bykig++/memory.bykig) | **Scoped Lexical Environment & Heap Storage**: Manages lexical block scopes (`pushScope`, `popScope`), variable resolution, variable assignment, shadowing, heap-allocated dynamic lists (`newList`, `listPush`, `listPop`, `listSet`, `listGetVal`), generic associative maps (`newMap`, `mapSet`, `mapGetVal`, `mapExists`, `mapDelete`), recursive `Value` formatting (`formatValue`), and the user function registry. |
-| [`evaluator.bykig`](file:///c:/Users/spand/OneDrive/Documents/MyFiles/BYKIG++/mini-bykig++/evaluator.bykig) | **Expression, Collection & Call Evaluator**: Evaluates multi-term infix arithmetic, boolean logic, string concatenation, collection literals (`[ ... ]` and `{ ... }`), multi-level nested index resolution (`resolve_indexed_val`), built-in collection operations (`len`, `push`, `pop`, `exists`, `delete`), function argument lists, and user function execution. |
-| [`main.bykig`](file:///c:/Users/spand/OneDrive/Documents/MyFiles/BYKIG++/mini-bykig++/main.bykig) | **Execution Loop & CLI**: Interactive CLI entry point, statement dispatch, block execution, control flow handling (`if`, `elif`, `else`, `while`, `for`, `break`, `continue`), nested index assignment (`execute_index_assignment`), standalone built-in execution, and I/O. |
+| [`UserGuide.md`](UserGuide.md) | Syntax rules, types, expressions, control flow, functions, dynamic collections, nested indexing, complete OOP guide, built-in reference, and execution. |
+| [`DevGuide.md`](DevGuide.md) | Implementation architecture, memory models, heap representations, class registry, receiver isolation, expression evaluation, statement dispatch, and host runtime invariants. |
+| [`FeatureMatrix.md`](FeatureMatrix.md) | Complete support matrix for core language features, collections, OOP capabilities, built-in functions, and current system boundaries. |
 
 ---
 
-## Language Features (`.mini`)
+## Quick Example
 
-### 1. Variables & Types
-- **Numbers**: Integers and floating-point numbers.
-- **Strings**: Quoted string literals (supports spaces and concatenation with `+`).
-- **Booleans**: `true` and `false` (resolved to `1` and `0` in logical operations).
-- **Dynamic Lists**: Heap-managed arrays containing numbers, strings, lists, or maps.
-- **Generic Maps**: Key-value associative tables with string or numeric keys.
-- **Declaration & Assignment**:
-  ```mini
-  var x = 42 ;
-  var greeting = "Hello, world!" ;
-  x = x + 10 ;
-  ```
+```mini
+class Animal
+{
+    public string name ;
 
-### 2. Dynamic Lists
-- **Literals**: List literals use bracket notation `[ elem1 , elem2 , ... ]`:
-  ```mini
-  var lst = [ 10 , 20 , 30 ] ;
-  out lst ; // Prints [10, 20, 30]
-  ```
-- **Indexing & Mutation**:
-  ```mini
-  out lst[0] ; // 10
-  lst[1] = 99 ;
-  out lst[1] ; // 99
-  ```
-- **Built-in Operations**:
-  - `push(lst, val)`: Appends an element to the list.
-  - `pop(lst)`: Removes and returns the last element.
-  - `len(lst)`: Returns the current element count.
+    public func construct ( petName )
+    {
+        this . name = petName ;
+    }
 
-### 3. Generic Associative Maps
-- **Literals**: Key-value map literals use brace notation `{ "key" : val , ... }`:
-  ```mini
-  var person = { "name" : "Alice" , "age" : 30 } ;
-  out person ; // Prints {"name": Alice, "age": 30}
-  ```
-- **Key Lookup & Update**:
-  ```mini
-  out person["name"] ; // Alice
-  person["city"] = "Paris" ;
-  out person["city"] ; // Paris
-  ```
-- **Built-in Operations**:
-  - `exists(map, key)`: Returns `1` if key is present, `0` otherwise.
-  - `delete(map, key)`: Removes a key-value entry from the map.
-  - `len(map)`: Returns the number of entries in the map.
+    public func speak ( )
+    {
+        out this . name + " makes a sound." ;
+    }
+}
 
-### 4. Nested List & Map Indexing
-- Deep read traversal and index assignment across multi-dimensional collections:
-  ```mini
-  // 2D Array / Nested List
-  var matrix = [ [ 1 , 2 ] , [ 3 , 4 ] ] ;
-  out matrix[0][0] ; // 1
-  matrix[1][0] = 77 ;
-  out matrix ; // [[1, 2], [77, 4]]
+class Dog extends Animal
+{
+    public string breed ;
 
-  // Complex Nested Maps & Lists
-  var data = { "users" : [ { "name" : "Bob" , "score" : 50 } ] } ;
-  out data["users"][0]["name"] ; // Bob
-  data["users"][0]["score"] = 95 ;
-  out data["users"][0]["score"] ; // 95
-  ```
+    public func construct ( petName , petBreed )
+    {
+        this . name = petName ;
+        this . breed = petBreed ;
+    }
 
-### 5. Lexical Scoping & Shadowing
-- Each block `{ ... }` introduces an isolated scope level.
-- Inner variables cleanly shadow outer variables without overwriting the outer scope:
-  ```mini
-  var x = 100 ;
-  if x == 100
-  {
-      var x = 200 ;
-      out x ; // Prints 200
-  }
-  out x ; // Prints 100
-  ```
+    public func speak ( )
+    {
+        out this . name + " barks! (" + this . breed + ")" ;
+    }
+}
 
-### 6. Expressions & Operators
-- **Arithmetic**: `+`, `-`, `*`, `/`, `%` with standard operator precedence and grouping `( ... )`.
-- **Relational**: `==`, `!=`, `<`, `>`, `<=`, `>=`.
-- **Logical**: `&&`, `||`, `!`.
-- **String Concatenation**: `+` handles strings, variables, and numbers seamlessly.
+// Polymorphic invocation
+func announce ( pet )
+{
+    pet . speak ( ) ;
+}
 
-### 7. Control Flow
-- **Conditional branching**:
-  ```mini
-  if score >= 90
-  {
-      out "Grade: A" ;
-  }
-  elif score >= 80
-  {
-      out "Grade: B" ;
-  }
-  else
-  {
-      out "Grade: C" ;
-  }
-  ```
-- **While Loops** (with `break` and `continue` support):
-  ```mini
-  var i = 0 ;
-  while i < 10
-  {
-      i = i + 1 ;
-      if i == 3 { continue ; }
-      if i > 5 { break ; }
-      out i ;
-  }
-  ```
-- **For Loops**:
-  ```mini
-  for var i = 1 ; i <= 5 ; i = i + 1
-  {
-      out i ;
-  }
-  ```
+var myDog = new Dog ( "Buddy" , "Golden Retriever" ) ;
+announce ( myDog ) ; // Buddy barks! (Golden Retriever)
 
-### 8. Functions & Recursion
-- User-defined functions support multiple arguments and return statements.
-- Procedures (functions with side-effects and no explicit return) are supported.
-- Collections can be passed as arguments and returned from functions:
-  ```mini
-  func getFirst ( list )
-  {
-      return list[0] ;
-  }
+// Dynamic collections & built-ins
+var pets = [ myDog ] ;
+push ( pets , new Animal ( "Creature" ) ) ;
+out len ( pets ) ; // 2
 
-  var first = getFirst ( [ 100 , 200 ] ) ;
-  out first ; // 100
-  ```
-- Supports recursive calls (e.g., Fibonacci, Factorial) and nested function calls inside expressions:
-  ```mini
-  func fact ( n )
-  {
-      if n <= 1
-      {
-          return 1 ;
-      }
-      return n * fact ( n - 1 ) ;
-  }
-
-  var res = fact ( 5 ) ;
-  out res ; // 120
-  ```
-
-### 9. I/O & Comments
-- `out <expr> ;`: Prints numbers, strings, collections, or expression results followed by a newline.
-- `in <var> ;`: Reads user input from standard input.
-- `//`: Single-line comments anywhere in source files are ignored by the scanner.
+// Runtime type verification
+out is_instance ( myDog , "Animal" ) ; // 1
+```
 
 ---
 
 ## Test Suites
 
-The test suite is organized into focused `.mini` programs:
+The test suite is organized into focused `.mini` programs located in [`tests/`](tests/):
 
-1. [`test_basic.mini`](file:///c:/Users/spand/OneDrive/Documents/MyFiles/BYKIG++/mini-bykig++/test_basic.mini): Arithmetic precedence, string concatenation, variable mutation, boolean comparisons.
-2. [`test_control.mini`](file:///c:/Users/spand/OneDrive/Documents/MyFiles/BYKIG++/mini-bykig++/test_control.mini): `if`/`elif`/`else`, `while` with `break` & `continue`, `for` loop, block-level variable shadowing.
-3. [`test_func.mini`](file:///c:/Users/spand/OneDrive/Documents/MyFiles/BYKIG++/mini-bykig++/test_func.mini): Multi-parameter functions, string return values, procedures, recursion (`factorial`), and chained calls in expressions.
-4. [`test_collections.mini`](file:///c:/Users/spand/OneDrive/Documents/MyFiles/BYKIG++/mini-bykig++/test_collections.mini): Dynamic lists, generic maps, `push`, `pop`, `len`, `exists`, `delete`, multi-dimensional list indexing (`matrix[1][0]`), deep map/list nesting (`data["users"][0]["name"]`), and collection parameters in functions.
-5. [`test_all.mini`](file:///c:/Users/spand/OneDrive/Documents/MyFiles/BYKIG++/mini-bykig++/test_all.mini): Comprehensive end-to-end regression covering all language features including double recursion (`fibonacci`).
+1. [`test_basic.mini`](tests/test_basic.mini): Arithmetic precedence, string concatenation, variable mutation, boolean comparisons.
+2. [`test_control.mini`](tests/test_control.mini): `if`/`elif`/`else`, `while` with `break` & `continue`, `for` loop, block-level variable shadowing.
+3. [`test_func.mini`](tests/test_func.mini): Multi-parameter functions, string return values, procedures, recursion (`factorial`), and chained calls in expressions.
+4. [`test_collections.mini`](tests/test_collections.mini): Dynamic lists, generic maps, `push`, `pop`, `len`, `exists`, `delete`, multi-dimensional list indexing (`matrix[1][0]`), deep map/list nesting (`data["users"][0]["name"]`), and collection parameters in functions.
+5. [`test_oop.mini`](tests/test_oop.mini): Classes, typed and untyped fields, parameterized & default constructors, dynamic `this` receiver binding & field mutation, member access via dot notation, single inheritance (`extends`), method overriding, runtime polymorphic dispatch, `is_instance` type checking, and private member encapsulation.
+6. [`test_all.mini`](tests/test_all.mini): Comprehensive end-to-end regression covering all language features including double recursion (`fibonacci`) and full OOP integration.
 
 ---
 
@@ -187,17 +145,18 @@ The test suite is organized into focused `.mini` programs:
 To run any `.mini` file through the `mini-bykig++` interpreter:
 
 ```powershell
-echo mini-bykig++/test_collections.mini | .\Interpreter.exe mini-bykig++/main.bykig
+echo mini-bykig++/tests/test_collections.mini | .\Interpreter.exe mini-bykig++/main.bykig
 ```
 
 Or run the full test suite:
+
 ```powershell
-echo mini-bykig++/test_all.mini | .\Interpreter.exe mini-bykig++/main.bykig
+echo mini-bykig++/tests/test_all.mini | .\Interpreter.exe mini-bykig++/main.bykig
 ```
 
 Or interactively:
+
 ```powershell
 .\Interpreter.exe mini-bykig++/main.bykig
-# When prompted, type: mini-bykig++/test_all.mini
+# When prompted, type: mini-bykig++/tests/test_all.mini
 ```
-
