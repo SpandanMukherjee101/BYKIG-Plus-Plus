@@ -292,6 +292,195 @@ static inline char* find_brace_outside_quotes(const char *buf) {
     return NULL;
 }
 
+static inline void handleSuperConstruct(FILE *fp, const char *afterSuper) {
+    if (callStackTop < 0 || !callStack[callStackTop].isConstructor) {
+        printf("Error: 'super.construct' can only be called inside a constructor\n");
+        char t[100];
+        while (!feof(fp) && fscanf(fp, "%99s", t) == 1 && strcmp(t, ";") != 0 && !strchr(t, ';'));
+        return;
+    }
+
+    struct callFrame *curFrame = &callStack[callStackTop];
+    struct classDef *curClass = curFrame->executingClass;
+
+    if (!curClass || !curClass->parent) {
+        printf("Error: Class '%s' has no superclass to call 'super.construct'\n", curClass ? curClass->name : "<unknown>");
+        curFrame->ctorFailed = 1;
+        char t[100];
+        while (!feof(fp) && fscanf(fp, "%99s", t) == 1 && strcmp(t, ";") != 0 && !strchr(t, ';'));
+        return;
+    }
+
+    if (curFrame->statementCount > 0) {
+        printf("Error: 'super.construct' must be the first statement in constructor\n");
+        curFrame->ctorFailed = 1;
+        char t[100];
+        while (!feof(fp) && fscanf(fp, "%99s", t) == 1 && strcmp(t, ";") != 0 && !strchr(t, ';'));
+        return;
+    }
+
+    if (curFrame->superCalled) {
+        printf("Error: 'super.construct' cannot be called more than once\n");
+        curFrame->ctorFailed = 1;
+        char t[100];
+        while (!feof(fp) && fscanf(fp, "%99s", t) == 1 && strcmp(t, ";") != 0 && !strchr(t, ';'));
+        return;
+    }
+
+    curFrame->statementCount++;
+    curFrame->superCalled = 1;
+
+    char tok[100] = "";
+    if (afterSuper == NULL) {
+        read_token_skip_comments(fp, tok);
+        if (strcmp(tok, ".") == 0) {
+            read_token_skip_comments(fp, tok);
+        } else if (tok[0] == '.') {
+            memmove(tok, tok + 1, strlen(tok));
+        } else {
+            printf("Error: Expected '.' after 'super'\n");
+            curFrame->ctorFailed = 1;
+            while (!feof(fp) && strcmp(tok, ";") != 0 && !strchr(tok, ';')) read_token_skip_comments(fp, tok);
+            return;
+        }
+    } else {
+        strncpy(tok, afterSuper, sizeof(tok) - 1);
+        tok[sizeof(tok) - 1] = '\0';
+    }
+
+    if (strncmp(tok, "construct", 9) != 0) {
+        printf("Error: 'super' can only be used to invoke parent constructor via 'super.construct(...)'\n");
+        curFrame->ctorFailed = 1;
+        if (!strchr(tok, ';')) {
+            while (!feof(fp) && fscanf(fp, "%99s", tok) == 1 && strcmp(tok, ";") != 0 && !strchr(tok, ';'));
+        }
+        return;
+    }
+
+    char *paren = strchr(tok, '(');
+    char argExpr[1000] = "";
+    int pDepth = 0;
+    int in_q = 0;
+    int semiFound = 0;
+    int sawParen = (paren != NULL);
+
+    if (paren != NULL) {
+        pDepth = 1;
+        char *p = paren + 1;
+        while (*p) {
+            if (*p == '"') in_q = !in_q;
+            if (!in_q) {
+                if (*p == '(') pDepth++;
+                else if (*p == ')') {
+                    pDepth--;
+                    if (pDepth == 0) {
+                        p++;
+                        while (*p && (*p == ' ' || *p == '\t')) p++;
+                        if (*p == ';') semiFound = 1;
+                        break;
+                    }
+                }
+            }
+            if (pDepth > 0) {
+                int len = strlen(argExpr);
+                if (len < 990) {
+                    argExpr[len] = *p;
+                    argExpr[len + 1] = '\0';
+                }
+            }
+            p++;
+        }
+    }
+
+    if (!semiFound) {
+        char nextTok[100];
+        while (!feof(fp)) {
+            read_token_skip_comments(fp, nextTok);
+            if (feof(fp)) break;
+            char *s = nextTok;
+            while (*s) {
+                if (*s == '"') in_q = !in_q;
+                if (!in_q) {
+                    if (*s == '(') {
+                        sawParen = 1;
+                        pDepth++;
+                        if (pDepth == 1) { s++; continue; }
+                    } else if (*s == ')') {
+                        pDepth--;
+                        if (pDepth == 0) {
+                            s++;
+                            while (*s && (*s == ' ' || *s == '\t')) s++;
+                            if (*s == ';') semiFound = 1;
+                            break;
+                        }
+                    } else if (pDepth == 0 && *s == ';') {
+                        semiFound = 1;
+                        break;
+                    }
+                }
+                if (pDepth > 0) {
+                    int len = strlen(argExpr);
+                    if (len < 990) {
+                        argExpr[len] = *s;
+                        argExpr[len + 1] = '\0';
+                    }
+                }
+                s++;
+            }
+            if (semiFound) break;
+            if (pDepth > 0) {
+                int len = strlen(argExpr);
+                if (len < 990) {
+                    argExpr[len] = ' ';
+                    argExpr[len + 1] = '\0';
+                }
+            }
+        }
+    }
+
+    if (!sawParen) {
+        printf("Error: Expected '(' after 'super.construct'\n");
+        curFrame->ctorFailed = 1;
+        return;
+    }
+
+    struct Value argVals[16];
+    int argCount = 0;
+    parseCallArguments(argExpr, argVals, &argCount);
+
+    struct classDef *parentCls = curClass->parent;
+    struct classMethod *parentCtor = findConstructor(parentCls);
+
+    if (parentCtor == NULL) {
+        if (argCount > 0) {
+            printf("Error: Class '%s' has no constructor matching %d argument(s)\n", parentCls->name, argCount);
+            curFrame->ctorFailed = 1;
+            return;
+        }
+        int ok = runImplicitParentConstructors(curFrame->thisObj, parentCls);
+        if (!ok) curFrame->ctorFailed = 1;
+        return;
+    }
+
+    if (parentCtor->isPrivate) {
+        printf("Error: Cannot access private constructor of class '%s'\n", parentCls->name);
+        curFrame->ctorFailed = 1;
+        return;
+    }
+
+    if (parentCtor->func && parentCtor->func->paramCount != argCount) {
+        printf("Error: Argument count mismatch for constructor in class '%s': expected %d, got %d\n",
+               parentCls->name, parentCtor->func->paramCount, argCount);
+        curFrame->ctorFailed = 1;
+        return;
+    }
+
+    struct Value ret = executeMethod(curFrame->thisObj, parentCtor, argVals, argCount);
+    if (ret.type == VAL_ERROR) {
+        curFrame->ctorFailed = 1;
+    }
+}
+
 struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
 
     char buffer[1000], tempS[1000], name[100], tD[100], dataC, ch;
@@ -331,6 +520,11 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
         mode= 0;
 
         mode= whichone(buffer);
+        if (callStackTop >= 0 && callStack[callStackTop].isConstructor) {
+            if (mode != 7 && mode != 28 && mode != 31 && !(mode == 11 && !strncmp(buffer, "super.", 6)) && strcmp(buffer, ";") != 0) {
+                callStack[callStackTop].statementCount++;
+            }
+        }
         switch (mode)
         {
         
@@ -968,6 +1162,11 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
         
         case 11:
             
+            if (!strncmp(buffer, "super.", 6)) {
+                handleSuperConstruct(fp, buffer + 6);
+                break;
+            }
+
             type= typeFetcher(buffer);
             
             if (type == 0)
@@ -1772,6 +1971,7 @@ case 15:
                 safe_fscanf(fp, "%s", buffer); while (strcmp(buffer, ")")) {
                     if (strcmp(buffer, ",")) {
                         int pType = 0;
+                        char pCls[100] = "";
                         if (!strcmp(buffer, "int")) pType = 1;
                         else if (!strcmp(buffer, "float")) pType = 2;
                         else if (!strcmp(buffer, "char")) pType = 3;
@@ -1783,9 +1983,13 @@ case 15:
                         else if (!strcmp(buffer, "boolarr")) pType = 9;
                         else if (!strcmp(buffer, "list")) pType = 10;
                         else if (!strcmp(buffer, "map")) pType = 11;
-                        else if (findClass(CLASS_REGISTRY, buffer) != NULL || !strcmp(buffer, "object")) pType = 12;
+                        else if (findClass(CLASS_REGISTRY, buffer) != NULL || !strcmp(buffer, "object")) {
+                            pType = 12;
+                            snprintf(pCls, sizeof(pCls), "%s", buffer);
+                        }
                         
                         params[paramCount].type = pType;
+                        snprintf(params[paramCount].className, sizeof(params[paramCount].className), "%s", pCls);
                         safe_fscanf(fp, "%s", params[paramCount].name);  
                         paramCount++;
                     }
@@ -2221,22 +2425,41 @@ case 15:
                 int kw = whichone(className);
                 if (kw != 11 || className[0] == '\0') {
                     printf("Error: Invalid class name '%s' (cannot be a keyword or empty)\n", className);
+                    char skipBuf[100];
+                    read_token_skip_comments(fp, skipBuf);
+                    if (!strcmp(skipBuf, "extends")) {
+                        char parentSkip[100];
+                        read_token_skip_comments(fp, parentSkip);
+                        read_token_skip_comments(fp, skipBuf);
+                    }
+                    if (!strcmp(skipBuf, "{")) {
+                        int bDepth = 1;
+                        while (bDepth > 0 && !feof(fp)) {
+                            read_token_skip_comments(fp, skipBuf);
+                            if (!strcmp(skipBuf, "{")) bDepth++;
+                            else if (!strcmp(skipBuf, "}")) bDepth--;
+                        }
+                    }
                     break;
                 }
                 
                 // 2. Reject duplicate class name
                 if (findClass(CLASS_REGISTRY, className) != NULL) {
                     printf("Error: Duplicate class '%s'\n", className);
-                    char skipBuf[1000];
-                    while (1) {
+                    char skipBuf[100];
+                    read_token_skip_comments(fp, skipBuf);
+                    if (!strcmp(skipBuf, "extends")) {
+                        char parentSkip[100];
+                        read_token_skip_comments(fp, parentSkip);
                         read_token_skip_comments(fp, skipBuf);
-                        if (!strcmp(skipBuf, "{")) break;
                     }
-                    int bDepth = 1;
-                    while (bDepth > 0) {
-                        read_token_skip_comments(fp, skipBuf);
-                        if (!strcmp(skipBuf, "{")) bDepth++;
-                        else if (!strcmp(skipBuf, "}")) bDepth--;
+                    if (!strcmp(skipBuf, "{")) {
+                        int bDepth = 1;
+                        while (bDepth > 0 && !feof(fp)) {
+                            read_token_skip_comments(fp, skipBuf);
+                            if (!strcmp(skipBuf, "{")) bDepth++;
+                            else if (!strcmp(skipBuf, "}")) bDepth--;
+                        }
                     }
                     break;
                 }
@@ -2286,7 +2509,7 @@ case 15:
                     break;
                 }
                 
-                // 4. Allocate and register new class
+                // 4. Allocate class definition (defer registration until validated)
                 struct classDef *cls = (struct classDef*)malloc(sizeof(struct classDef));
                 if (!cls) {
                     printf("Error: Memory allocation failed for class '%s'\n", className);
@@ -2311,20 +2534,22 @@ case 15:
                 }
                 cls->methodCount = 0;
                 cls->constructor = NULL;
-                cls->next = CLASS_REGISTRY;
-                CLASS_REGISTRY = cls;
+                cls->next = NULL;
                 
                 // 5. Parse class body until matching '}'
                 int classDeclError = 0;
+                int curBraceDepth = 1;
                 while (1) {
                     char tok[100];
                     read_token_skip_comments(fp, tok);
                     if (!strcmp(tok, "}")) {
+                        curBraceDepth = 0;
                         break;
                     }
                     if (!strcmp(tok, ".") || feof(fp)) {
                         printf("Error: Unexpected EOF or program terminator inside class '%s'\n", className);
                         classDeclError = 1;
+                        curBraceDepth = 0;
                         break;
                     }
                     
@@ -2350,15 +2575,27 @@ case 15:
                         if (strcmp(pParen, "(") != 0) {
                             printf("Error: Expected '(' after method name '%s' in class '%s'\n", methodName, className);
                             classDeclError = 1;
+                            if (!strcmp(pParen, "}")) curBraceDepth = 0;
+                            else if (!strcmp(pParen, "{")) curBraceDepth = 2;
+                            else curBraceDepth = 1;
                             break;
                         }
                         
                         int paramCount = 0;
                         struct funcParam params[10];
                         read_token_skip_comments(fp, buffer);
+                        int paramError = 0;
                         while (strcmp(buffer, ")") != 0) {
+                            if (!strcmp(buffer, ".") || !strcmp(buffer, "}") || feof(fp)) {
+                                printf("Error: Unexpected token '%s' in parameter list of method '%s' in class '%s'\n", buffer, methodName, className);
+                                classDeclError = 1;
+                                paramError = 1;
+                                if (!strcmp(buffer, "}")) curBraceDepth = 0;
+                                break;
+                            }
                             if (strcmp(buffer, ",") != 0) {
                                 int pType = 0;
+                                char pCls[100] = "";
                                 if (!strcmp(buffer, "int")) pType = 1;
                                 else if (!strcmp(buffer, "float")) pType = 2;
                                 else if (!strcmp(buffer, "char")) pType = 3;
@@ -2370,13 +2607,17 @@ case 15:
                                 else if (!strcmp(buffer, "boolarr")) pType = 9;
                                 else if (!strcmp(buffer, "list")) pType = 10;
                                 else if (!strcmp(buffer, "map")) pType = 11;
-                                else if (findClass(CLASS_REGISTRY, buffer) != NULL || !strcmp(buffer, "object")) pType = 12;
+                                else if (!strcmp(buffer, className) || findClass(CLASS_REGISTRY, buffer) != NULL || !strcmp(buffer, "object")) {
+                                    pType = 12;
+                                    snprintf(pCls, sizeof(pCls), "%s", buffer);
+                                }
                                 else {
                                     printf("Error: Unknown parameter type '%s' in method '%s' of class '%s'\n", buffer, methodName, className);
                                 }
                                 
                                 if (paramCount < 10) {
                                     params[paramCount].type = pType;
+                                    snprintf(params[paramCount].className, sizeof(params[paramCount].className), "%s", pCls);
                                     read_token_skip_comments(fp, params[paramCount].name);
                                     paramCount++;
                                 } else {
@@ -2386,29 +2627,32 @@ case 15:
                             }
                             read_token_skip_comments(fp, buffer);
                         }
+                        if (paramError) break;
                         
                         char mBrace[100];
                         read_token_skip_comments(fp, mBrace);
                         if (strcmp(mBrace, "{") != 0) {
                             printf("Error: Expected '{' for body of method '%s' in class '%s'\n", methodName, className);
                             classDeclError = 1;
+                            if (!strcmp(mBrace, "}")) curBraceDepth = 0;
+                            else curBraceDepth = 1;
                             break;
                         }
                         
                         long bodyPos = ftell(fp);
                         
                         int isDupMethod = 0;
-                        for (int m = 0; m < cls->methodCount; m++) {
-                            if (!strcmp(cls->methods[m].name, methodName)) {
-                                printf("Error: Duplicate method '%s' in class '%s'\n", methodName, className);
-                                isDupMethod = 1;
-                                break;
-                            }
-                        }
-                        
                         if (cls->methodCount >= MAX_CLASS_METHODS) {
                             printf("Error: Class '%s' exceeds maximum method capacity of %d\n", className, MAX_CLASS_METHODS);
                             isDupMethod = 1;
+                        } else {
+                            for (int m = 0; m < cls->methodCount; m++) {
+                                if (!strcmp(cls->methods[m].name, methodName)) {
+                                    printf("Error: Duplicate method '%s' in class '%s'\n", methodName, className);
+                                    isDupMethod = 1;
+                                    break;
+                                }
+                            }
                         }
                         
                         if (!isDupMethod && cls->parent != NULL && strcmp(methodName, "construct") != 0) {
@@ -2425,7 +2669,8 @@ case 15:
                                         isDupMethod = 1;
                                     } else {
                                         for (int pi = 0; pi < paramCount; pi++) {
-                                            if (params[pi].type != inheritedMethod->func->params[pi].type) {
+                                            if (params[pi].type != inheritedMethod->func->params[pi].type ||
+                                                (params[pi].type == 12 && strcmp(params[pi].className, inheritedMethod->func->params[pi].className) != 0)) {
                                                 printf("Error: Method override parameter %d type mismatch in method '%s' of class '%s'\n",
                                                        pi + 1, methodName, className);
                                                 isDupMethod = 1;
@@ -2435,11 +2680,6 @@ case 15:
                                     }
                                 }
                             }
-                        }
-                        
-                        if (cls->methodCount >= MAX_CLASS_METHODS) {
-                            printf("Error: Class '%s' exceeds maximum method capacity of %d\n", className, MAX_CLASS_METHODS);
-                            isDupMethod = 1;
                         }
                         
                         if (!isDupMethod) {
@@ -2466,13 +2706,14 @@ case 15:
                         }
                         
                         int mDepth = 1;
-                        while (mDepth > 0) {
+                        while (mDepth > 0 && !feof(fp)) {
                             read_token_skip_comments(fp, buffer);
                             if (!strcmp(buffer, "{")) mDepth++;
                             else if (!strcmp(buffer, "}")) mDepth--;
                         }
                     } else {
                         int fType = 0;
+                        char fCls[100] = "";
                         if (!strcmp(tok, "int")) fType = 1;
                         else if (!strcmp(tok, "float")) fType = 2;
                         else if (!strcmp(tok, "char")) fType = 3;
@@ -2484,7 +2725,10 @@ case 15:
                         else if (!strcmp(tok, "boolarr")) fType = 9;
                         else if (!strcmp(tok, "list")) fType = 10;
                         else if (!strcmp(tok, "map")) fType = 11;
-                        else if (findClass(CLASS_REGISTRY, tok) != NULL || !strcmp(tok, "object")) fType = 12;
+                        else if (!strcmp(tok, className) || findClass(CLASS_REGISTRY, tok) != NULL || !strcmp(tok, "object")) {
+                            fType = 12;
+                            snprintf(fCls, sizeof(fCls), "%s", tok);
+                        }
                         
                         if (fType == 0) {
                             printf("Error: Malformed class member declaration in class '%s': unexpected token '%s'\n", className, tok);
@@ -2493,8 +2737,12 @@ case 15:
                                 read_token_skip_comments(fp, buffer);
                                 if (!strcmp(buffer, ";") || !strcmp(buffer, "}") || !strcmp(buffer, ".") || feof(fp)) break;
                             }
-                            if (!strcmp(buffer, "}")) break;
-                            continue;
+                            if (!strcmp(buffer, "}")) {
+                                curBraceDepth = 0;
+                                break;
+                            }
+                            curBraceDepth = 1;
+                            break;
                         }
                         
                         while (1) {
@@ -2502,17 +2750,17 @@ case 15:
                             read_token_skip_comments(fp, fieldName);
                             
                             int isDupField = 0;
-                            for (int f = 0; f < cls->fieldCount; f++) {
-                                if (!strcmp(cls->fields[f].name, fieldName)) {
-                                    printf("Error: Duplicate field '%s' in class '%s'\n", fieldName, className);
-                                    isDupField = 1;
-                                    break;
-                                }
-                            }
-                            
                             if (cls->fieldCount >= MAX_CLASS_FIELDS) {
                                 printf("Error: Class '%s' exceeds maximum field capacity of %d\n", className, MAX_CLASS_FIELDS);
                                 isDupField = 1;
+                            } else {
+                                for (int f = 0; f < cls->fieldCount; f++) {
+                                    if (!strcmp(cls->fields[f].name, fieldName)) {
+                                        printf("Error: Duplicate field '%s' in class '%s'\n", fieldName, className);
+                                        isDupField = 1;
+                                        break;
+                                    }
+                                }
                             }
                             
                             if (!isDupField) {
@@ -2520,6 +2768,7 @@ case 15:
                                 cls->fields[cls->fieldCount].type = fType;
                                 cls->fields[cls->fieldCount].isPrivate = isPrivate;
                                 cls->fields[cls->fieldCount].declaringClass = cls;
+                                snprintf(cls->fields[cls->fieldCount].typeName, sizeof(cls->fields[cls->fieldCount].typeName), "%s", fCls);
                                 cls->fieldCount++;
                             }
                             
@@ -2544,11 +2793,35 @@ case 15:
                             } else {
                                 printf("Error: Expected ';' or ',' after field '%s' in class '%s', got '%s'\n", fieldName, className, sep);
                                 classDeclError = 1;
+                                if (!strcmp(sep, "}")) curBraceDepth = 0;
+                                else if (!strcmp(sep, "{")) curBraceDepth = 2;
+                                else curBraceDepth = 1;
                                 break;
                             }
                         }
                         if (classDeclError) break;
                     }
+                }
+                
+                // 6. Finalize registration or perform safe rollback on error
+                if (classDeclError) {
+                    while (curBraceDepth > 0 && !feof(fp)) {
+                        char skipBuf[100];
+                        read_token_skip_comments(fp, skipBuf);
+                        if (!strcmp(skipBuf, "{")) curBraceDepth++;
+                        else if (!strcmp(skipBuf, "}")) curBraceDepth--;
+                    }
+                    for (int m = 0; m < cls->methodCount; m++) {
+                        if (cls->methods[m].func) {
+                            free(cls->methods[m].func);
+                            cls->methods[m].func = NULL;
+                        }
+                    }
+                    free(cls);
+                    cls = NULL;
+                } else {
+                    cls->next = CLASS_REGISTRY;
+                    CLASS_REGISTRY = cls;
                 }
             }
             break;
@@ -2570,6 +2843,10 @@ case 15:
                 strcat(exprBuf, ";");
                 val(exprBuf);
             }
+            break;
+
+        case 31:
+            handleSuperConstruct(fp, NULL);
             break;
 
         default:

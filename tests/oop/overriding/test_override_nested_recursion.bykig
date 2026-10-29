@@ -20,7 +20,7 @@ class Branch extends Node
 
     public func construct ( float v , Node l , Node r )
     {
-        this . val = v ;
+        super . construct ( v ) ;
         this . left = l ;
         this . right = r ;
     }

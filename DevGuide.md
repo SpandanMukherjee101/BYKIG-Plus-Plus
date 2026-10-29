@@ -13,8 +13,9 @@ BYKIG++/
 ├── Builtins.h               # Built-in function handlers and registry
 ├── Keywords.h               # Keyword-to-mode classification
 ├── BYKIG.c                  # Core support routines
-├── tests/                   # Regression test suites and automated test runner
-│   ├── run_tests.py         # Test execution harness (154 tests)
+├── tests/                   # Regression test suites and automated test runners
+│   ├── run_tests.py         # Full regression suite test runner (173 tests)
+│   ├── run_oop_tests.py     # Dedicated OOP subsystem conformance harness (46 tests)
 │   ├── basics/              # Core types, expressions, shadowing, strings
 │   ├── control_flow/        # Conditionals, while loops, for loops, break/continue
 │   ├── data_structures/     # Arrays, dynamic lists, generic maps, collection references
@@ -411,9 +412,9 @@ struct mV {
 
 The OOP subsystem adds classes, instances, encapsulation, single inheritance, and virtual dispatch while strictly preserving the interpreter's direct, token-driven architecture.
 
-### 14.1 Class Registry (`struct classDef`, `CLASS_REGISTRY`)
+### 14.1 Class Declaration and Registration (`CLASS_REGISTRY`)
 
-Classes are declared using `class Name [extends Parent]` and registered in the global linked list `CLASS_REGISTRY`:
+Classes are declared using `class Name [extends SuperName] { ... }` and registered in the global linked list `CLASS_REGISTRY`:
 
 ```c
 struct classDef {
@@ -429,75 +430,78 @@ struct classDef {
 };
 ```
 
-- **Bounds Enforcement**: Up to `MAX_CLASS_FIELDS` (64) fields and `MAX_CLASS_METHODS` (64) methods per class. Declarations exceeding these bounds are rejected with descriptive diagnostics to prevent buffer overflows.
-- **Inherited Field Layout**: Derived classes concatenate inherited superclass fields in parent-to-child order, retaining the declaring class and visibility metadata for access checks.
+- **Single Inheritance Order**: A class may extend at most one superclass. The superclass must be declared prior to the derived class in execution order. Unknown superclasses, self-inheritance (`class A extends A`), and cyclic inheritance chains are rejected with clear diagnostics.
+- **Rollback on Parsing Failure**: If a class body contains malformed definitions or duplicate fields, class registration rolls back: allocated method descriptors are freed, field allocations are rolled back, and the incomplete class is unlinked from `CLASS_REGISTRY`, leaving no dangling metadata.
+- **Capacity Bounds**: Enforces up to `MAX_CLASS_FIELDS` (64) fields and `MAX_CLASS_METHODS` (64) methods per class. Attempting to declare or inherit members beyond these limits emits a descriptive diagnostic and cleanly aborts registration to prevent memory corruption.
+- **Field Collision Prevention**: A class cannot declare duplicate field names within its own body, nor can it declare a field whose name collides with an inherited field from its superclass.
 
-### 14.2 Object Heap & Instances (`struct objInstance`, `OBJECT_HEAP`)
+### 14.2 Member Visibility and Encapsulation
 
-Instances are dynamically allocated on the runtime heap and tracked globally:
+Fields and methods support access control via `public` and `private` visibility specifiers:
 
-```c
-struct objInstance {
-    int id;
-    struct classDef *cls;
-    struct objFieldVal *fields;
-    int fieldCount;
-    struct objInstance *next;
-};
-```
+- **Default Member Visibility**: If an explicit visibility modifier is omitted, members default to `public`.
+- **Declaring-Class Context Model**: Access control is enforced against the member's `declaringClass` rather than the runtime class of the instance:
+  ```c
+  struct classDef *callerContext = (callStackTop >= 0) ? callStack[callStackTop].executingClass : NULL;
+  struct classDef *declaringClass = member->declaringClass ? member->declaringClass : inst->cls;
+  if (callerContext != declaringClass) {
+      // Access blocked: cannot access private member from outside declaring class
+  }
+  ```
+- **Base-Class Access Preservation**: When a base-class method executes on a derived instance, it retains full access to the base class's private fields.
+- **Derived-Class Protection**: Derived-class methods cannot directly read, write, or invoke private members introduced by a superclass.
+- **Same-Class Cross-Instance Access**: Methods of class `A` may access private members on another instance of class `A` (e.g., `other.privateField`).
+- **Global Function Isolation**: Global functions and script top-level statements run with `callerContext == NULL` and cannot access private members.
 
-- **Centralized Heap Ownership**: All instances are linked through `inst->next` into `OBJECT_HEAP`. Environment stack variables (`struct oV`) and object fields hold non-owning references.
-- **Deterministic Shutdown Teardown**: `freeAllObjects(&OBJECT_HEAP)` traverses the intrusive heap chain linearly at process termination, freeing `fields` buffers and instance structs without risk of infinite loops or memory leaks from cyclic user references.
+### 14.3 Constructor Resolution and `super.construct(...)`
 
-### 14.3 Receiver Binding and Call Frames
+- **Constructor Resolution**: Constructors are declared using `public func construct(...)`. A class has at most one constructor. Constructors are not inherited as callable signatures.
+- **Default Constructor**: If a class declares no explicit constructor, it provides an implicit zero-argument default constructor, provided all superclasses in its inheritance chain can be initialized without required arguments.
+- **Explicit Parent Chaining**: Derived constructors invoke parent constructors using `super.construct(arg1, arg2, ...);`.
+- **`super.construct` Contract Rules**:
+  1. `super.construct(...)` must be the first executable statement in a derived constructor body.
+  2. `super` is strictly reserved for constructor chaining; calling `super.construct` outside a constructor or on a class without a superclass is rejected.
+  3. Parent constructors execute against the same object identity (`this`), traversing the hierarchy in base-to-derived order.
+  4. If a superclass constructor requires arguments and the derived constructor neither calls `super.construct(...)` nor supplies valid parameters, instantiation fails with a diagnostic and returns `null`.
 
-When invoking an instance method (`inst . method ( args )`):
+### 14.4 Receiver (`this`) and Dynamic Virtual Dispatch
 
-1. `callStackTop++` pushes a new frame and stores `callStack[callStackTop].thisObj = inst`.
-2. `callStack[callStackTop].executingClass = method->declaringClass` records the declaring class for access control.
-3. An environment frame is initialized (`envTop++`), and local variable `"this"` is bound to `inst`.
-4. Parameters are copied into the callee environment frame.
-5. `run_interpreter_loop()` executes the method body starting at `func->bodyPos`.
-6. Upon return or unwind, the caller's environment frames and receiver state are restored (`callStackTop--`).
-7. Free function calls explicitly set `thisObj = NULL` and `executingClass = NULL`, preventing receiver leakage.
+- **Receiver Binding**: Method calls dynamically bind `this` to the receiver instance `struct objInstance*` in `callStack[callStackTop].thisObj` and local environment `envStack[envTop]`.
+- **Call Frame Isolation & Restoration**: The receiver and `executingClass` context are saved per call frame. Normal return, early return (`return;`), nested method calls (`a.foo(b.bar())`), and recursive calls immediately restore the caller's receiver context upon frame pop.
+- **Free Function Isolation**: Free function calls explicitly push frames with `thisObj = NULL` and `executingClass = NULL`, preventing receiver leakage.
+- **Dynamic Method Dispatch**: Method resolution starts at the receiver's actual dynamic runtime class (`inst->cls`) and traverses parent links upward. Inherited methods remain callable if not overridden.
 
-### 14.4 Virtual Dispatch & Inheritance
+### 14.5 Override Signature Validation
 
-Method dispatch uses `findClassMethod(inst->cls, methodName)`:
+When a derived class declares a method with the same name as an inherited method:
+- **Parameter Count**: Must match the base method's parameter count exactly.
+- **Parameter Types**: Parameter types must match identically, including typed object parameter types (`funcParam.className`).
+- **Visibility Preservation**: An override cannot reduce visibility (overriding a `public` base method as `private` is rejected).
+- Signature violations emit clear diagnostics during class registration and discard the invalid override.
 
-```c
-static inline struct classMethod* findClassMethod(struct classDef *cls, const char *name) {
-    struct classDef *curr = cls;
-    while (curr) {
-        for (int i = 0; i < curr->methodCount; i++) {
-            if (!strcmp(curr->methods[i].name, name)) return &curr->methods[i];
-        }
-        curr = curr->parent;
-    }
-    return NULL;
-}
-```
+### 14.6 Subtyping, Type Compatibility, and Predicates
 
-Method lookup starts at the receiver's actual dynamic runtime class (`inst->cls`) and walks upward through `parent` links, achieving dynamic runtime polymorphism.
+- **Unified Subtyping Rule**: Variable assignment, function/method parameter passing, and field assignment enforce `isSubclassOf(runtimeCls, targetCls)`. Passing or assigning an incompatible instance produces a clear type mismatch diagnostic and sets the target to `null`.
+- **`is_instance(obj, "ClassName")`**: Built-in function returning `1.0` if `obj`'s runtime class matches `ClassName` or descends from it. Returns `0.0` for non-matching classes, unknown classes, primitive values, and `null` references.
+- **Null Safety**: Uninitialized object variables and `null` references (`v.type == VAL_OBJECT && v.ptr == NULL`) format as `"null"`. Reading or writing fields or calling methods on null receivers produces safe diagnostics without crashing. The built-in `is_null(expr)` returns `1.0` for null references.
 
-### 14.5 Access Control and Context Tracking
+### 14.7 Object Lifetimes, Aliasing, and Centralized Cleanup
 
-Private members are guarded against unauthorized callers by comparing the declaring class against the currently executing method:
+- **Heap Ownership**: Object instances (`struct objInstance`) are tracked on a central intrusive heap `OBJECT_HEAP`.
+- **Reference Semantics**: Object variables and fields hold non-owning references. Normal scope and function frame exits (`cleanupFrame`) free variable binding descriptors (`struct oV`) without deallocating heap instances.
+- **Collection Aliasing**: Storing an object into a `list` or `map` preserves the instance reference. Mutating an object retrieved from a collection (`inventory[0].price = 99.0;`) updates the object in-place across all aliases.
+- **Deterministic Teardown**: `freeAllObjects(&OBJECT_HEAP)` linearly frees all heap instances and field storage at shutdown. Because user-level cyclic references (`n1.next = n2; n2.next = n1;`) do not affect the internal heap linked list, shutdown deallocation never loops indefinitely.
 
-```c
-struct classDef *callerContext = (callStackTop >= 0) ? callStack[callStackTop].executingClass : NULL;
-struct classDef *declaringClass = member->declaringClass ? member->declaringClass : inst->cls;
-if (callerContext != declaringClass) {
-    // Access denied: cannot access private member from outside context
-}
-```
+### 14.8 Explicitly Unsupported OOP Features (Non-Goals)
 
-This ensures inherited methods executing on child instances can access their declaring class's private members while foreign, global, or derived-class methods are blocked.
-
-### 14.6 Constructors and Type Predicates
-
-- **Constructors**: Explicitly identified by the name `construct`. Looked up via `findConstructor(cls)` strictly in the target class (constructors are not automatically inherited or chained).
-- **Subclass Compatibility**: `isSubclassOf(child, parent)` traverses `child->parent` to validate assignment compatibility and powers the `is_instance(obj, "ClassName")` built-in.
+To prevent specification drift, the following features are explicitly unsupported in BYKIG++:
+- **Interfaces / Protocols**: No `interface` or `implements` keywords.
+- **Multiple Inheritance**: Strictly single inheritance (`extends` exactly one class).
+- **Abstract Classes / Pure Virtual Methods**: No `abstract` keyword.
+- **General `super.method()` Dispatch**: Calling parent methods outside constructor chaining (`super.construct`) is unsupported.
+- **Destructors / Finalizers**: Objects have no custom destructor or finalizer hooks.
+- **Garbage Collection / Reference Counting**: Heap objects persist until interpreter shutdown.
+- **Operator Overloading**: Custom operator definitions on classes are not supported.
 
 ## 15. Modules
 

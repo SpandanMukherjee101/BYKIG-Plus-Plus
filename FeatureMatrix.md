@@ -29,20 +29,41 @@
 
 | Feature | Status | Notes |
 |---|:---:|---|
-| `class` declaration | ✅ | Registers class metadata, fields, and methods in `CLASS_REGISTRY`. |
-| Instance fields | ✅ | Supported types include primitives, strings, arrays, lists, maps, and objects; up to 64 fields per class. |
-| Access control | ✅ | Explicit `public` and `private` modifiers on fields and methods; default visibility is public. |
-| `new` instantiation | ✅ | Heap-allocates object instances (`struct objInstance`), initializes fields to defaults, and executes constructor. |
-| `construct` constructor | ✅ | Explicit constructor method matching parameter count; default zero-argument constructor provided if omitted. |
-| Instance methods | ✅ | Scoped per declaring class; up to 64 methods per class; callable via `obj . method ( args )` or `obj.method ( args )`. |
+| `class` declaration | ✅ | Registers class metadata, fields, and methods in `CLASS_REGISTRY`; rolls back safely on malformed body. |
+| Single inheritance (`extends`) | ✅ | Derived class inherits fields and methods in parent-to-child order; superclass must precede subclass. |
+| Inheritance validation | ✅ | Duplicate class names, unknown parents, self-inheritance, cyclic inheritance, and field collisions are rejected. |
+| Member capacity limits | ✅ | Strictly enforces up to 64 fields (`MAX_CLASS_FIELDS`) and 64 methods (`MAX_CLASS_METHODS`) per class. |
+| Instance fields | ✅ | Supported types include primitives, strings, arrays, lists, maps, and objects; typed object fields enforce subclass compatibility. |
+| Access control | ✅ | Explicit `public` and `private` modifiers; default visibility is public; access enforced against declaring class context. |
+| Cross-instance private access | ✅ | Methods of a class can access private fields on another instance of the exact same class (`other.secret`). |
+| `new` instantiation | ✅ | Heap-allocates `struct objInstance`, initializes default field values, and executes constructor. |
+| `construct` constructor | ✅ | Explicit constructor method; at most one constructor per class; argument count and types strictly validated. |
+| Default constructor | ✅ | Implicit zero-argument constructor provided when omitted, only if parent chain requires no constructor arguments. |
+| `super.construct(...)` | ✅ | Explicit parent constructor invocation; must be the first statement in derived constructor; multilevel chaining supported. |
+| Instance methods | ✅ | Scoped per declaring class; callable via `obj . method ( args )` or `obj.method ( args )`. |
 | `this` reference | ✅ | Receiver dynamically bound in call frame and local environment; reentrant and isolated across nested/recursive calls. |
-| Reference semantics & aliasing | ✅ | Object variables (`VAL_OBJECT`) hold non-owning heap pointers; mutations reflect across aliases. |
-| Single inheritance (`extends`) | ✅ | Derived class inherits fields and methods; superclasses must be declared before subclasses. |
-| Method overriding & polymorphism | ✅ | Dynamic virtual dispatch starts at receiver's runtime class and traverses parent chain. |
-| Override signature validation | ✅ | Enforces exact parameter count and parameter type matching; prevents illegal visibility reduction. |
-| `is_instance()` predicate | ✅ | Built-in testing exact class match or any descendant class in the inheritance hierarchy. |
+| Method overriding & dynamic dispatch | ✅ | Dispatches dynamically based on receiver's runtime class; un-overridden inherited methods remain callable. |
+| Override signature validation | ✅ | Parameter counts and parameter types must match base method (including object types); visibility reduction rejected. |
+| Assignment compatibility | ✅ | Variables, parameters, and fields enforce `isSubclassOf(child, parent)`; incompatible assignments rejected. |
+| `is_instance()` predicate | ✅ | Built-in testing exact class match or any descendant class in hierarchy; returns 0 on null, primitives, and invalid classes. |
+| `is_null()` predicate | ✅ | Built-in testing whether an object reference is null or uninitialized. |
 | Null dereference safety | ✅ | Guarded member access on uninitialized or null object references with explicit error diagnostics. |
-| Centralized heap reclamation | ✅ | Global intrusive linked list `OBJECT_HEAP` cleaned up deterministically at shutdown via `freeAllObjects()`. |
+| Reference semantics & aliasing | ✅ | Variables and fields hold non-owning heap pointers; mutations reflect across all aliases. |
+| Collections containing objects | ✅ | `list` and `map` store and return object references; in-place mutations reflect across collection references. |
+| Multi-hop navigation | ✅ | Chained member access and collection indexing (`inventory[0].price`, `matrix[0][1]`) resolve to convergence. |
+| Centralized heap reclamation | ✅ | Global intrusive linked list `OBJECT_HEAP` cleaned up deterministically at shutdown via `freeAllObjects()`; cycles cannot hang shutdown. |
+
+## Unsupported OOP Features (Explicit Non-Goals)
+
+| Feature | Status | Notes |
+|---|:---:|---|
+| Interfaces / Protocols | ❌ | No `interface` or `implements` keywords. |
+| Multiple inheritance | ❌ | Strictly single inheritance via `extends`; diamond inheritance is not supported. |
+| Abstract classes / pure virtual methods | ❌ | No `abstract` keyword or abstract method declarations. |
+| General `super.method()` dispatch | ❌ | `super` can only be used as `super.construct(...)` in constructors; calling overridden parent methods from general methods is unsupported. |
+| Destructors / Finalizers | ❌ | No destructor hooks (`~ClassName()` or `destruct`); instances have no user-level cleanup routines. |
+| Garbage collection / Reference counting | ❌ | Allocated object instances persist on `OBJECT_HEAP` until interpreter termination. |
+| Operator overloading | ❌ | Custom operator methods on classes are unsupported. |
 
 ## Runtime data structures
 

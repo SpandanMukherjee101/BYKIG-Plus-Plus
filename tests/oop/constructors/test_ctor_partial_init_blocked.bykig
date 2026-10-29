@@ -1,0 +1,58 @@
+class ParentReq
+{
+    public float pVal ;
+
+    public func construct ( float p )
+    {
+        this . pVal = p ;
+    }
+}
+
+class ChildNoCtor extends ParentReq
+{
+    public float cVal ;
+}
+
+class GrandchildNoCtor extends ChildNoCtor
+{
+    public float gVal ;
+}
+
+class ChildOmitSuper extends ParentReq
+{
+    public float cVal ;
+
+    public func construct ( float c )
+    {
+        this . cVal = c ;
+    }
+}
+
+class PrivateBase
+{
+    private func construct ( float x )
+    {
+    }
+}
+
+class DerivedCallPrivate extends PrivateBase
+{
+    public func construct ( float x )
+    {
+        super . construct ( x ) ;
+    }
+}
+
+ChildNoCtor c1 = new ChildNoCtor ( ) ;
+out c1 ;
+
+GrandchildNoCtor c2 = new GrandchildNoCtor ( ) ;
+out c2 ;
+
+ChildOmitSuper c3 = new ChildOmitSuper ( 50.0 ) ;
+out c3 ;
+
+DerivedCallPrivate c4 = new DerivedCallPrivate ( 10.0 ) ;
+out c4 ;
+.
+

@@ -477,7 +477,8 @@ out p . x ; // Prints 99.0
 ```
 
 - **Identity Equality**: `p == q` tests whether `p` and `q` refer to the identical object instance.
-- **Null Safety**: Uninitialized object variables (`Point p ;`) or variables assigned `null` (`p = null ;`) are safely checked. Dereferencing a null reference prints an explicit runtime error diagnostic without crashing.
+- **Collections Containing Objects**: Dynamic `list` and `map` store object references; mutating an object retrieved from a collection (`items[0].price = 99.0;`) updates the object in-place across all aliases.
+- **Null Safety**: Uninitialized object variables (`Point p ;`) or variables assigned `null` (`p = null ;`) are safely checked. Dereferencing a null reference prints an explicit runtime error diagnostic without crashing. Built-in `is_null(obj)` returns `1.0` if null or uninitialized.
 - **Readable Representation**: Printing an object (`out p ;`) outputs its formatted identifier: `<Object Point#1>`.
 
 ### 16.4 Instance Methods and `this`
@@ -544,6 +545,11 @@ class Animal
 {
     public string name ;
 
+    public func construct ( string n )
+    {
+        this . name = n ;
+    }
+
     public func describe ( )
     {
         out "Animal: " + this . name + "%n" ;
@@ -554,20 +560,24 @@ class Dog extends Animal
 {
     public string breed ;
 
+    public func construct ( string n , string b )
+    {
+        super . construct ( n ) ;
+        this . breed = b ;
+    }
+
     public func bark ( )
     {
         out "Woof!%n" ;
     }
 }
 
-Dog d = new Dog ( ) ;
-d . name = "Rex" ;
-d . breed = "German Shepherd" ;
+Dog d = new Dog ( "Rex" , "German Shepherd" ) ;
 d . describe ( ) ; // Inherited method
 d . bark ( ) ;     // Subclass method
 ```
 
-Multilevel inheritance (`class C extends B`, where `B extends A`) is fully supported. Subclasses inherit all accessible superclass fields and methods while preserving object runtime type identity.
+Derived class constructors initialize superclass state using `super.construct(...)`, which must be the first statement in the constructor. Multilevel inheritance (`class C extends B`, where `B extends A`) is fully supported; each level chains its parent constructor in sequence. Subclasses inherit all accessible superclass fields and methods while preserving object runtime type identity.
 
 ### 16.7 Method Overriding and Polymorphism
 

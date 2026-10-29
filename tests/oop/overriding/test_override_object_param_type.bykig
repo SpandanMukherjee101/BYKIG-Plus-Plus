@@ -1,0 +1,56 @@
+class Animal
+{
+    public string name ;
+
+    public func construct ( string n )
+    {
+        this . name = n ;
+    }
+}
+
+class Dog extends Animal
+{
+    public func construct ( string n )
+    {
+        super . construct ( n ) ;
+    }
+}
+
+class Vehicle
+{
+    public float speed ;
+}
+
+class BaseHandler
+{
+    public func process ( Animal a )
+    {
+        return 1.0 ;
+    }
+}
+
+class DerivedInvalidHandler extends BaseHandler
+{
+    public func process ( Vehicle a )
+    {
+        return 999.0 ;
+    }
+}
+
+class DerivedValidHandler extends BaseHandler
+{
+    public func process ( Animal a )
+    {
+        return 2.0 ;
+    }
+}
+
+DerivedInvalidHandler invH = new DerivedInvalidHandler ( ) ;
+Animal pet = new Dog ( "Rover" ) ;
+out invH . process ( pet ) ;
+
+DerivedValidHandler valH = new DerivedValidHandler ( ) ;
+BaseHandler polyH = valH ;
+out polyH . process ( pet ) ;
+.
+

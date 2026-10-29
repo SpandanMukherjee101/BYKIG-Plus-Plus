@@ -1,0 +1,28 @@
+class Item
+{
+    public float price ;
+    public func construct ( float p )
+    {
+        this . price = p ;
+    }
+}
+
+Item item1 = new Item ( 10.0 ) ;
+Item item2 = item1 ;
+
+list inventory ;
+push ( inventory , item1 ) ;
+
+map catalog ;
+catalog [ "main" ] = item1 ;
+
+item2 . price = 99.0 ;
+
+out item1 . price + "%n" ;
+out item2 . price + "%n" ;
+Item fromList = inventory [ 0 ] ;
+out fromList . price + "%n" ;
+Item fromMap = catalog [ "main" ] ;
+out fromMap . price + "%n" ;
+.
+

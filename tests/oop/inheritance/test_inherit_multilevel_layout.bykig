@@ -1,0 +1,81 @@
+class BaseA
+{
+    public float valA ;
+
+    public func construct ( float a )
+    {
+        this . valA = a ;
+    }
+
+    public func getA ( )
+    {
+        return this . valA ;
+    }
+}
+
+class LevelB extends BaseA
+{
+    public float valB ;
+
+    public func construct ( float a , float b )
+    {
+        super . construct ( a ) ;
+        this . valB = b ;
+    }
+
+    public func getB ( )
+    {
+        return this . valB ;
+    }
+}
+
+class LevelC extends LevelB
+{
+    public float valC ;
+
+    public func construct ( float a , float b , float c )
+    {
+        super . construct ( a , b ) ;
+        this . valC = c ;
+    }
+
+    public func getC ( )
+    {
+        return this . valC ;
+    }
+}
+
+class LevelD extends LevelC
+{
+    public float valD ;
+
+    public func construct ( float a , float b , float c , float d )
+    {
+        super . construct ( a , b , c ) ;
+        this . valD = d ;
+    }
+
+    public func getD ( )
+    {
+        return this . valD ;
+    }
+
+    public func sumAll ( )
+    {
+        return this . valA + this . valB + this . valC + this . valD ;
+    }
+}
+
+LevelD d = new LevelD ( 10.0 , 20.0 , 30.0 , 40.0 ) ;
+out "A: " + d . getA ( ) + "%n" ;
+out "B: " + d . getB ( ) + "%n" ;
+out "C: " + d . getC ( ) + "%n" ;
+out "D: " + d . getD ( ) + "%n" ;
+out "Sum: " + d . sumAll ( ) + "%n" ;
+
+out "is LevelD: " + is_instance ( d , "LevelD" ) + "%n" ;
+out "is LevelC: " + is_instance ( d , "LevelC" ) + "%n" ;
+out "is LevelB: " + is_instance ( d , "LevelB" ) + "%n" ;
+out "is BaseA: " + is_instance ( d , "BaseA" ) + "%n" ;
+.
+

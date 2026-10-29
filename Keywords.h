@@ -52,6 +52,7 @@ int whichone(char *c)
     else if (!(strcmp(c, "{"))) return 28;
     else if (!(strcmp(c, "class"))) return 29;
     else if (!(strcmp(c, "new"))) return 30;
+    else if (!(strcmp(c, "super"))) return 31;
     
     else return 11;
 }

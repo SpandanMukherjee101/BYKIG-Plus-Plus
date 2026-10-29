@@ -26,9 +26,7 @@ class ExplicitChild extends ParentCtor
 
     public func construct ( float a , float b , float c )
     {
-
-        this . pVal1 = a ;
-        this . pVal2 = b ;
+        super . construct ( a , b ) ;
         this . cVal = c ;
     }
 

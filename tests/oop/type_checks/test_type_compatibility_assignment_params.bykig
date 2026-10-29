@@ -1,0 +1,80 @@
+class Living
+{
+    public float alive ;
+
+    public func construct ( )
+    {
+        this . alive = 1.0 ;
+    }
+}
+
+class Animal extends Living
+{
+    public string tag ;
+
+    public func construct ( string t )
+    {
+        this . tag = t ;
+    }
+}
+
+class Dog extends Animal
+{
+    public func construct ( string t )
+    {
+        super . construct ( t ) ;
+    }
+}
+
+class Cat extends Animal
+{
+    public func construct ( string t )
+    {
+        super . construct ( t ) ;
+    }
+}
+
+class Shelter
+{
+    public Animal resident ;
+
+    public func assignResident ( Animal a )
+    {
+        this . resident = a ;
+    }
+
+    public func checkDogOnly ( Dog d )
+    {
+        return 10.0 ;
+    }
+}
+
+Dog buddy = new Dog ( "Buddy" ) ;
+Cat whiskers = new Cat ( "Whiskers" ) ;
+
+Animal polyA = buddy ;
+out polyA . tag ;
+
+Animal badAssign = whiskers ;
+Dog badDog = whiskers ;
+
+Shelter s = new Shelter ( ) ;
+s . assignResident ( buddy ) ;
+out s . resident . tag ;
+
+s . assignResident ( whiskers ) ;
+out s . resident . tag ;
+
+out s . checkDogOnly ( buddy ) ;
+out s . checkDogOnly ( whiskers ) ;
+out s . checkDogOnly ( 999.0 ) ;
+
+out is_instance ( buddy , "Dog" ) ;
+out is_instance ( buddy , "Animal" ) ;
+out is_instance ( buddy , "Living" ) ;
+out is_instance ( buddy , "Cat" ) ;
+out is_instance ( null , "Dog" ) ;
+out is_instance ( 42.0 , "Dog" ) ;
+out is_instance ( buddy , "UnknownClassXYZ" ) ;
+.
+

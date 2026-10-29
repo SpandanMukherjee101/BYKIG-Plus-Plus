@@ -1,0 +1,38 @@
+class PrefixClass
+{
+    public float prefixVal ;
+
+    public func construct ( float v )
+    {
+        this . prefixVal = v ;
+    }
+}
+
+class BadClass
+{
+    public float validBefore ;
+    public invalidKeywordBroken ;
+    public float validAfter ;
+}
+
+class SuffixClass
+{
+    public float suffixVal ;
+
+    public func construct ( float v )
+    {
+        this . suffixVal = v ;
+    }
+}
+
+out "Prefix exists: " + class_exists ( "PrefixClass" ) + "%n" ;
+out "BadClass exists: " + class_exists ( "BadClass" ) + "%n" ;
+out "Suffix exists: " + class_exists ( "SuffixClass" ) + "%n" ;
+
+PrefixClass p = new PrefixClass ( 111.0 ) ;
+out "Prefix val: " + p . prefixVal + "%n" ;
+
+SuffixClass s = new SuffixClass ( 222.0 ) ;
+out "Suffix val: " + s . suffixVal + "%n" ;
+.
+

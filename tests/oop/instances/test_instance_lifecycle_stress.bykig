@@ -1,0 +1,45 @@
+class Node
+{
+    public float val ;
+    public Node next ;
+
+    public func construct ( float v )
+    {
+        this . val = v ;
+        this . next = null ;
+    }
+
+    public func setNext ( Node n )
+    {
+        this . next = n ;
+    }
+}
+
+func makeNode ( float v )
+{
+    Node localNode = new Node ( v ) ;
+    return localNode ;
+}
+
+Node n1 = makeNode ( 100.0 ) ;
+out n1 . val + "%n" ;
+
+Node n2 = new Node ( 200.0 ) ;
+n1 . setNext ( n2 ) ;
+n2 . setNext ( n1 ) ;
+
+out n1 . next . val + "%n" ;
+out n1 . next . next . val + "%n" ;
+
+list nodeCollection ;
+push ( nodeCollection , n1 ) ;
+Node fromColl = nodeCollection [ 0 ] ;
+fromColl . val = 999.0 ;
+out n1 . val + "%n" ;
+
+Node uninit ;
+out is_null ( uninit ) + "%n" ;
+out is_null ( n1 ) + "%n" ;
+
+out uninit . val + "%n" ;
+.

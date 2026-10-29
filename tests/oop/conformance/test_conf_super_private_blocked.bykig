@@ -1,0 +1,29 @@
+class SuperBase
+{
+    private float secret ;
+    public func construct ( float s )
+    {
+        this . secret = s ;
+    }
+    public func getSecret ( )
+    {
+        return this . secret ;
+    }
+}
+
+class DerivedSub extends SuperBase
+{
+    public func construct ( float s )
+    {
+        super . construct ( s ) ;
+    }
+    public func steal ( )
+    {
+        return this . secret ;
+    }
+}
+
+DerivedSub d = new DerivedSub ( 999.0 ) ;
+out d . steal ( ) ;
+.
+

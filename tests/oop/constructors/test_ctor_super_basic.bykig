@@ -1,0 +1,26 @@
+class Animal
+{
+    public string name ;
+
+    public func construct ( string n )
+    {
+        this . name = n ;
+    }
+}
+
+class Dog extends Animal
+{
+    public float age ;
+
+    public func construct ( string n , float a )
+    {
+        super . construct ( n ) ;
+        this . age = a ;
+    }
+}
+
+Dog d = new Dog ( "Buddy" , 5.0 ) ;
+out d . name ;
+out d . age ;
+.
+

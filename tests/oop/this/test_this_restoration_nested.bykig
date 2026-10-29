@@ -1,0 +1,49 @@
+class ChildComponent
+{
+    public float childId ;
+
+    public func construct ( float cid )
+    {
+        this . childId = cid ;
+    }
+
+    public func computeChild ( float mul )
+    {
+        return this . childId * mul ;
+    }
+}
+
+func globalMathHelper ( float x )
+{
+    return x + 1000.0 ;
+}
+
+class ParentContainer
+{
+    public float parentId ;
+    public ChildComponent child ;
+
+    public func construct ( float pid , ChildComponent c )
+    {
+        this . parentId = pid ;
+        this . child = c ;
+    }
+
+    public func executeWorkflow ( float factor )
+    {
+        float before = this . parentId ;
+        float childRes = this . child . computeChild ( factor ) ;
+        float helperRes = globalMathHelper ( childRes ) ;
+        float after = this . parentId ;
+        return before + childRes + helperRes + after ;
+    }
+}
+
+ChildComponent cObj = new ChildComponent ( 5.0 ) ;
+ParentContainer pObj = new ParentContainer ( 10.0 , cObj ) ;
+
+out pObj . executeWorkflow ( 2.0 ) ;
+
+out pObj . child . computeChild ( 4.0 ) ;
+.
+

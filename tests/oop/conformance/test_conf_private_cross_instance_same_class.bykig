@@ -1,0 +1,18 @@
+class SecretPair
+{
+    private float val ;
+    public func construct ( float v )
+    {
+        this . val = v ;
+    }
+    public func combine ( SecretPair other )
+    {
+        return this . val + other . val ;
+    }
+}
+
+SecretPair s1 = new SecretPair ( 30.0 ) ;
+SecretPair s2 = new SecretPair ( 70.0 ) ;
+out s1 . combine ( s2 ) + "%n" ;
+.
+

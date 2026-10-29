@@ -47,7 +47,7 @@ struct mV {
     struct mV *next;
 };
 
-struct funcParam { int type; char name[100]; };
+struct funcParam { int type; char name[100]; char className[100]; };
 struct funcDef { char name[100]; int paramCount; struct funcParam params[10]; long bodyPos; char filepath[1000]; struct funcDef *next; };
 
 #define MAX_CLASS_FIELDS 64
@@ -60,6 +60,7 @@ struct classField {
     int type;          // 1=int, 2=float, 3=char, 4=bool, 5=string, 6=intarr, 7=floatarr, 8=chararr, 9=boolarr, 10=list, 11=map, 12=object
     int isPrivate;     // 0=public, 1=private
     struct classDef *declaringClass;
+    char typeName[100];
 };
 
 struct classMethod {
@@ -86,11 +87,15 @@ struct classDef {
 
 extern struct classDef *CLASS_REGISTRY;
 
+struct classDef* findClass(struct classDef *list, const char *name);
+static inline int isSubclassOf(struct classDef *child, struct classDef *parent);
+
 struct objFieldVal {
     char name[100];
     int type;          // 1=int, 2=float, 3=char, 4=bool, 5=string, 6=intarr, 7=floatarr, 8=chararr, 9=boolarr, 10=list, 11=map, 12=object
     int isPrivate;     // 0=public, 1=private
     struct classDef *declaringClass;
+    char typeName[100];
     struct Value val;  // Unified runtime Value representation
 };
 
@@ -215,6 +220,10 @@ struct callFrame {
     struct oV *OV;
     struct objInstance *thisObj;
     struct classDef *executingClass;
+    int isConstructor;
+    int superCalled;
+    int statementCount;
+    int ctorFailed;
     long returnPos; 
     int hasReturn; 
     struct Value returnValue;
@@ -391,6 +400,7 @@ static inline struct objInstance* allocateObject(struct classDef *cls) {
             inst->fields[i].type = cls->fields[i].type;
             inst->fields[i].isPrivate = cls->fields[i].isPrivate;
             inst->fields[i].declaringClass = cls->fields[i].declaringClass ? cls->fields[i].declaringClass : cls;
+            snprintf(inst->fields[i].typeName, sizeof(inst->fields[i].typeName), "%s", cls->fields[i].typeName);
             if (cls->fields[i].type == 5) {
                 inst->fields[i].val.type = VAL_STRING;
                 inst->fields[i].val.s[0] = '\0';
@@ -429,6 +439,27 @@ static inline struct objInstance* allocateObject(struct classDef *cls) {
     inst->next = OBJECT_HEAP;
     OBJECT_HEAP = inst;
     return inst;
+}
+
+static inline void freeFailedObject(struct objInstance *inst) {
+    if (!inst) return;
+    if (OBJECT_HEAP == inst) {
+        OBJECT_HEAP = inst->next;
+    } else {
+        struct objInstance *cur = OBJECT_HEAP;
+        while (cur && cur->next) {
+            if (cur->next == inst) {
+                cur->next = inst->next;
+                break;
+            }
+            cur = cur->next;
+        }
+    }
+    if (inst->fields) {
+        free(inst->fields);
+        inst->fields = NULL;
+    }
+    free(inst);
 }
 
 static inline void freeAllObjects(struct objInstance **heap) {
@@ -506,6 +537,15 @@ static inline int assignFieldValue(struct objInstance *inst, const char *fieldNa
     
     if (field->type == 12) {
         if (rhsVal.type == VAL_OBJECT) {
+            struct objInstance *rInst = (struct objInstance*)rhsVal.ptr;
+            if (field->typeName[0] != '\0' && strcmp(field->typeName, "object") != 0) {
+                struct classDef *targetCls = findClass(CLASS_REGISTRY, field->typeName);
+                if (targetCls != NULL && rInst != NULL && rInst->cls != NULL && !isSubclassOf(rInst->cls, targetCls)) {
+                    printf("Error: Type mismatch: cannot assign instance of class '%s' to field '%s' of class '%s'\n",
+                           rInst->cls->name, fieldName, targetCls->name);
+                    return 0;
+                }
+            }
             field->val.type = VAL_OBJECT;
             field->val.ptr = rhsVal.ptr;
             field->val.f = (rhsVal.ptr != NULL) ? 1.0f : 0.0f;
@@ -961,6 +1001,30 @@ static inline int isSubclassOf(struct classDef *child, struct classDef *parent) 
         curr = curr->parent;
     }
     return 0;
+}
+
+static inline int parentRequiresArguments(struct classDef *parent) {
+    struct classDef *curr = parent;
+    while (curr) {
+        struct classMethod *ctor = findConstructor(curr);
+        if (ctor && ctor->func && ctor->func->paramCount > 0) {
+            return ctor->func->paramCount;
+        }
+        curr = curr->parent;
+    }
+    return 0;
+}
+
+static inline struct classDef* getParentRequiringArguments(struct classDef *parent) {
+    struct classDef *curr = parent;
+    while (curr) {
+        struct classMethod *ctor = findConstructor(curr);
+        if (ctor && ctor->func && ctor->func->paramCount > 0) {
+            return curr;
+        }
+        curr = curr->parent;
+    }
+    return NULL;
 }
 
 void freeClassRegistry(struct classDef **head) {

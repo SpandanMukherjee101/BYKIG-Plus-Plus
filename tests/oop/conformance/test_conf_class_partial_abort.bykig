@@ -1,0 +1,8 @@
+class BrokenClass
+{
+    public float ;
+}
+
+out "BrokenClass registered: " + class_exists ( "BrokenClass" ) + "%n" ;
+.
+

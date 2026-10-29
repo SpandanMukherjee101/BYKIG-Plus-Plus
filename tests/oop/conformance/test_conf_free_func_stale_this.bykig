@@ -1,0 +1,22 @@
+func freeFunc ( )
+{
+    out this . val ;
+}
+
+class Caller
+{
+    public float val ;
+    public func construct ( float v )
+    {
+        this . val = v ;
+    }
+    public func invokeFree ( )
+    {
+        freeFunc ( ) ;
+    }
+}
+
+Caller c = new Caller ( 55.0 ) ;
+c . invokeFree ( ) ;
+.
+

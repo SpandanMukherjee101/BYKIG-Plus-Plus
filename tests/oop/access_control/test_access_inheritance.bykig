@@ -33,8 +33,7 @@ class Derived extends Base
 
     public func construct ( float sec , float pub , float d )
     {
-
-        this . basePublic = pub ;
+        super . construct ( sec , pub ) ;
         this . derivedField = d ;
     }
 

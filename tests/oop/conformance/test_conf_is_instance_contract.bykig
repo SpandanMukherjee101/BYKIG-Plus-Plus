@@ -1,0 +1,18 @@
+class A { }
+class B extends A { }
+class C extends B { }
+class Unrelated { }
+
+C c = new C ( ) ;
+out is_instance ( c , "C" ) + "%n" ;
+out is_instance ( c , "B" ) + "%n" ;
+out is_instance ( c , "A" ) + "%n" ;
+out is_instance ( c , "Unrelated" ) + "%n" ;
+out is_instance ( c , "GhostClass" ) + "%n" ;
+
+C nullC ;
+out is_instance ( nullC , "C" ) + "%n" ;
+out is_instance ( 123.0 , "A" ) + "%n" ;
+out is_instance ( "text" , "A" ) + "%n" ;
+.
+

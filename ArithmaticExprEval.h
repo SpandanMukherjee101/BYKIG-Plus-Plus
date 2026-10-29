@@ -76,6 +76,10 @@ static inline void parseCallArguments(const char *argExpr, struct Value *argVals
     }
 }
 
+static inline void parseCallArguments(const char *argExpr, struct Value *argVals, int *argCount);
+static inline struct Value executeMethod(struct objInstance *inst, struct classMethod *method, struct Value *argVals, int argCount);
+static inline int runImplicitParentConstructors(struct objInstance *inst, struct classDef *parent);
+
 static inline struct Value executeMethod(struct objInstance *inst, struct classMethod *method, struct Value *argVals, int argCount) {
     struct Value retVal;
     memset(&retVal, 0, sizeof(retVal));
@@ -127,12 +131,17 @@ static inline struct Value executeMethod(struct objInstance *inst, struct classM
     frame->returnValue.s[0] = '\0';
     frame->thisObj = inst;
     frame->executingClass = method->declaringClass;
+    frame->isConstructor = !strcmp(method->name, "construct");
+    frame->superCalled = 0;
+    frame->statementCount = 0;
+    frame->ctorFailed = 0;
 
     envTop++;
     initEnvironmentFrame(&envStack[envTop]);
 
     appendO(&envStack[envTop].OV, "this", inst->cls ? inst->cls->name : "", inst);
 
+    int paramBindingError = 0;
     for (int p = 0; p < argCount && p < func->paramCount; p++) {
         if (func->params[p].type == 1) {
             appendI(&envStack[envTop].IV, func->params[p].name, (int)argVals[p].f);
@@ -157,9 +166,37 @@ static inline struct Value executeMethod(struct objInstance *inst, struct classM
         } else if (func->params[p].type == 11) {
             appendM_copy(&envStack[envTop].MV, func->params[p].name, (struct mV*)argVals[p].ptr);
         } else if (func->params[p].type == 12) {
-            struct objInstance *oInst = (argVals[p].type == VAL_OBJECT) ? (struct objInstance*)argVals[p].ptr : NULL;
-            appendO(&envStack[envTop].OV, func->params[p].name, oInst && oInst->cls ? oInst->cls->name : "", oInst);
+            if (argVals[p].type != VAL_OBJECT) {
+                printf("Error: Type mismatch: cannot pass non-object value to parameter '%s' of class '%s'\n",
+                       func->params[p].name, func->params[p].className[0] ? func->params[p].className : "object");
+                paramBindingError = 1;
+            } else {
+                struct objInstance *oInst = (struct objInstance*)argVals[p].ptr;
+                if (func->params[p].className[0] != '\0' && strcmp(func->params[p].className, "object") != 0) {
+                    struct classDef *targetCls = findClass(CLASS_REGISTRY, func->params[p].className);
+                    if (targetCls != NULL && oInst != NULL && oInst->cls != NULL && !isSubclassOf(oInst->cls, targetCls)) {
+                        printf("Error: Type mismatch: cannot pass instance of class '%s' to parameter '%s' of class '%s'\n",
+                               oInst->cls->name, func->params[p].name, targetCls->name);
+                        paramBindingError = 1;
+                    }
+                }
+                appendO(&envStack[envTop].OV, func->params[p].name, func->params[p].className, oInst);
+            }
         }
+    }
+
+    if (paramBindingError) {
+        frame->ctorFailed = 1;
+        retVal.type = VAL_ERROR;
+        if (frame->saved_envTop >= 0) {
+            for (int e = envTop; e > frame->saved_envTop; e--) cleanupFrame(&envStack[e]);
+            envTop = frame->saved_envTop;
+        } else {
+            cleanupFrame(&envStack[envTop]);
+            envTop--;
+        }
+        callStackTop--;
+        return retVal;
     }
 
     FILE *old_fp = current_fp;
@@ -178,11 +215,61 @@ static inline struct Value executeMethod(struct objInstance *inst, struct classM
     if (!closeFp && methodFp) { savedPos = ftell(methodFp); }
     if (methodFp) fseek(methodFp, func->bodyPos, SEEK_SET);
 
+    struct classDef *curClass = method->declaringClass ? method->declaringClass : inst->cls;
+    if (frame->isConstructor && methodFp && curClass && curClass->parent) {
+        long curP = ftell(methodFp);
+        char peekTok[100] = "";
+        read_token_skip_comments(methodFp, peekTok);
+        int firstTokenIsSuper = (!strcmp(peekTok, "super") || !strncmp(peekTok, "super.", 6));
+        fseek(methodFp, curP, SEEK_SET);
+
+        if (!firstTokenIsSuper) {
+            if (parentRequiresArguments(curClass->parent) > 0) {
+                struct classDef *reqP = getParentRequiringArguments(curClass->parent);
+                printf("Error: Class '%s' constructor cannot initialize superclass '%s': superclass requires %d argument(s)\n",
+                       curClass->name, reqP ? reqP->name : "<unknown>", parentRequiresArguments(curClass->parent));
+                frame->ctorFailed = 1;
+                retVal.type = VAL_ERROR;
+                if (closeFp) { fclose(methodFp); current_fp = old_fp; }
+                else if (methodFp) { fseek(methodFp, savedPos, SEEK_SET); }
+                if (frame->saved_envTop >= 0) {
+                    for (int e = envTop; e > frame->saved_envTop; e--) cleanupFrame(&envStack[e]);
+                    envTop = frame->saved_envTop;
+                } else {
+                    cleanupFrame(&envStack[envTop]);
+                    envTop--;
+                }
+                callStackTop--;
+                return retVal;
+            } else {
+                int parentInitOk = runImplicitParentConstructors(inst, curClass->parent);
+                if (!parentInitOk) {
+                    frame->ctorFailed = 1;
+                    retVal.type = VAL_ERROR;
+                    if (closeFp) { fclose(methodFp); current_fp = old_fp; }
+                    else if (methodFp) { fseek(methodFp, savedPos, SEEK_SET); }
+                    if (frame->saved_envTop >= 0) {
+                        for (int e = envTop; e > frame->saved_envTop; e--) cleanupFrame(&envStack[e]);
+                        envTop = frame->saved_envTop;
+                    } else {
+                        cleanupFrame(&envStack[envTop]);
+                        envTop--;
+                    }
+                    callStackTop--;
+                    return retVal;
+                }
+            }
+        }
+    }
+
     const char *passPath = (strlen(func->filepath) > 0) ? func->filepath : NULL;
     run_interpreter_loop(methodFp, passPath);
 
     if (frame->hasReturn) {
         retVal = frame->returnValue;
+    }
+    if (frame->ctorFailed) {
+        retVal.type = VAL_ERROR;
     }
 
     if (closeFp) {
@@ -204,6 +291,30 @@ static inline struct Value executeMethod(struct objInstance *inst, struct classM
     callStackTop--;
 
     return retVal;
+}
+
+static inline int runImplicitParentConstructors(struct objInstance *inst, struct classDef *parent) {
+    if (!inst || !parent) return 1;
+    struct classDef *cur = parent;
+    while (cur && findConstructor(cur) == NULL) {
+        cur = cur->parent;
+    }
+    if (!cur) return 1;
+
+    struct classMethod *pCtor = findConstructor(cur);
+    if (!pCtor || !pCtor->func) return 1;
+
+    if (pCtor->func->paramCount > 0) {
+        printf("Error: Superclass '%s' constructor requires %d argument(s)\n", cur->name, pCtor->func->paramCount);
+        return 0;
+    }
+    if (pCtor->isPrivate) {
+        printf("Error: Cannot access private constructor of class '%s'\n", cur->name);
+        return 0;
+    }
+    struct Value ret = executeMethod(inst, pCtor, NULL, 0);
+    if (ret.type == VAL_ERROR) return 0;
+    return 1;
 }
 
 void resolve_complex_types(char *expr) {
@@ -292,15 +403,29 @@ void resolve_complex_types(char *expr) {
                         struct classMethod *ctor = findConstructor(cls);
                         if (ctor == NULL) {
                             if (argCount == 0) {
-                                struct objInstance *inst = allocateObject(cls);
-                                if (!inst) {
-                                    printf("Error: Out of memory\n");
+                                int req = parentRequiresArguments(cls->parent);
+                                if (req > 0) {
+                                    struct classDef *pReq = getParentRequiringArguments(cls->parent);
+                                    printf("Error: Class '%s' cannot be default-constructed: superclass '%s' requires %d argument(s)\n",
+                                           className, pReq ? pReq->name : "parent", req);
                                     strcpy(tokens[i], "null");
                                 } else {
-                                    char tempName[64];
-                                    snprintf(tempName, sizeof(tempName), "__obj_%d", inst->id);
-                                    appendO(&envStack[envTop].OV, tempName, cls->name, inst);
-                                    strcpy(tokens[i], tempName);
+                                    struct objInstance *inst = allocateObject(cls);
+                                    if (!inst) {
+                                        printf("Error: Out of memory\n");
+                                        strcpy(tokens[i], "null");
+                                    } else {
+                                        int parentInitOk = runImplicitParentConstructors(inst, cls->parent);
+                                        if (!parentInitOk) {
+                                            freeFailedObject(inst);
+                                            strcpy(tokens[i], "null");
+                                        } else {
+                                            char tempName[64];
+                                            snprintf(tempName, sizeof(tempName), "__obj_%d", inst->id);
+                                            appendO(&envStack[envTop].OV, tempName, cls->name, inst);
+                                            strcpy(tokens[i], tempName);
+                                        }
+                                    }
                                 }
                             } else {
                                 printf("Error: Class '%s' has no constructor matching %d argument(s)\n", className, argCount);
@@ -319,7 +444,8 @@ void resolve_complex_types(char *expr) {
                                     strcpy(tokens[i], "null");
                                 } else {
                                     struct Value ctorRet = executeMethod(inst, ctor, argVals, argCount);
-                                    if (ctorRet.type == VAL_ERROR && ctor->isPrivate) {
+                                    if (ctorRet.type == VAL_ERROR) {
+                                        freeFailedObject(inst);
                                         strcpy(tokens[i], "null");
                                     } else {
                                         char tempName[64];
@@ -396,6 +522,14 @@ void resolve_complex_types(char *expr) {
                     struct Value res = bfunc->handler(rawArgs, rArgCount);
                     if (res.type == VAL_STRING) {
                         format_string_token(tokens[i], sizeof(tokens[i]), res.s);
+                    } else if (res.type == VAL_OBJECT) {
+                        struct objInstance *rInst = (struct objInstance*)res.ptr;
+                        if (rInst) {
+                            snprintf(tokens[i], sizeof(tokens[i]), "__obj_%d", rInst->id);
+                            appendO(&envStack[envTop].OV, tokens[i], rInst->cls ? rInst->cls->name : "", rInst);
+                        } else {
+                            strcpy(tokens[i], "null");
+                        }
                     } else if (strlen(builtin_string_return) > 0) {
                         format_string_token(tokens[i], sizeof(tokens[i]), builtin_string_return);
                     } else {
@@ -486,8 +620,20 @@ void resolve_complex_types(char *expr) {
                         } else if (func->params[p].type == 11) {
                             appendM_copy(&envStack[envTop].MV, func->params[p].name, (struct mV*)argVals[p].ptr);
                         } else if (func->params[p].type == 12) {
-                            struct objInstance *inst = (argVals[p].type == VAL_OBJECT) ? (struct objInstance*)argVals[p].ptr : NULL;
-                            appendO(&envStack[envTop].OV, func->params[p].name, "", inst);
+                            if (argVals[p].type != VAL_OBJECT) {
+                                printf("Error: Type mismatch: cannot pass non-object value to parameter '%s' of class '%s'\n",
+                                       func->params[p].name, func->params[p].className[0] ? func->params[p].className : "object");
+                            } else {
+                                struct objInstance *inst = (struct objInstance*)argVals[p].ptr;
+                                if (func->params[p].className[0] != '\0' && strcmp(func->params[p].className, "object") != 0) {
+                                    struct classDef *targetCls = findClass(CLASS_REGISTRY, func->params[p].className);
+                                    if (targetCls != NULL && inst != NULL && inst->cls != NULL && !isSubclassOf(inst->cls, targetCls)) {
+                                        printf("Error: Type mismatch: cannot pass instance of class '%s' to parameter '%s' of class '%s'\n",
+                                               inst->cls->name, func->params[p].name, targetCls->name);
+                                    }
+                                }
+                                appendO(&envStack[envTop].OV, func->params[p].name, func->params[p].className, inst);
+                            }
                         }
                     }
                     
@@ -550,10 +696,10 @@ void resolve_complex_types(char *expr) {
         }
     }
 
-    // Resolve member method calls and field accesses: receiver . member and receiver.member
-    int resolvedMember = 1;
-    while (resolvedMember) {
-        resolvedMember = 0;
+    // Resolve member method calls, field accesses, and collection interactions
+    int resolvedCompound = 1;
+    while (resolvedCompound) {
+        resolvedCompound = 0;
 
         // 1. Spaced method call: tokens[i] . tokens[i+2] ( ... )
         for (int i = 0; i < tokenCount; i++) {
@@ -634,7 +780,7 @@ void resolve_complex_types(char *expr) {
                         strcpy(tokens[k], tokens[k + shift]);
                     }
                     tokenCount -= shift;
-                    resolvedMember = 1;
+                    resolvedCompound = 1;
                     break;
                 }
             }
@@ -760,7 +906,7 @@ void resolve_complex_types(char *expr) {
                                 strcpy(tokens[k], tokens[k + shift]);
                             }
                             tokenCount -= shift;
-                            resolvedMember = 1;
+                            resolvedCompound = 1;
                             break;
                         }
                     }
@@ -768,7 +914,7 @@ void resolve_complex_types(char *expr) {
             }
         }
 
-        if (resolvedMember) continue;
+        if (resolvedCompound) continue;
 
         // 3. Spaced field access: tokens[i] . tokens[i+2] (when tokens[i+3] != "(")
         for (int i = 0; i < tokenCount; i++) {
@@ -819,6 +965,24 @@ void resolve_complex_types(char *expr) {
                                 } else {
                                     strcpy(tokens[i], "null");
                                 }
+                            } else if (fVal.type == VAL_LIST) {
+                                if (fVal.ptr != NULL) {
+                                    char lName[64];
+                                    snprintf(lName, sizeof(lName), "__lst_%d_%s", inst->id, fieldName);
+                                    appendL_ref(&envStack[envTop].LV, lName, (struct lV*)fVal.ptr);
+                                    strcpy(tokens[i], lName);
+                                } else {
+                                    strcpy(tokens[i], "null");
+                                }
+                            } else if (fVal.type == VAL_MAP) {
+                                if (fVal.ptr != NULL) {
+                                    char mName[64];
+                                    snprintf(mName, sizeof(mName), "__map_%d_%s", inst->id, fieldName);
+                                    appendM_copy(&envStack[envTop].MV, mName, (struct mV*)fVal.ptr);
+                                    strcpy(tokens[i], mName);
+                                } else {
+                                    strcpy(tokens[i], "null");
+                                }
                             } else if (fVal.type == VAL_FLOAT) {
                                 snprintf(tokens[i], sizeof(tokens[i]), "%f", fVal.f);
                             } else {
@@ -833,7 +997,7 @@ void resolve_complex_types(char *expr) {
                         strcpy(tokens[k], tokens[k + shift]);
                     }
                     tokenCount -= shift;
-                    resolvedMember = 1;
+                    resolvedCompound = 1;
                     break;
                 }
             }
@@ -911,6 +1075,24 @@ void resolve_complex_types(char *expr) {
                                         } else {
                                             strcpy(tokens[i], "null");
                                         }
+                                    } else if (fVal.type == VAL_LIST) {
+                                        if (fVal.ptr != NULL) {
+                                            char lName[64];
+                                            snprintf(lName, sizeof(lName), "__lst_%d_%s", inst->id, fld);
+                                            appendL_ref(&envStack[envTop].LV, lName, (struct lV*)fVal.ptr);
+                                            strcpy(tokens[i], lName);
+                                        } else {
+                                            strcpy(tokens[i], "null");
+                                        }
+                                    } else if (fVal.type == VAL_MAP) {
+                                        if (fVal.ptr != NULL) {
+                                            char mName[64];
+                                            snprintf(mName, sizeof(mName), "__map_%d_%s", inst->id, fld);
+                                            appendM_copy(&envStack[envTop].MV, mName, (struct mV*)fVal.ptr);
+                                            strcpy(tokens[i], mName);
+                                        } else {
+                                            strcpy(tokens[i], "null");
+                                        }
                                     } else if (fVal.type == VAL_FLOAT) {
                                         snprintf(tokens[i], sizeof(tokens[i]), "%f", fVal.f);
                                     } else {
@@ -920,118 +1102,131 @@ void resolve_complex_types(char *expr) {
                                     }
                                 }
                             }
-                            resolvedMember = 1;
+                            resolvedCompound = 1;
                             break;
                         }
                     }
                 }
             }
         }
-    }
 
-    for (int i = 0; i < tokenCount; i++) {
-        if (i < tokenCount - 3 && strcmp(tokens[i+1], "[") == 0) {
-            int type = typeFetcher(tokens[i]);
-            if (type >= 6 && type <= 11) {
-                struct Value curVal = valFetcherGlobal(tokens[i]);
-                int nextIdx = i + 1;
-                while (nextIdx < tokenCount && strcmp(tokens[nextIdx], "[") == 0) {
-                    int bDepth = 1;
-                    int j = nextIdx + 1;
-                    char argExpr[1000] = "";
-                    while (j < tokenCount && bDepth > 0) {
-                        if (strcmp(tokens[j], "[") == 0) bDepth++;
-                        else if (strcmp(tokens[j], "]") == 0) bDepth--;
-                        if (bDepth > 0) {
-                            strcat(argExpr, tokens[j]);
-                            strcat(argExpr, " ");
-                        }
-                        j++;
-                    }
-                    strcat(argExpr, ";");
-                    struct Value idxVal = val(argExpr);
-                    
-                    if (curVal.type == VAL_LIST) {
-                        struct lV *lv = (struct lV*)curVal.ptr;
-                        while (lv && lv->ref) lv = lv->ref;
-                        int idx = (int)idxVal.f;
-                        if (lv && idx >= 0 && idx < lv->size) {
-                            curVal = lv->data[idx];
-                        } else {
-                            curVal.type = VAL_ERROR;
-                            curVal.f = 0.0;
-                        }
-                    } else if (curVal.type == VAL_MAP) {
-                        struct mV *mv = (struct mV*)curVal.ptr;
-                        char key[100] = "";
-                        if (idxVal.type == VAL_STRING) {
-                            strcpy(key, idxVal.s);
-                        } else if (idxVal.type == VAL_FLOAT) {
-                            if (idxVal.f == (float)(int)idxVal.f) sprintf(key, "%d", (int)idxVal.f);
-                            else sprintf(key, "%f", idxVal.f);
-                        } else {
-                            sscanf(argExpr, "%s", key);
-                            if (key[0] == '"') {
-                                key[strlen(key)-1] = '\0';
-                                memmove(key, key+1, strlen(key));
+        if (resolvedCompound) continue;
+
+        // 5. Collection indexing: tokens[i] [ ... ]
+        for (int i = 0; i < tokenCount; i++) {
+            if (i < tokenCount - 3 && strcmp(tokens[i+1], "[") == 0) {
+                int type = typeFetcher(tokens[i]);
+                if (type >= 6 && type <= 11) {
+                    struct Value curVal = valFetcherGlobal(tokens[i]);
+                    int nextIdx = i + 1;
+                    while (nextIdx < tokenCount && strcmp(tokens[nextIdx], "[") == 0) {
+                        int bDepth = 1;
+                        int j = nextIdx + 1;
+                        char argExpr[1000] = "";
+                        while (j < tokenCount && bDepth > 0) {
+                            if (strcmp(tokens[j], "[") == 0) bDepth++;
+                            else if (strcmp(tokens[j], "]") == 0) bDepth--;
+                            if (bDepth > 0) {
+                                strcat(argExpr, tokens[j]);
+                                strcat(argExpr, " ");
                             }
+                            j++;
                         }
-                        int found = 0;
-                        if (mv) {
-                            for (int k = 0; k < mv->count; k++) {
-                                if (!strcmp(mv->entries[k].key, key)) {
-                                    curVal = mv->entries[k].value;
-                                    found = 1;
-                                    break;
+                        strcat(argExpr, ";");
+                        struct Value idxVal = val(argExpr);
+                        
+                        if (curVal.type == VAL_LIST) {
+                            struct lV *lv = (struct lV*)curVal.ptr;
+                            while (lv && lv->ref) lv = lv->ref;
+                            int idx = (int)idxVal.f;
+                            if (lv && idx >= 0 && idx < lv->size) {
+                                curVal = lv->data[idx];
+                            } else {
+                                curVal.type = VAL_ERROR;
+                                curVal.f = 0.0;
+                            }
+                        } else if (curVal.type == VAL_MAP) {
+                            struct mV *mv = (struct mV*)curVal.ptr;
+                            char key[100] = "";
+                            if (idxVal.type == VAL_STRING) {
+                                strcpy(key, idxVal.s);
+                            } else if (idxVal.type == VAL_FLOAT) {
+                                if (idxVal.f == (float)(int)idxVal.f) sprintf(key, "%d", (int)idxVal.f);
+                                else sprintf(key, "%f", idxVal.f);
+                            } else {
+                                sscanf(argExpr, "%s", key);
+                                if (key[0] == '"') {
+                                    key[strlen(key)-1] = '\0';
+                                    memmove(key, key+1, strlen(key));
                                 }
                             }
-                        }
-                        if (!found) {
+                            int found = 0;
+                            if (mv) {
+                                for (int k = 0; k < mv->count; k++) {
+                                    if (!strcmp(mv->entries[k].key, key)) {
+                                        curVal = mv->entries[k].value;
+                                        found = 1;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!found) {
+                                curVal.type = VAL_ERROR;
+                                curVal.f = 0.0;
+                            }
+                        } else if (curVal.type == VAL_INT_ARRAY) {
+                            struct iA *ia = (struct iA*)curVal.ptr;
+                            int idx = (int)idxVal.f;
+                            curVal.type = VAL_FLOAT;
+                            curVal.f = (ia && idx >= 0 && idx < ia->size) ? (float)ia->data[idx] : 0.0f;
+                        } else if (curVal.type == VAL_FLOAT_ARRAY) {
+                            struct fA *fa = (struct fA*)curVal.ptr;
+                            int idx = (int)idxVal.f;
+                            curVal.type = VAL_FLOAT;
+                            curVal.f = (fa && idx >= 0 && idx < fa->size) ? fa->data[idx] : 0.0f;
+                        } else if (curVal.type == VAL_CHAR_ARRAY) {
+                            struct cA *ca = (struct cA*)curVal.ptr;
+                            int idx = (int)idxVal.f;
+                            curVal.type = VAL_FLOAT;
+                            curVal.f = (ca && idx >= 0 && idx < ca->size) ? (float)ca->data[idx] : 0.0f;
+                        } else if (curVal.type == VAL_BOOL_ARRAY) {
+                            struct bA *ba = (struct bA*)curVal.ptr;
+                            int idx = (int)idxVal.f;
+                            curVal.type = VAL_FLOAT;
+                            curVal.f = (ba && idx >= 0 && idx < ba->size) ? (float)ba->data[idx] : 0.0f;
+                        } else {
                             curVal.type = VAL_ERROR;
                             curVal.f = 0.0;
                         }
-                    } else if (curVal.type == VAL_INT_ARRAY) {
-                        struct iA *ia = (struct iA*)curVal.ptr;
-                        int idx = (int)idxVal.f;
-                        curVal.type = VAL_FLOAT;
-                        curVal.f = (ia && idx >= 0 && idx < ia->size) ? (float)ia->data[idx] : 0.0f;
-                    } else if (curVal.type == VAL_FLOAT_ARRAY) {
-                        struct fA *fa = (struct fA*)curVal.ptr;
-                        int idx = (int)idxVal.f;
-                        curVal.type = VAL_FLOAT;
-                        curVal.f = (fa && idx >= 0 && idx < fa->size) ? fa->data[idx] : 0.0f;
-                    } else if (curVal.type == VAL_CHAR_ARRAY) {
-                        struct cA *ca = (struct cA*)curVal.ptr;
-                        int idx = (int)idxVal.f;
-                        curVal.type = VAL_FLOAT;
-                        curVal.f = (ca && idx >= 0 && idx < ca->size) ? (float)ca->data[idx] : 0.0f;
-                    } else if (curVal.type == VAL_BOOL_ARRAY) {
-                        struct bA *ba = (struct bA*)curVal.ptr;
-                        int idx = (int)idxVal.f;
-                        curVal.type = VAL_FLOAT;
-                        curVal.f = (ba && idx >= 0 && idx < ba->size) ? (float)ba->data[idx] : 0.0f;
-                    } else {
-                        curVal.type = VAL_ERROR;
-                        curVal.f = 0.0;
+                        
+                        nextIdx = j;
                     }
                     
-                    nextIdx = j;
+                    if (curVal.type == VAL_STRING) {
+                        format_string_token(tokens[i], sizeof(tokens[i]), curVal.s);
+                    } else if (curVal.type == VAL_FLOAT) {
+                        sprintf(tokens[i], "%f", curVal.f);
+                    } else if (curVal.type == VAL_OBJECT) {
+                        struct objInstance *rInst = (struct objInstance*)curVal.ptr;
+                        if (rInst) {
+                            snprintf(tokens[i], sizeof(tokens[i]), "__obj_%d", rInst->id);
+                            appendO(&envStack[envTop].OV, tokens[i], rInst->cls ? rInst->cls->name : "", rInst);
+                        } else {
+                            strcpy(tokens[i], "null");
+                        }
+                    } else {
+                        char strVal[1000] = "";
+                        value_to_string(curVal, strVal, sizeof(strVal));
+                        format_string_token(tokens[i], sizeof(tokens[i]), strVal);
+                    }
+                    int shift = nextIdx - (i + 1);
+                    for (int k = i + 1; k < tokenCount - shift; k++) {
+                        strcpy(tokens[k], tokens[k + shift]);
+                    }
+                    tokenCount -= shift;
+                    resolvedCompound = 1;
+                    break;
                 }
-                
-                if (curVal.type == VAL_STRING) {
-                    format_string_token(tokens[i], sizeof(tokens[i]), curVal.s);
-                } else if (curVal.type == VAL_FLOAT) {
-                    sprintf(tokens[i], "%f", curVal.f);
-                } else {
-                    char strVal[1000] = "";
-                    value_to_string(curVal, strVal, sizeof(strVal));
-                    format_string_token(tokens[i], sizeof(tokens[i]), strVal);
-                }
-                int shift = nextIdx - (i + 1);
-                for (int k = i + 1; k < tokenCount - shift; k++) {
-                    strcpy(tokens[k], tokens[k + shift]);
-                }
-                tokenCount -= shift;
             }
         }
     }

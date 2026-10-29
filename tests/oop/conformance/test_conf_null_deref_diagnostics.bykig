@@ -1,0 +1,15 @@
+class NullTarget
+{
+    public float num ;
+    public func action ( )
+    {
+        return 1.0 ;
+    }
+}
+
+NullTarget uninit ;
+out uninit . num ;
+uninit . num = 10.0 ;
+out uninit . action ( ) ;
+.
+

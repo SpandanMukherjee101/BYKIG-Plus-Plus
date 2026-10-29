@@ -1,0 +1,51 @@
+class BankVault
+{
+    private float secretCode ;
+
+    public func construct ( float code )
+    {
+        this . secretCode = code ;
+    }
+
+    public func getSecret ( )
+    {
+        return this . secretCode ;
+    }
+
+    public func transferSecret ( BankVault other )
+    {
+        this . secretCode = other . secretCode ;
+    }
+}
+
+class HackerVault extends BankVault
+{
+    public func construct ( float code )
+    {
+        super . construct ( code ) ;
+    }
+
+    public func tryStealDirect ( )
+    {
+        return this . secretCode ;
+    }
+}
+
+func spyAccess ( BankVault vault )
+{
+    out vault . secretCode ;
+}
+
+BankVault vaultA = new BankVault ( 1234.0 ) ;
+BankVault vaultB = new BankVault ( 9999.0 ) ;
+
+vaultA . transferSecret ( vaultB ) ;
+out vaultA . getSecret ( ) ;
+
+HackerVault hacker = new HackerVault ( 5555.0 ) ;
+out hacker . tryStealDirect ( ) ;
+
+spyAccess ( vaultB ) ;
+out vaultB . secretCode ;
+.
+

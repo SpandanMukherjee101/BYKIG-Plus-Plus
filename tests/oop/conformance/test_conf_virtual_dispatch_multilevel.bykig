@@ -1,0 +1,24 @@
+class Top
+{
+    public func identify ( ) { return "Top" ; }
+    public func topOnly ( ) { return "TopOnly" ; }
+}
+
+class Mid extends Top
+{
+    public func identify ( ) { return "Mid" ; }
+    public func midOnly ( ) { return "MidOnly" ; }
+}
+
+class Bottom extends Mid
+{
+    public func identify ( ) { return "Bottom" ; }
+}
+
+Top t = new Bottom ( ) ;
+out t . identify ( ) + "%n" ;
+out t . topOnly ( ) + "%n" ;
+Mid m = new Bottom ( ) ;
+out m . midOnly ( ) + "%n" ;
+.
+

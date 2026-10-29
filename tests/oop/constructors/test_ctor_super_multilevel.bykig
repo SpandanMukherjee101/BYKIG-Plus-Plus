@@ -1,0 +1,44 @@
+class Root
+{
+    public float rVal ;
+
+    public func construct ( float r )
+    {
+        this . rVal = r ;
+    }
+}
+
+class Mid extends Root
+{
+    public float mVal ;
+
+    public func construct ( float r , float m )
+    {
+        super . construct ( r ) ;
+        this . mVal = m ;
+    }
+}
+
+class Leaf extends Mid
+{
+    public float lVal ;
+
+    public func construct ( float r , float m , float l )
+    {
+        super . construct ( r , m ) ;
+        this . lVal = l ;
+    }
+
+    public func getSum ( )
+    {
+        return this . rVal + this . mVal + this . lVal ;
+    }
+}
+
+Leaf obj = new Leaf ( 10.0 , 20.0 , 30.0 ) ;
+out obj . rVal ;
+out obj . mVal ;
+out obj . lVal ;
+out obj . getSum ( ) ;
+.
+

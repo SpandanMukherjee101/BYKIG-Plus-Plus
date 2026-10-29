@@ -1,0 +1,33 @@
+class BaseZero
+{
+    public float count ;
+
+    public func construct ( )
+    {
+        this . count = 42.0 ;
+    }
+}
+
+class ChildDefault extends BaseZero
+{
+    public float extra ;
+}
+
+class ChildExplicit extends BaseZero
+{
+    public float val ;
+
+    public func construct ( float v )
+    {
+        this . val = v ;
+    }
+}
+
+ChildDefault cd = new ChildDefault ( ) ;
+out cd . count ;
+
+ChildExplicit ce = new ChildExplicit ( 100.0 ) ;
+out ce . count ;
+out ce . val ;
+.
+

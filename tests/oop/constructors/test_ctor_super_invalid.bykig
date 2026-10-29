@@ -1,0 +1,89 @@
+class Standalone
+{
+    public float x ;
+
+    public func construct ( )
+    {
+        super . construct ( ) ;
+        this . x = 1.0 ;
+    }
+}
+
+class BaseWithArg
+{
+    public float p ;
+
+    public func construct ( float v )
+    {
+        this . p = v ;
+    }
+}
+
+class SecondStmtDerived extends BaseWithArg
+{
+    public float y ;
+
+    public func construct ( float v )
+    {
+        this . y = 10.0 ;
+        super . construct ( v ) ;
+    }
+}
+
+class DuplicateSuperDerived extends BaseWithArg
+{
+    public func construct ( float v )
+    {
+        super . construct ( v ) ;
+        super . construct ( v ) ;
+    }
+}
+
+class WrongArgSuperDerived extends BaseWithArg
+{
+    public func construct ( )
+    {
+        super . construct ( 1.0 , 2.0 ) ;
+    }
+}
+
+class MethodSuperDerived extends BaseWithArg
+{
+    public func construct ( float v )
+    {
+        super . construct ( v ) ;
+    }
+
+    public func badMethod ( )
+    {
+        super . construct ( 5.0 ) ;
+    }
+}
+
+class BadMemberDerived extends BaseWithArg
+{
+    public func construct ( float v )
+    {
+        super . foo ( v ) ;
+    }
+}
+
+Standalone s = new Standalone ( ) ;
+out s ;
+
+SecondStmtDerived d1 = new SecondStmtDerived ( 5.0 ) ;
+out d1 ;
+
+DuplicateSuperDerived d2 = new DuplicateSuperDerived ( 5.0 ) ;
+out d2 ;
+
+WrongArgSuperDerived d3 = new WrongArgSuperDerived ( ) ;
+out d3 ;
+
+MethodSuperDerived m = new MethodSuperDerived ( 7.0 ) ;
+m . badMethod ( ) ;
+
+BadMemberDerived b = new BadMemberDerived ( 9.0 ) ;
+out b ;
+.
+
