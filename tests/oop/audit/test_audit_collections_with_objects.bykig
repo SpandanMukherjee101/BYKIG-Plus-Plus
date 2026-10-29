@@ -1,0 +1,33 @@
+class Point
+{
+    public float x ;
+    public float y ;
+
+    public func construct ( float initialX , float initialY )
+    {
+        this . x = initialX ;
+        this . y = initialY ;
+    }
+
+    public func sum ( )
+    {
+        return this . x + this . y ;
+    }
+}
+
+Point p1 = new Point ( 10.0 , 20.0 ) ;
+Point p2 = new Point ( 30.0 , 40.0 ) ;
+
+
+list pointList ;
+push ( pointList , p1 ) ;
+push ( pointList , p2 ) ;
+
+out len ( pointList ) ;
+
+
+map pointMap ;
+pointMap [ "origin" ] = p1 ;
+pointMap [ "target" ] = p2 ;
+
+out "Collections with objects test passed." ;

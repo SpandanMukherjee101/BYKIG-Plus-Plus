@@ -1,0 +1,24 @@
+func freeFunc ( float x )
+{
+
+    return x * 3.0 ;
+}
+
+class Service
+{
+    public float value ;
+
+    public func execute ( )
+    {
+        this . value = 10.0 ;
+        float temp = freeFunc ( 5.0 ) ;
+
+        return this . value + temp ;
+    }
+}
+
+Service s = new Service ( ) ;
+float total = s . execute ( ) ;
+out total + "%n" ;
+out s . value + "%n" ;
+.

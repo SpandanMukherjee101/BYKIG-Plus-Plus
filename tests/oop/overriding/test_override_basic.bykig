@@ -1,0 +1,42 @@
+class Animal
+{
+    public func speak ( )
+    {
+        return "Generic sound" ;
+    }
+
+    public func sleep ( )
+    {
+        return "Zzz..." ;
+    }
+}
+
+class Dog extends Animal
+{
+    public func speak ( )
+    {
+        return "Woof!" ;
+    }
+}
+
+class Cat extends Animal
+{
+    public func speak ( )
+    {
+        return "Meow!" ;
+    }
+}
+
+Animal a = new Animal ( ) ;
+Dog d = new Dog ( ) ;
+Cat c = new Cat ( ) ;
+
+
+out a . speak ( ) ;
+out d . speak ( ) ;
+out c . speak ( ) ;
+
+
+out a . sleep ( ) ;
+out d . sleep ( ) ;
+out c . sleep ( ) ;

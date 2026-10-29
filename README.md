@@ -15,6 +15,11 @@ It extends the original BYKIG interpreter with a broader runtime model while ret
 - Dynamic generic lists with arbitrary `Value` elements and capacity growth
 - Generic dynamic associative maps with `Value` values and dynamic capacity
 - Multi-dimensional and nested indexing (`matrix[0][1] = 99 ;`, `data["users"][0]["name"]`)
+- Object-Oriented Programming: classes, typed fields, explicit constructors, instance methods, and `this` receiver binding
+- Encapsulation with `public` and `private` member access modifiers
+- Single inheritance (`extends`), dynamic virtual dispatch, and runtime polymorphism
+- Runtime object type predicate: `is_instance(obj, "ClassName")`
+- Centralized runtime heap (`OBJECT_HEAP`) with safe reference semantics and deterministic shutdown cleanup
 - Built-in collection operations: `len`, `push`, `pop`, `exists`, `delete`
 - Expanded utility built-ins: `quote`, `strip_quotes`, `is_num`, `is_str`, `starts_with`, `parse_float`
 - Streaming file scanner (`file_scan_*`) with punctuation-aware tokenization
@@ -45,15 +50,16 @@ It extends the original BYKIG interpreter with a broader runtime model while ret
                   └──────────┬──────┘
                              ▼
                       Runtime state
-             ┌──────────────┼──────────────┐
-             ▼              ▼              ▼
-          envStack       callStack         FN
-             │              │              │
-             ▼              ▼              ▼
-        variables       invocations      functions
-        arrays
-        lists
+             ┌──────────────┼──────────────┬──────────────┬──────────────┐
+             ▼              ▼              ▼              ▼              ▼
+          envStack       callStack         FN       CLASS_REGISTRY  OBJECT_HEAP
+             │              │              │              │              │
+             ▼              ▼              ▼              ▼              ▼
+        variables       invocations    functions       classes        objects
+        arrays          (thisObj)
+        lists           (executingClass)
         maps
+        objects
 ```
 
 BYKIG++ does not build a traditional AST. Functions and control flow rely heavily on source positions (`ftell`/`fseek`) and interpreter state.
@@ -85,6 +91,32 @@ out "List: " + numbers + "%n" ;
 map user = { "name" : "Alice" , "role" : "admin" } ;
 user [ "city" ] = "Paris" ;
 out "User: " + user + "%n" ;
+
+class Animal
+{
+    public string name ;
+    public func speak ( )
+    {
+        return "Generic sound" ;
+    }
+}
+
+class Dog extends Animal
+{
+    public func construct ( string n )
+    {
+        this . name = n ;
+    }
+
+    public func speak ( )
+    {
+        return "Woof!" ;
+    }
+}
+
+Animal pet = new Dog ( "Buddy" ) ;
+out pet . name + " says: " + pet . speak ( ) + "%n" ;
+out "Is Dog? " + is_instance ( pet , "Dog" ) + "%n" ;
 .
 ```
 
@@ -137,6 +169,9 @@ echo mini-bykig++/test_collections.mini | .\Interpreter.exe mini-bykig++/main.by
 - Dynamic lists store generic `Value` elements (numbers, strings, nested lists, maps).
 - Dynamic maps use generic `Value`-backed dynamic entries with automatic capacity growth (`realloc`).
 - Nested indexing is fully supported for expressions and assignments.
+- Object instances are heap-allocated (`OBJECT_HEAP`) with reference semantics, managed by deterministic shutdown reclamation.
+- Classes support single inheritance (`extends`), virtual method overriding, explicit `construct` constructors, and encapsulation (`public`/`private`).
+- Runtime object type predicates are provided via `is_instance(obj, "ClassName")`.
 - `use` executes another source file in the current runtime environment rather than creating an isolated module namespace.
 - The interpreter remains source-position-driven rather than AST-driven.
 

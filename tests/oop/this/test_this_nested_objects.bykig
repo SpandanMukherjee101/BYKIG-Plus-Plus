@@ -1,0 +1,36 @@
+class Worker
+{
+    public float tasksDone ;
+
+    public func doWork ( float count )
+    {
+        this . tasksDone = this . tasksDone + count ;
+        return this . tasksDone ;
+    }
+}
+
+class Manager
+{
+    public float managedScore ;
+
+    public func manage ( Worker w , float tasks )
+    {
+        this . managedScore = this . managedScore + 10.0 ;
+        float done = w . doWork ( tasks ) ;
+        this . managedScore = this . managedScore + done ;
+        return this . managedScore ;
+    }
+}
+
+Worker w1 = new Worker ( ) ;
+w1 . tasksDone = 0.0 ;
+
+Manager m1 = new Manager ( ) ;
+m1 . managedScore = 100.0 ;
+
+float res = m1 . manage ( w1 , 5.0 ) ;
+out res + "%n" ;
+out m1 . managedScore + "%n" ;
+out w1 . tasksDone + "%n" ;
+.
+

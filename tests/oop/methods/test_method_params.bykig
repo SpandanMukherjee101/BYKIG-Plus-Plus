@@ -1,0 +1,40 @@
+class Calculator
+{
+    public float lastResult ;
+
+    public func add ( float a , float b )
+    {
+        float res = a + b ;
+        this . lastResult = res ;
+        return res ;
+    }
+
+    public func scaleAndOffset ( float val , float factor , float offset )
+    {
+        return ( val * factor ) + offset ;
+    }
+
+    public func greet ( string name , int times )
+    {
+        int i = 0 ;
+        while ( i < times )
+        {
+            out "Hello " + name + "%n" ;
+            i = i + 1 ;
+        }
+        return 1.0 ;
+    }
+}
+
+Calculator c = new Calculator ( ) ;
+float sum = c . add ( 10.5 , 20.5 ) ;
+out sum + "%n" ;
+out c . lastResult + "%n" ;
+
+float scaled = c . scaleAndOffset ( 5.0 , 3.0 , 2.5 ) ;
+out scaled + "%n" ;
+
+float ok = c . greet ( "Alice" , 2 ) ;
+out ok + "%n" ;
+.
+

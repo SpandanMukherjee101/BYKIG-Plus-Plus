@@ -1,0 +1,33 @@
+class Point
+{
+    private float x ;
+    private float y ;
+
+    public func construct ( float px , float py )
+    {
+        this . x = px ;
+        this . y = py ;
+    }
+
+    public func getSum ( )
+    {
+        return this . x + this . y ;
+    }
+
+    public func copyFrom ( Point other )
+    {
+
+        this . x = other . x ;
+        this . y = other . y ;
+    }
+}
+
+Point p1 = new Point ( 10.0 , 20.0 ) ;
+Point p2 = new Point ( 50.0 , 70.0 ) ;
+
+out p1 . getSum ( ) ;
+out p2 . getSum ( ) ;
+
+p1 . copyFrom ( p2 ) ;
+
+out p1 . getSum ( ) ;

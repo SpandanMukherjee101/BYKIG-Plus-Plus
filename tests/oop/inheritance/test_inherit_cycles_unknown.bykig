@@ -1,0 +1,40 @@
+class InvalidSub extends GhostClass
+{
+    public float ghostField ;
+    public func ghostMethod ( )
+    {
+        return 404.0 ;
+    }
+}
+
+
+class LoopClass extends LoopClass
+{
+    public float loopField ;
+    public func loopMethod ( )
+    {
+        return 999.0 ;
+    }
+}
+
+
+class ValidClass
+{
+    public float validNum ;
+
+    public func construct ( float n )
+    {
+        this . validNum = n ;
+    }
+}
+
+
+InvalidSub inv = new InvalidSub ( ) ;
+out inv ;
+
+LoopClass loop = new LoopClass ( ) ;
+out loop ;
+
+
+ValidClass ok = new ValidClass ( 777.0 ) ;
+out ok . validNum ;

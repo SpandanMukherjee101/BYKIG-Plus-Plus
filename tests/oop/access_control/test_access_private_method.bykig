@@ -1,0 +1,35 @@
+class Device
+{
+    public float power ;
+
+    public func construct ( float p )
+    {
+        this . power = p ;
+    }
+
+    private func internalReset ( )
+    {
+        this . power = 0.0 ;
+        return this . power ;
+    }
+}
+
+class Remote
+{
+    public func triggerReset ( Device d )
+    {
+        return d . internalReset ( ) ;
+    }
+}
+
+Device d = new Device ( 100.0 ) ;
+
+
+out d . internalReset ( ) ;
+
+
+Remote r = new Remote ( ) ;
+out r . triggerReset ( d ) ;
+
+
+out d . power ;

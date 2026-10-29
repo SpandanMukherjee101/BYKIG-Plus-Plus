@@ -1,0 +1,77 @@
+class LivingThing
+{
+    public float id ;
+
+    public func construct ( float i )
+    {
+        this . id = i ;
+    }
+
+    public func getId ( )
+    {
+        return this . id ;
+    }
+}
+
+class Animal extends LivingThing
+{
+    public string category ;
+
+    public func construct ( float i , string c )
+    {
+        this . id = i ;
+        this . category = c ;
+    }
+
+    public func getCategory ( )
+    {
+        return this . category ;
+    }
+}
+
+class Dog extends Animal
+{
+    public string breed ;
+
+    public func construct ( float i , string c , string b )
+    {
+        this . id = i ;
+        this . category = c ;
+        this . breed = b ;
+    }
+
+    public func getBreed ( )
+    {
+        return this . breed ;
+    }
+
+    public func fullSummary ( )
+    {
+        return this . category + " " + this . breed ;
+    }
+}
+
+Dog d = new Dog ( 101.0 , "Mammal" , "Beagle" ) ;
+
+
+out d . id ;
+out d . getId ( ) ;
+
+
+out d . category ;
+out d . getCategory ( ) ;
+
+
+out d . breed ;
+out d . getBreed ( ) ;
+out d . fullSummary ( ) ;
+
+
+d . id = 202.0 ;
+d . category = "Canine" ;
+d . breed = "Poodle" ;
+
+out d . getId ( ) ;
+out d . getCategory ( ) ;
+out d . getBreed ( ) ;
+out d . fullSummary ( ) ;

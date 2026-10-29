@@ -1,0 +1,72 @@
+class MethodHeavyClass
+{
+    public func m01 ( ) { return 1.0 ; }
+    public func m02 ( ) { return 2.0 ; }
+    public func m03 ( ) { return 3.0 ; }
+    public func m04 ( ) { return 4.0 ; }
+    public func m05 ( ) { return 5.0 ; }
+    public func m06 ( ) { return 6.0 ; }
+    public func m07 ( ) { return 7.0 ; }
+    public func m08 ( ) { return 8.0 ; }
+    public func m09 ( ) { return 9.0 ; }
+    public func m10 ( ) { return 10.0 ; }
+    public func m11 ( ) { return 11.0 ; }
+    public func m12 ( ) { return 12.0 ; }
+    public func m13 ( ) { return 13.0 ; }
+    public func m14 ( ) { return 14.0 ; }
+    public func m15 ( ) { return 15.0 ; }
+    public func m16 ( ) { return 16.0 ; }
+    public func m17 ( ) { return 17.0 ; }
+    public func m18 ( ) { return 18.0 ; }
+    public func m19 ( ) { return 19.0 ; }
+    public func m20 ( ) { return 20.0 ; }
+    public func m21 ( ) { return 21.0 ; }
+    public func m22 ( ) { return 22.0 ; }
+    public func m23 ( ) { return 23.0 ; }
+    public func m24 ( ) { return 24.0 ; }
+    public func m25 ( ) { return 25.0 ; }
+    public func m26 ( ) { return 26.0 ; }
+    public func m27 ( ) { return 27.0 ; }
+    public func m28 ( ) { return 28.0 ; }
+    public func m29 ( ) { return 29.0 ; }
+    public func m30 ( ) { return 30.0 ; }
+    public func m31 ( ) { return 31.0 ; }
+    public func m32 ( ) { return 32.0 ; }
+    public func m33 ( ) { return 33.0 ; }
+    public func m34 ( ) { return 34.0 ; }
+    public func m35 ( ) { return 35.0 ; }
+    public func m36 ( ) { return 36.0 ; }
+    public func m37 ( ) { return 37.0 ; }
+    public func m38 ( ) { return 38.0 ; }
+    public func m39 ( ) { return 39.0 ; }
+    public func m40 ( ) { return 40.0 ; }
+    public func m41 ( ) { return 41.0 ; }
+    public func m42 ( ) { return 42.0 ; }
+    public func m43 ( ) { return 43.0 ; }
+    public func m44 ( ) { return 44.0 ; }
+    public func m45 ( ) { return 45.0 ; }
+    public func m46 ( ) { return 46.0 ; }
+    public func m47 ( ) { return 47.0 ; }
+    public func m48 ( ) { return 48.0 ; }
+    public func m49 ( ) { return 49.0 ; }
+    public func m50 ( ) { return 50.0 ; }
+    public func m51 ( ) { return 51.0 ; }
+    public func m52 ( ) { return 52.0 ; }
+    public func m53 ( ) { return 53.0 ; }
+    public func m54 ( ) { return 54.0 ; }
+    public func m55 ( ) { return 55.0 ; }
+    public func m56 ( ) { return 56.0 ; }
+    public func m57 ( ) { return 57.0 ; }
+    public func m58 ( ) { return 58.0 ; }
+    public func m59 ( ) { return 59.0 ; }
+    public func m60 ( ) { return 60.0 ; }
+    public func m61 ( ) { return 61.0 ; }
+    public func m62 ( ) { return 62.0 ; }
+    public func m63 ( ) { return 63.0 ; }
+    public func m64 ( ) { return 64.0 ; }
+    public func m65 ( ) { return 65.0 ; }
+}
+MethodHeavyClass inst = new MethodHeavyClass ( ) ;
+out inst . m01 ( ) ;
+out inst . m64 ( ) ;
+out 1000 ;

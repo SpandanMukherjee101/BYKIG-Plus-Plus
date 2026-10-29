@@ -1,0 +1,38 @@
+class SafePoint
+{
+    public float x ;
+    public float y ;
+
+    public func construct ( float initialX , float initialY )
+    {
+        this . x = initialX ;
+        this . y = initialY ;
+    }
+
+    public func getX ( )
+    {
+        return this . x ;
+    }
+}
+
+
+SafePoint uninit ;
+out is_instance ( uninit , "SafePoint" ) ;
+
+
+uninit . x = 50.0 ;
+float uninitX = uninit . x ;
+float uninitCall = uninit . getX ( ) ;
+
+
+SafePoint badArgs = new SafePoint ( 10.0 ) ;
+out is_instance ( badArgs , "SafePoint" ) ;
+
+
+SafePoint valid = new SafePoint ( 1.0 , 2.0 ) ;
+out valid . getX ( ) ;
+valid = null ;
+valid . x = 99.0 ;
+out is_instance ( valid , "SafePoint" ) ;
+
+out "Null and constructor guards test passed." ;

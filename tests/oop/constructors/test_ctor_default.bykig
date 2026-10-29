@@ -1,0 +1,24 @@
+class Plain
+{
+    public float num ;
+    public string str ;
+}
+
+class AutoInit
+{
+    public float status ;
+
+    public func construct ( )
+    {
+        this . status = 42.0 ;
+    }
+}
+
+Plain p = new Plain ( ) ;
+out p . num + "%n" ;
+out p . str + "%n" ;
+
+AutoInit a = new AutoInit ( ) ;
+out a . status + "%n" ;
+.
+

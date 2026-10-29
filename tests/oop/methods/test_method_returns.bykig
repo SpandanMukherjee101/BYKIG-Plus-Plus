@@ -1,0 +1,34 @@
+class Box
+{
+    public float val ;
+    public string label ;
+
+    public func getLabel ( )
+    {
+        return this . label ;
+    }
+
+    public func setLabel ( string newLabel )
+    {
+        this . label = newLabel ;
+    }
+}
+
+class Factory
+{
+    public func createBox ( float initialVal , string initialLabel )
+    {
+        Box b = new Box ( ) ;
+        b . val = initialVal ;
+        b . setLabel ( initialLabel ) ;
+        return b ;
+    }
+}
+
+Factory f = new Factory ( ) ;
+Box box1 = f . createBox ( 99.0 , "BoxOne" ) ;
+
+out box1 . val + "%n" ;
+out box1 . getLabel ( ) + "%n" ;
+.
+

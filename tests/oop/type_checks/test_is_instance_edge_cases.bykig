@@ -1,0 +1,23 @@
+class Base
+{
+    public float id ;
+}
+
+Base obj = new Base ( ) ;
+Base nullObj ;
+
+
+out is_instance ( obj , "NonExistentClass" ) ;
+out is_instance ( obj , "AnotherFake" ) ;
+
+
+out is_instance ( obj , "" ) ;
+
+
+out is_instance ( nullObj , "Base" ) ;
+out is_instance ( nullObj , "NonExistent" ) ;
+
+
+out is_instance ( 42 , "Base" ) ;
+out is_instance ( "hello" , "Base" ) ;
+out is_instance ( 3.14159 , "Base" ) ;

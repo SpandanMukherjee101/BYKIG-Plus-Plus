@@ -25,19 +25,42 @@
 | Comments | ✅ | `//` single-line comments. |
 | Program terminator | ✅ | `.` stops execution early; reaching EOF also ends a program successfully. |
 
+## Object-Oriented Programming (OOP)
+
+| Feature | Status | Notes |
+|---|:---:|---|
+| `class` declaration | ✅ | Registers class metadata, fields, and methods in `CLASS_REGISTRY`. |
+| Instance fields | ✅ | Supported types include primitives, strings, arrays, lists, maps, and objects; up to 64 fields per class. |
+| Access control | ✅ | Explicit `public` and `private` modifiers on fields and methods; default visibility is public. |
+| `new` instantiation | ✅ | Heap-allocates object instances (`struct objInstance`), initializes fields to defaults, and executes constructor. |
+| `construct` constructor | ✅ | Explicit constructor method matching parameter count; default zero-argument constructor provided if omitted. |
+| Instance methods | ✅ | Scoped per declaring class; up to 64 methods per class; callable via `obj . method ( args )` or `obj.method ( args )`. |
+| `this` reference | ✅ | Receiver dynamically bound in call frame and local environment; reentrant and isolated across nested/recursive calls. |
+| Reference semantics & aliasing | ✅ | Object variables (`VAL_OBJECT`) hold non-owning heap pointers; mutations reflect across aliases. |
+| Single inheritance (`extends`) | ✅ | Derived class inherits fields and methods; superclasses must be declared before subclasses. |
+| Method overriding & polymorphism | ✅ | Dynamic virtual dispatch starts at receiver's runtime class and traverses parent chain. |
+| Override signature validation | ✅ | Enforces exact parameter count and parameter type matching; prevents illegal visibility reduction. |
+| `is_instance()` predicate | ✅ | Built-in testing exact class match or any descendant class in the inheritance hierarchy. |
+| Null dereference safety | ✅ | Guarded member access on uninitialized or null object references with explicit error diagnostics. |
+| Centralized heap reclamation | ✅ | Global intrusive linked list `OBJECT_HEAP` cleaned up deterministically at shutdown via `freeAllObjects()`. |
+
 ## Runtime data structures
 
 | Runtime component | Status | Implementation idea |
 |---|:---:|---|
-| Unified `Value` | ✅ | `ValueType`, scalar storage, string storage, or `void *ptr` for complex objects. |
+| Unified `Value` | ✅ | `ValueType` (`VAL_FLOAT`, `VAL_STRING`, `VAL_OBJECT`, arrays, lists, maps), scalar storage, string buffer, or `void *ptr`. |
 | Environment stack | ✅ | `envStack[10000]`; active scope is selected with `envTop`. |
-| Call stack | ✅ | `callStack[10000]`; active call is selected with `callStackTop`. |
-| Function registry | ✅ | Linked list of `funcDef` structures. |
+| Call stack | ✅ | `callStack[10000]`; stores `thisObj`, `executingClass`, return position, return values, caller's `envTop`. |
+| Function registry | ✅ | Linked list of `funcDef` structures (`FN`). |
+| Class registry | ✅ | Linked list of `classDef` structures (`CLASS_REGISTRY`). |
+| Object heap | ✅ | Intrusive singly-linked list of `objInstance` structures (`OBJECT_HEAP`). |
 | Typed primitive storage | ✅ | Separate linked lists for `int`, `float`, `char`, `bool`, `string`. |
+| Object variable storage | ✅ | Linked list of `struct oV` references per environment frame. |
 | Typed arrays | ✅ | Separate structures for int/float/char/bool arrays. |
 | Dynamic lists | ✅ | Size/capacity based dynamic `Value` list with capacity doubling. |
-| Maps | ✅ | Generic `Value`-based map with dynamic capacity (`realloc`), supporting strings, floats, ints, lists, and nested maps. |
-| Environment cleanup | ✅ | `cleanupFrame()` frees variables, arrays, list buffers, and maps in the frame. |
+| Maps | ✅ | Generic `Value`-based map with dynamic capacity (`realloc`), supporting strings, floats, ints, lists, maps, and objects. |
+| Environment cleanup | ✅ | `cleanupFrame()` frees variable link nodes, arrays, list buffers, and maps in the frame without double-freeing objects. |
+| Heap cleanup | ✅ | `freeAllObjects(&OBJECT_HEAP)` frees all allocated object instances and field arrays at shutdown. |
 
 ## Collections
 
@@ -73,6 +96,7 @@
 | `is_str()` | ✅ | Returns `1` if the value is a string, `0` otherwise. |
 | `starts_with()` | ✅ | `starts_with(str, prefix)` tests if string starts with prefix. |
 | `parse_float()` | ✅ | Converts a string/numeric value to a float result. |
+| `is_instance()` | ✅ | Tests if an object instance belongs to a class or any of its derived subclasses. |
 | `file_exists()` | ✅ | Tests whether a file can be opened for reading. |
 | `file_write()` | ✅ | Overwrites a file. |
 | `file_append()` | ✅ | Appends to a file. |

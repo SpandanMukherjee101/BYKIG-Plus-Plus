@@ -1,0 +1,53 @@
+class BasePricing
+{
+    public func getBaseRate ( )
+    {
+        return 10.0 ;
+    }
+
+    public func getMultiplier ( )
+    {
+        return 1.0 ;
+    }
+
+    public func calculateTotal ( float units )
+    {
+
+        return ( this . getBaseRate ( ) * units ) * this . getMultiplier ( ) ;
+    }
+}
+
+class PremiumPricing extends BasePricing
+{
+    public func getBaseRate ( )
+    {
+        return 20.0 ;
+    }
+
+    public func getMultiplier ( )
+    {
+        return 1.5 ;
+    }
+}
+
+class DiscountPricing extends BasePricing
+{
+    public func getMultiplier ( )
+    {
+
+        return 0.5 ;
+    }
+}
+
+BasePricing standard = new BasePricing ( ) ;
+BasePricing premium = new PremiumPricing ( ) ;
+BasePricing discount = new DiscountPricing ( ) ;
+
+
+out standard . calculateTotal ( 2.0 ) ;
+
+
+out premium . calculateTotal ( 2.0 ) ;
+
+
+out discount . calculateTotal ( 2.0 ) ;

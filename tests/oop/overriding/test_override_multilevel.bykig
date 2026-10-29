@@ -1,0 +1,74 @@
+class LevelA
+{
+    public func compute ( float x )
+    {
+        return x + 1.0 ;
+    }
+
+    public func describe ( )
+    {
+        return "LevelA" ;
+    }
+}
+
+class LevelB extends LevelA
+{
+    public func compute ( float x )
+    {
+        return x * 2.0 ;
+    }
+
+    public func describe ( )
+    {
+        return "LevelB" ;
+    }
+}
+
+class LevelC extends LevelB
+{
+
+    public func describe ( )
+    {
+        return "LevelC" ;
+    }
+}
+
+class LevelD extends LevelC
+{
+    public func compute ( float x )
+    {
+        return x * 10.0 ;
+    }
+
+    public func describe ( )
+    {
+        return "LevelD" ;
+    }
+}
+
+LevelA a = new LevelA ( ) ;
+LevelB b = new LevelB ( ) ;
+LevelC c = new LevelC ( ) ;
+LevelD d = new LevelD ( ) ;
+
+out a . compute ( 5.0 ) ;
+out b . compute ( 5.0 ) ;
+out c . compute ( 5.0 ) ;
+out d . compute ( 5.0 ) ;
+
+
+LevelA polyRef = a ;
+out polyRef . compute ( 5.0 ) ;
+out polyRef . describe ( ) ;
+
+polyRef = b ;
+out polyRef . compute ( 5.0 ) ;
+out polyRef . describe ( ) ;
+
+polyRef = c ;
+out polyRef . compute ( 5.0 ) ;
+out polyRef . describe ( ) ;
+
+polyRef = d ;
+out polyRef . compute ( 5.0 ) ;
+out polyRef . describe ( ) ;

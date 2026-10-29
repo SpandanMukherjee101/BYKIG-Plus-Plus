@@ -1,0 +1,15 @@
+class RealClass
+{
+    public float x ;
+}
+
+Ghost g ;
+
+RealClass r = new Phantom ( ) ;
+
+out ( r == null ) + "%n" ;
+
+RealClass valid = new RealClass ( ) ;
+out valid + "%n" ;
+.
+

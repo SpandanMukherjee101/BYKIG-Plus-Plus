@@ -1,0 +1,27 @@
+class Builder
+{
+    public float total ;
+
+    public func add ( float n )
+    {
+        this . total = this . total + n ;
+        return this ;
+    }
+
+    public func getAlias ( )
+    {
+        Builder alias = this ;
+        return alias . total ;
+    }
+}
+
+Builder b = new Builder ( ) ;
+b . total = 0.0 ;
+
+
+b . add ( 5.0 ) . add ( 10.0 ) . add ( 20.0 ) ;
+out b . total + "%n" ;
+
+float aliasVal = b . getAlias ( ) ;
+out aliasVal + "%n" ;
+.

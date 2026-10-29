@@ -1,0 +1,61 @@
+class Point
+{
+    public float x ;
+    public float y ;
+
+    public func construct ( float px , float py )
+    {
+        this . x = px ;
+        this . y = py ;
+
+        return 999.0 ;
+    }
+}
+
+class Window
+{
+    public Point origin ;
+    public float width ;
+    public float height ;
+
+    public func construct ( float x , float y , float w , float h )
+    {
+        this . origin = new Point ( x , y ) ;
+        this . width = w ;
+        this . height = h ;
+    }
+
+    public func getArea ( )
+    {
+        return this . width * this . height ;
+    }
+}
+
+class Line
+{
+    public Point start ;
+    public Point end ;
+
+    public func construct ( Point s , Point e )
+    {
+        this . start = s ;
+        this . end = e ;
+    }
+}
+
+
+Point p = new Point ( 10.0 , 20.0 ) ;
+out p . x + "%n" ;
+out p . y + "%n" ;
+
+
+Window win = new Window ( 5.0 , 15.0 , 800.0 , 600.0 ) ;
+out win . origin . x + "%n" ;
+out win . origin . y + "%n" ;
+out win . getArea ( ) + "%n" ;
+
+
+Line line = new Line ( new Point ( 1.0 , 2.0 ) , new Point ( 3.0 , 4.0 ) ) ;
+out line . start . x + "%n" ;
+out line . end . y + "%n" ;
+.

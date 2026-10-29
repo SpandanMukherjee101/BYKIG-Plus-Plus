@@ -1,0 +1,43 @@
+class SecureData
+{
+    private float key ;
+    public float publicTag ;
+
+    public func construct ( float k , float t )
+    {
+        this . key = k ;
+        this . publicTag = t ;
+    }
+
+    public func getKey ( )
+    {
+        return this . key ;
+    }
+}
+
+func freeReader ( SecureData s )
+{
+
+    return s . key ;
+}
+
+SecureData s1 = new SecureData ( 12345.0 , 1.0 ) ;
+
+
+SecureData alias = s1 ;
+out alias . key ;
+alias . key = 99999.0 ;
+
+
+out alias.key ;
+alias.key = 88888.0 ;
+
+
+out ( s1 . key + 10.0 ) ;
+
+
+out freeReader ( s1 ) ;
+
+
+out s1 . getKey ( ) ;
+out s1 . publicTag ;

@@ -1,0 +1,33 @@
+class Box
+{
+    public float size ;
+
+    public func construct ( float s )
+    {
+        this . size = s ;
+    }
+}
+
+class NoCtor
+{
+    public float val ;
+}
+
+
+Box b1 = new Box ( ) ;
+out b1 + "%n" ;
+
+
+Box b2 = new Box ( 10.0 , 20.0 ) ;
+out b2 + "%n" ;
+
+
+NoCtor nc = new NoCtor ( 99.0 ) ;
+out nc + "%n" ;
+
+
+Box b3 = new GhostClass ( 1.0 ) ;
+out b3 + "%n" ;
+
+out "Ctor error tests complete" + "%n" ;
+.

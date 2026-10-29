@@ -1,0 +1,27 @@
+class Point
+{
+    public float x ;
+}
+
+Point p = new Point ( ) ;
+p . x = 10.0 ;
+
+
+float f = p . missing ;
+
+
+p . notAField = 5.0 ;
+
+
+Point uninit ;
+uninit . x = 20.0 ;
+
+
+float f2 = uninit . x ;
+
+
+p . x = "bad value" ;
+
+
+out p . x + "%n" ;
+.

@@ -1,0 +1,62 @@
+class Animal
+{
+    public string name ;
+
+    public func construct ( string n )
+    {
+        this . name = n ;
+    }
+
+    public func speak ( )
+    {
+        return "Generic sound" ;
+    }
+
+    public func describe ( )
+    {
+        return this . name ;
+    }
+}
+
+class Dog extends Animal
+{
+    public string breed ;
+
+    public func construct ( string n , string b )
+    {
+        this . name = n ;
+        this . breed = b ;
+    }
+
+    public func bark ( )
+    {
+        return "Woof!" ;
+    }
+
+    public func getDetails ( )
+    {
+        return this . name + " the " + this . breed ;
+    }
+}
+
+Animal a = new Animal ( "Creature" ) ;
+out a . name ;
+out a . speak ( ) ;
+out a . describe ( ) ;
+
+Dog d = new Dog ( "Buddy" , "Golden Retriever" ) ;
+
+out d . name ;
+
+out d . breed ;
+
+out d . speak ( ) ;
+out d . describe ( ) ;
+
+out d . bark ( ) ;
+out d . getDetails ( ) ;
+
+
+d . name = "Max" ;
+out a . name ;
+out d . name ;

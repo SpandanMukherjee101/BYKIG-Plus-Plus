@@ -1,0 +1,33 @@
+class Counter
+{
+    public float count ;
+    public string label ;
+
+    public func init ( string lbl , float start )
+    {
+        this . label = lbl ;
+        this . count = start ;
+    }
+
+    public func increment ( float amount )
+    {
+        this . count = this . count + amount ;
+    }
+
+    public func getSummary ( )
+    {
+        return this . label + ": " + this . count ;
+    }
+}
+
+Counter c = new Counter ( ) ;
+c . init ( "Apples" , 10.0 ) ;
+out c . getSummary ( ) + "%n" ;
+
+c . increment ( 5.0 ) ;
+out c . getSummary ( ) + "%n" ;
+
+c . increment ( 20.0 ) ;
+out c . getSummary ( ) + "%n" ;
+.
+

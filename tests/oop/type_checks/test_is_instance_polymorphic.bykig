@@ -1,0 +1,45 @@
+class Animal
+{
+    public string name ;
+}
+
+class Dog extends Animal
+{
+    public string breed ;
+}
+
+class Cat extends Animal
+{
+    public float lives ;
+}
+
+Animal poly = new Dog ( ) ;
+
+
+out is_instance ( poly , "Dog" ) ;
+out is_instance ( poly , "Animal" ) ;
+out is_instance ( poly , "Cat" ) ;
+
+
+string targetClass = "Dog" ;
+out is_instance ( poly , targetClass ) ;
+
+string otherClass = "Cat" ;
+out is_instance ( poly , otherClass ) ;
+
+
+if ( is_instance ( poly , "Dog" ) )
+{
+    out 100 ;
+}
+
+if ( is_instance ( poly , "Cat" ) )
+{
+    out 999 ;
+}
+else
+{
+    out 200 ;
+}
+
+out "Done" ;

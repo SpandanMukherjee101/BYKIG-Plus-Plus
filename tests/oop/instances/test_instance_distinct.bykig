@@ -1,0 +1,26 @@
+class Counter
+{
+    public float val ;
+}
+
+Counter c1 = new Counter ( ) , c2 = new Counter ( ) ;
+Counter c3 = new Counter ( ) ;
+
+out c1 + "%n" ;
+out c2 + "%n" ;
+out c3 + "%n" ;
+
+out ( c1 != c2 ) + "%n" ;
+out ( c2 != c3 ) + "%n" ;
+out ( c1 != c3 ) + "%n" ;
+
+float id1 = object_id ( c1 ) ;
+float id2 = object_id ( c2 ) ;
+float id3 = object_id ( c3 ) ;
+
+out id1 + "%n" ;
+out id2 + "%n" ;
+out id3 + "%n" ;
+out ( id2 > id1 ) + "%n" ;
+out ( id3 > id2 ) + "%n" ;
+.

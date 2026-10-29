@@ -1,0 +1,58 @@
+class ParentCtor
+{
+    public float pVal1 ;
+    public float pVal2 ;
+
+    public func construct ( float a , float b )
+    {
+        this . pVal1 = a ;
+        this . pVal2 = b ;
+    }
+
+    public func getSum ( )
+    {
+        return this . pVal1 + this . pVal2 ;
+    }
+}
+
+class NoCtorChild extends ParentCtor
+{
+    public float cVal ;
+}
+
+class ExplicitChild extends ParentCtor
+{
+    public float cVal ;
+
+    public func construct ( float a , float b , float c )
+    {
+
+        this . pVal1 = a ;
+        this . pVal2 = b ;
+        this . cVal = c ;
+    }
+
+    public func getTotal ( )
+    {
+        return this . pVal1 + this . pVal2 + this . cVal ;
+    }
+}
+
+
+NoCtorChild n1 = new NoCtorChild ( ) ;
+out n1 . pVal1 ;
+out n1 . pVal2 ;
+out n1 . cVal ;
+
+
+NoCtorChild n2 = new NoCtorChild ( 10.0 , 20.0 ) ;
+out n2 ;
+
+
+ExplicitChild e = new ExplicitChild ( 10.0 , 20.0 , 30.0 ) ;
+out e . pVal1 ;
+out e . pVal2 ;
+out e . cVal ;
+out e . getTotal ( ) ;
+
+out e . getSum ( ) ;

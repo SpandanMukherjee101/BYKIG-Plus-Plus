@@ -1,0 +1,33 @@
+class SuperA
+{
+    public float sharedValue ;
+    public float alpha ;
+}
+
+class SubB extends SuperA
+{
+
+    public float sharedValue ;
+    public float beta ;
+
+
+    public func action ( )
+    {
+        return 1.0 ;
+    }
+
+    public func action ( )
+    {
+        return 2.0 ;
+    }
+}
+
+SubB obj = new SubB ( ) ;
+obj . sharedValue = 10.0 ;
+obj . alpha = 20.0 ;
+obj . beta = 30.0 ;
+
+out obj . sharedValue ;
+out obj . alpha ;
+out obj . beta ;
+out obj . action ( ) ;

@@ -1,0 +1,29 @@
+class Particle
+{
+    public float id ;
+    public float energy ;
+
+    public func construct ( float pid , float e )
+    {
+        this . id = pid ;
+        this . energy = e ;
+    }
+
+    public func printInfo ( )
+    {
+        out "P#" + this . id + " E=" + this . energy + "%n" ;
+    }
+}
+
+float sumEnergy = 0.0 ;
+
+for ( int i = 1 ; i <= 5 ; i = i + 1 )
+{
+    Particle p = new Particle ( i * 1.0 , i * 10.0 ) ;
+    p . printInfo ( ) ;
+    sumEnergy = sumEnergy + p . energy ;
+}
+
+out "Total energy: " + sumEnergy + "%n" ;
+.
+

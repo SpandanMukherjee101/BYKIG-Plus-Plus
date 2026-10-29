@@ -1,0 +1,59 @@
+class Animal
+{
+    public func speak ( )
+    {
+        return "Generic sound" ;
+    }
+
+    public func typeName ( )
+    {
+        return "Animal" ;
+    }
+}
+
+class Dog extends Animal
+{
+    public func speak ( )
+    {
+        return "Woof!" ;
+    }
+
+    public func typeName ( )
+    {
+        return "Dog" ;
+    }
+}
+
+class Cat extends Animal
+{
+    public func speak ( )
+    {
+        return "Meow!" ;
+    }
+
+    public func typeName ( )
+    {
+        return "Cat" ;
+    }
+}
+
+func announce ( Animal a )
+{
+    out a . typeName ( ) ;
+    out a . speak ( ) ;
+}
+
+
+Animal ref = new Dog ( ) ;
+out ref . speak ( ) ;
+announce ( ref ) ;
+
+
+ref = new Cat ( ) ;
+out ref . speak ( ) ;
+announce ( ref ) ;
+
+
+ref = new Animal ( ) ;
+out ref . speak ( ) ;
+announce ( ref ) ;

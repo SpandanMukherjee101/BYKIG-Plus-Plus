@@ -1,0 +1,22 @@
+class Point
+{
+    public float x ;
+
+    public func getX ( )
+    {
+        return this . x ;
+    }
+
+    public func setX ( float newX )
+    {
+        this . x = newX ;
+    }
+}
+
+Point p = new Point ( ) ;
+out p . getX ( ) + "%n" ;
+
+p . setX ( 42.5 ) ;
+out p . getX ( ) + "%n" ;
+.
+

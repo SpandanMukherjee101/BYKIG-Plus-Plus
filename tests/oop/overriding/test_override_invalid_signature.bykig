@@ -1,0 +1,44 @@
+class BaseSignatures
+{
+    public func foo ( float a )
+    {
+        return a + 1.0 ;
+    }
+
+    public func bar ( float a )
+    {
+        return a * 10.0 ;
+    }
+
+    public func baz ( )
+    {
+        return 100.0 ;
+    }
+}
+
+class InvalidOverrides extends BaseSignatures
+{
+
+    public func foo ( float a , float b )
+    {
+        return a + b ;
+    }
+
+
+    public func bar ( string a )
+    {
+        return 0.0 ;
+    }
+
+
+    private func baz ( )
+    {
+        return 999.0 ;
+    }
+}
+
+InvalidOverrides obj = new InvalidOverrides ( ) ;
+
+out obj . foo ( 5.0 ) ;
+out obj . bar ( 5.0 ) ;
+out obj . baz ( ) ;

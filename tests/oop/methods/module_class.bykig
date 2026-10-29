@@ -1,0 +1,9 @@
+class Calculator
+{
+    public func square ( float x )
+    {
+        return x * x ;
+    }
+}
+.
+

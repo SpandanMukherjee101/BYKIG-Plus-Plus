@@ -1,0 +1,36 @@
+class MathService
+{
+    public float base ;
+
+    public func setBase ( float b )
+    {
+        this . base = b ;
+    }
+
+    public func doubleBase ( )
+    {
+        return this . base * 2.0 ;
+    }
+
+    public func quadrupleBase ( )
+    {
+        float d = this . doubleBase ( ) ;
+        return d * 2.0 ;
+    }
+
+    public func calculateTotal ( float extra )
+    {
+        return this . quadrupleBase ( ) + extra ;
+    }
+}
+
+MathService ms = new MathService ( ) ;
+ms . setBase ( 10.0 ) ;
+
+float q = ms . quadrupleBase ( ) ;
+out q + "%n" ;
+
+float tot = ms . calculateTotal ( 7.0 ) ;
+out tot + "%n" ;
+.
+

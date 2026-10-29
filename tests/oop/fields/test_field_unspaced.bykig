@@ -1,0 +1,24 @@
+class Inner
+{
+    public float val ;
+}
+
+class Outer
+{
+    public Inner inner ;
+    public float x ;
+}
+
+Outer o = new Outer ( ) ;
+o.inner = new Inner ( ) ;
+
+o.x = 12.5 ;
+o.inner.val = 50.0 ;
+
+out o.x + "%n" ;
+out o.inner.val + "%n" ;
+
+o.inner.val = o.inner.val + o.x ;
+out o.inner.val + "%n" ;
+.
+

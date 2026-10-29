@@ -1,0 +1,49 @@
+class Inner
+{
+    public float val ;
+
+    public func getVal ( )
+    {
+        return this . val ;
+    }
+
+    public func setVal ( float v )
+    {
+        this . val = v ;
+    }
+}
+
+class Outer
+{
+    public Inner inner ;
+
+    public func getInner ( )
+    {
+        return this . inner ;
+    }
+}
+
+Outer o = new Outer ( ) ;
+Inner in1 = new Inner ( ) ;
+in1 . setVal ( 123.0 ) ;
+o . inner = in1 ;
+
+
+float m2m = o . getInner ( ) . getVal ( ) ;
+out m2m + "%n" ;
+
+
+float m2f = o . getInner ( ) . val ;
+out m2f + "%n" ;
+
+
+float f2m = o . inner . getVal ( ) ;
+out f2m + "%n" ;
+
+
+o . getInner ( ) . setVal ( 555.0 ) ;
+out o . getInner ( ) . getVal ( ) + "%n" ;
+
+
+out in1.getVal ( ) + "%n" ;
+.

@@ -588,11 +588,116 @@ static inline struct Value builtin_parse_float(char args[][1000], int argCount) 
     struct Value retV; retV.type=0; retV.f=parsed; return retV;
 }
 
+static inline struct Value builtin_class_exists(char args[][1000], int argCount) {
+    struct Value retV; retV.type = VAL_FLOAT; retV.f = 0.0;
+    if (argCount >= 1) {
+        char name[100];
+        strncpy(name, args[0], sizeof(name) - 1);
+        name[sizeof(name) - 1] = '\0';
+        trim_spaces(name);
+        strip_quotes(name);
+        if (findClass(CLASS_REGISTRY, name) != NULL) {
+            retV.f = 1.0;
+        }
+    }
+    return retV;
+}
+
+static inline struct Value builtin_object_id(char args[][1000], int argCount) {
+    struct Value retV; retV.type = VAL_FLOAT; retV.f = 0.0;
+    if (argCount >= 1) {
+        char exprBuf[1000];
+        snprintf(exprBuf, sizeof(exprBuf), "%s ;", args[0]);
+        struct Value v = val(exprBuf);
+        if (v.type == VAL_OBJECT && v.ptr != NULL) {
+            struct objInstance *inst = (struct objInstance*)v.ptr;
+            retV.f = (float)inst->id;
+        }
+    }
+    return retV;
+}
+
+static inline struct Value builtin_is_null(char args[][1000], int argCount) {
+    struct Value retV; retV.type = VAL_FLOAT; retV.f = 0.0;
+    if (argCount >= 1) {
+        char exprBuf[1000];
+        snprintf(exprBuf, sizeof(exprBuf), "%s ;", args[0]);
+        struct Value v = val(exprBuf);
+        if (v.type == VAL_OBJECT && v.ptr == NULL) {
+            retV.f = 1.0;
+        }
+    }
+    return retV;
+}
+
+static inline struct Value builtin_is_instance(char args[][1000], int argCount) {
+    struct Value retV;
+    retV.type = VAL_FLOAT;
+    retV.f = 0.0f;
+    retV.ptr = NULL;
+    retV.s[0] = '\0';
+
+    if (argCount < 2) {
+        return retV;
+    }
+
+    // 1. Resolve and validate target class name
+    char targetClassName[100] = "";
+    char clsExpr[1000];
+    snprintf(clsExpr, sizeof(clsExpr), "%s ;", args[1]);
+    struct Value cVal = val(clsExpr);
+    if (cVal.type == VAL_STRING && cVal.s[0] != '\0') {
+        snprintf(targetClassName, sizeof(targetClassName), "%.99s", cVal.s);
+    } else {
+        snprintf(targetClassName, sizeof(targetClassName), "%.99s", args[1]);
+    }
+    targetClassName[sizeof(targetClassName) - 1] = '\0';
+    trim_spaces(targetClassName);
+    strip_quotes(targetClassName);
+    trim_spaces(targetClassName);
+
+    if (targetClassName[0] == '\0') {
+        return retV;
+    }
+
+    struct classDef *targetCls = findClass(CLASS_REGISTRY, targetClassName);
+    if (!targetCls) {
+        // Unknown target class name returns 0 (false) safely
+        return retV;
+    }
+
+    // 2. Evaluate object expression
+    char objExpr[1000];
+    snprintf(objExpr, sizeof(objExpr), "%s ;", args[0]);
+    struct Value oVal = val(objExpr);
+
+    // 3. Non-object values and null references return 0 (false)
+    if (oVal.type != VAL_OBJECT || oVal.ptr == NULL) {
+        return retV;
+    }
+
+    struct objInstance *inst = (struct objInstance*)oVal.ptr;
+    if (!inst->cls) {
+        return retV;
+    }
+
+    // 4. Check if inst->cls is targetCls or a subclass of targetCls
+    if (isSubclassOf(inst->cls, targetCls)) {
+        retV.f = 1.0f;
+    }
+
+    return retV;
+}
+
 static struct BuiltinFunc builtins[] = {
     {"len", 1, builtin_len},
     {"push", 0, builtin_push},
     {"pop", 0, builtin_pop},
     {"exists", 0, builtin_map_exists},
+    {"class_exists", 1, builtin_class_exists},
+    {"object_id", 1, builtin_object_id},
+    {"is_null", 1, builtin_is_null},
+    {"is_instance", 2, builtin_is_instance},
     {"delete", 0, builtin_map_delete},
     {"file_exists", 1, builtin_file_exists},
     {"file_write", 2, builtin_file_write},

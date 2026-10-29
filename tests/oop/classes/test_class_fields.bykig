@@ -1,0 +1,15 @@
+class Entity
+{
+    public int id ;
+    public float score ;
+    private string secretKey ;
+    char initial ;
+    bool active ;
+    public list tags ;
+    public map meta ;
+    public int x , y ;
+}
+
+out "Entity class exists: " + class_exists ( "Entity" ) + "%n" ;
+out "PASS: Class with fields test%n" ;
+.

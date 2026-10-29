@@ -1,0 +1,47 @@
+class Node
+{
+    public float id ;
+    public Node next ;
+
+    public func construct ( float initialId )
+    {
+        this . id = initialId ;
+    }
+
+    public func getId ( )
+    {
+        return this . id ;
+    }
+}
+
+
+Node n1 = new Node ( 101.0 ) ;
+Node n2 = new Node ( 102.0 ) ;
+n1 . next = n2 ;
+n2 . next = n1 ;
+
+out n1 . id ;
+out n1 . next . id ;
+out n1 . next . next . id ;
+out n1 . next . next . next . id ;
+
+
+Node loop = new Node ( 999.0 ) ;
+loop . next = loop ;
+out loop . id ;
+out loop . next . id ;
+out loop . next . next . id ;
+
+
+Node a = new Node ( 1.0 ) ;
+Node b = new Node ( 2.0 ) ;
+Node c = new Node ( 3.0 ) ;
+a . next = b ;
+b . next = c ;
+c . next = a ;
+
+out a . next . next . next . id ;
+out b . next . next . next . id ;
+out c . next . next . next . id ;
+
+out "Cyclic references test passed." ;

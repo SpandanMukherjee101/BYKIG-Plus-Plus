@@ -35,11 +35,182 @@ static inline void format_string_token(char *dest, size_t dest_sz, const char *s
     dest[idx] = '\0';
 }
 
+static inline void parseCallArguments(const char *argExpr, struct Value *argVals, int *argCount) {
+    *argCount = 0;
+    if (!argExpr) return;
+    char trimmed[1000];
+    strncpy(trimmed, argExpr, sizeof(trimmed) - 1);
+    trimmed[sizeof(trimmed) - 1] = '\0';
+    trim_spaces(trimmed);
+    if (strlen(trimmed) == 0) return;
+
+    char singleArg[1000] = "";
+    int pDepth = 0;
+    int in_q = 0;
+    for (int k = 0; trimmed[k]; k++) {
+        char ch = trimmed[k];
+        if (ch == '"') in_q = !in_q;
+        if (!in_q) {
+            if (ch == '(') pDepth++;
+            else if (ch == ')') pDepth--;
+        }
+        if (ch == ',' && pDepth == 0 && !in_q) {
+            trim_spaces(singleArg);
+            if (strlen(singleArg) > 0) {
+                strcat(singleArg, " ;");
+                argVals[(*argCount)++] = val(singleArg);
+            }
+            singleArg[0] = '\0';
+        } else {
+            int sl = strlen(singleArg);
+            if (sl < 995) {
+                singleArg[sl] = ch;
+                singleArg[sl+1] = '\0';
+            }
+        }
+    }
+    trim_spaces(singleArg);
+    if (strlen(singleArg) > 0) {
+        strcat(singleArg, " ;");
+        argVals[(*argCount)++] = val(singleArg);
+    }
+}
+
+static inline struct Value executeMethod(struct objInstance *inst, struct classMethod *method, struct Value *argVals, int argCount) {
+    struct Value retVal;
+    memset(&retVal, 0, sizeof(retVal));
+    retVal.type = VAL_FLOAT;
+    retVal.f = 0.0f;
+
+    if (!inst) {
+        printf("Error: Null reference: cannot call method on null receiver\n");
+        retVal.type = VAL_ERROR;
+        return retVal;
+    }
+    if (!method || !method->func) {
+        printf("Error: Invalid method\n");
+        retVal.type = VAL_ERROR;
+        return retVal;
+    }
+    if (method->isPrivate) {
+        struct classDef *callerContext = (callStackTop >= 0) ? callStack[callStackTop].executingClass : NULL;
+        struct classDef *declaringClass = method->declaringClass ? method->declaringClass : inst->cls;
+        if (callerContext != declaringClass) {
+            printf("Error: Cannot access private member '%s' of class '%s' from context '%s'\n",
+                   method->name,
+                   declaringClass ? declaringClass->name : "<unknown>",
+                   callerContext ? callerContext->name : "<global>");
+            retVal.type = VAL_ERROR;
+            return retVal;
+        }
+    }
+    struct funcDef *func = method->func;
+    if (argCount != func->paramCount) {
+        printf("Error: Argument count mismatch for method '%s' in class '%s': expected %d, got %d\n",
+               method->name, inst->cls ? inst->cls->name : "<unknown>", func->paramCount, argCount);
+        retVal.type = VAL_ERROR;
+        return retVal;
+    }
+    if (callStackTop >= 999) {
+        printf("Error: Stack Overflow\n");
+        retVal.type = VAL_ERROR;
+        return retVal;
+    }
+
+    callStackTop++;
+    struct callFrame *frame = &callStack[callStackTop];
+    frame->saved_envTop = envTop;
+    frame->hasReturn = 0;
+    frame->returnValue.type = VAL_FLOAT;
+    frame->returnValue.f = 0.0f;
+    frame->returnValue.ptr = NULL;
+    frame->returnValue.s[0] = '\0';
+    frame->thisObj = inst;
+    frame->executingClass = method->declaringClass;
+
+    envTop++;
+    initEnvironmentFrame(&envStack[envTop]);
+
+    appendO(&envStack[envTop].OV, "this", inst->cls ? inst->cls->name : "", inst);
+
+    for (int p = 0; p < argCount && p < func->paramCount; p++) {
+        if (func->params[p].type == 1) {
+            appendI(&envStack[envTop].IV, func->params[p].name, (int)argVals[p].f);
+        } else if (func->params[p].type == 2) {
+            appendF(&envStack[envTop].FV, func->params[p].name, argVals[p].f);
+        } else if (func->params[p].type == 3) {
+            appendC(&envStack[envTop].CV, func->params[p].name, (char)argVals[p].f);
+        } else if (func->params[p].type == 4) {
+            appendB(&envStack[envTop].BV, func->params[p].name, (int)argVals[p].f);
+        } else if (func->params[p].type == 5) {
+            appendS(&envStack[envTop].SV, func->params[p].name, argVals[p].s);
+        } else if (func->params[p].type == 6) {
+            appendIA_copy(&envStack[envTop].IA, func->params[p].name, (struct iA*)argVals[p].ptr);
+        } else if (func->params[p].type == 7) {
+            appendFA_copy(&envStack[envTop].FA, func->params[p].name, (struct fA*)argVals[p].ptr);
+        } else if (func->params[p].type == 8) {
+            appendCA_copy(&envStack[envTop].CA, func->params[p].name, (struct cA*)argVals[p].ptr);
+        } else if (func->params[p].type == 9) {
+            appendBA_copy(&envStack[envTop].BA, func->params[p].name, (struct bA*)argVals[p].ptr);
+        } else if (func->params[p].type == 10) {
+            appendL_ref(&envStack[envTop].LV, func->params[p].name, (struct lV*)argVals[p].ptr);
+        } else if (func->params[p].type == 11) {
+            appendM_copy(&envStack[envTop].MV, func->params[p].name, (struct mV*)argVals[p].ptr);
+        } else if (func->params[p].type == 12) {
+            struct objInstance *oInst = (argVals[p].type == VAL_OBJECT) ? (struct objInstance*)argVals[p].ptr : NULL;
+            appendO(&envStack[envTop].OV, func->params[p].name, oInst && oInst->cls ? oInst->cls->name : "", oInst);
+        }
+    }
+
+    FILE *old_fp = current_fp;
+    FILE *methodFp = current_fp;
+    int closeFp = 0;
+    if (strlen(func->filepath) > 0) {
+        methodFp = fopen(func->filepath, "rb");
+        if (methodFp) {
+            closeFp = 1;
+            current_fp = methodFp;
+        } else {
+            methodFp = current_fp;
+        }
+    }
+    long savedPos = 0;
+    if (!closeFp && methodFp) { savedPos = ftell(methodFp); }
+    if (methodFp) fseek(methodFp, func->bodyPos, SEEK_SET);
+
+    const char *passPath = (strlen(func->filepath) > 0) ? func->filepath : NULL;
+    run_interpreter_loop(methodFp, passPath);
+
+    if (frame->hasReturn) {
+        retVal = frame->returnValue;
+    }
+
+    if (closeFp) {
+        fclose(methodFp);
+        current_fp = old_fp;
+    } else if (methodFp) {
+        fseek(methodFp, savedPos, SEEK_SET);
+    }
+
+    if (frame->saved_envTop >= 0) {
+        for (int e = envTop; e > frame->saved_envTop; e--) {
+            cleanupFrame(&envStack[e]);
+        }
+        envTop = frame->saved_envTop;
+    } else {
+        cleanupFrame(&envStack[envTop]);
+        envTop--;
+    }
+    callStackTop--;
+
+    return retVal;
+}
+
 void resolve_complex_types(char *expr) {
     char temp[1000];
     strcpy(temp, expr);
     
-    char tokens[100][100];
+    char tokens[200][100];
     int tokenCount = 0;
     
     char *p = temp;
@@ -69,16 +240,109 @@ void resolve_complex_types(char *expr) {
             tok[0] = *p++;
             tok[1] = '\0';
             strcpy(tokens[tokenCount++], tok);
+        } else if (*p == '(' || *p == ')' || *p == ',' || *p == ';') {
+            char tok[2];
+            tok[0] = *p++;
+            tok[1] = '\0';
+            strcpy(tokens[tokenCount++], tok);
         } else {
             char tok[100];
             int idx = 0;
-            while (*p && *p != ' ' && *p != '\t' && *p != '\n' && *p != '"' && *p != '[' && *p != ']' && idx < 95) tok[idx++] = *p++;
+            while (*p && *p != ' ' && *p != '\t' && *p != '\n' && *p != '"' && *p != '[' && *p != ']' && *p != '(' && *p != ')' && *p != ',' && *p != ';' && idx < 95) tok[idx++] = *p++;
             tok[idx] = '\0';
             strcpy(tokens[tokenCount++], tok);
         }
     }
     
      
+    // Resolve object instantiation: new ClassName ( args )
+    int resolvedNew = 1;
+    while (resolvedNew) {
+        resolvedNew = 0;
+        for (int i = 0; i < tokenCount; i++) {
+            if (!strcmp(tokens[i], "new") && i < tokenCount - 1) {
+                char className[100];
+                strncpy(className, tokens[i+1], sizeof(className) - 1);
+                className[sizeof(className) - 1] = '\0';
+                
+                int j = i + 2;
+                if (j < tokenCount && !strcmp(tokens[j], "(")) {
+                    int brackets = 1;
+                    j++;
+                    char argExpr[1000] = "";
+                    while (j < tokenCount && brackets > 0) {
+                        if (!strcmp(tokens[j], "(")) brackets++;
+                        else if (!strcmp(tokens[j], ")")) brackets--;
+                        if (brackets > 0) {
+                            strcat(argExpr, tokens[j]);
+                            strcat(argExpr, " ");
+                        }
+                        j++;
+                    }
+                    
+                    struct classDef *cls = findClass(CLASS_REGISTRY, className);
+                    if (cls == NULL) {
+                        printf("Error: Unknown class '%s'\n", className);
+                        strcpy(tokens[i], "null");
+                    } else {
+                        struct Value argVals[10];
+                        int argCount = 0;
+                        parseCallArguments(argExpr, argVals, &argCount);
+
+                        struct classMethod *ctor = findConstructor(cls);
+                        if (ctor == NULL) {
+                            if (argCount == 0) {
+                                struct objInstance *inst = allocateObject(cls);
+                                if (!inst) {
+                                    printf("Error: Out of memory\n");
+                                    strcpy(tokens[i], "null");
+                                } else {
+                                    char tempName[64];
+                                    snprintf(tempName, sizeof(tempName), "__obj_%d", inst->id);
+                                    appendO(&envStack[envTop].OV, tempName, cls->name, inst);
+                                    strcpy(tokens[i], tempName);
+                                }
+                            } else {
+                                printf("Error: Class '%s' has no constructor matching %d argument(s)\n", className, argCount);
+                                strcpy(tokens[i], "null");
+                            }
+                        } else {
+                            struct funcDef *cFunc = ctor->func;
+                            if (cFunc && argCount != cFunc->paramCount) {
+                                printf("Error: Argument count mismatch for constructor in class '%s': expected %d, got %d\n",
+                                       className, cFunc->paramCount, argCount);
+                                strcpy(tokens[i], "null");
+                            } else {
+                                struct objInstance *inst = allocateObject(cls);
+                                if (!inst) {
+                                    printf("Error: Out of memory\n");
+                                    strcpy(tokens[i], "null");
+                                } else {
+                                    struct Value ctorRet = executeMethod(inst, ctor, argVals, argCount);
+                                    if (ctorRet.type == VAL_ERROR && ctor->isPrivate) {
+                                        strcpy(tokens[i], "null");
+                                    } else {
+                                        char tempName[64];
+                                        snprintf(tempName, sizeof(tempName), "__obj_%d", inst->id);
+                                        appendO(&envStack[envTop].OV, tempName, cls->name, inst);
+                                        strcpy(tokens[i], tempName);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    int shift = j - (i + 1);
+                    for (int k = i + 1; k < tokenCount - shift; k++) {
+                        strcpy(tokens[k], tokens[k + shift]);
+                    }
+                    tokenCount -= shift;
+                    resolvedNew = 1;
+                    break;
+                }
+            }
+        }
+    }
+
     for (int i = 0; i < tokenCount; i++) {
          
         if (i < tokenCount - 1 && strcmp(tokens[i+1], "(") == 0) {
@@ -187,20 +451,14 @@ void resolve_complex_types(char *expr) {
                     struct callFrame *frame = &callStack[callStackTop];
                     frame->saved_envTop = envTop;
                     frame->hasReturn = 0;
-                      frame->returnValue.type = VAL_FLOAT;
-                      frame->returnValue.f = 0.0;
+                    frame->returnValue.type = VAL_FLOAT;
+                    frame->returnValue.f = 0.0;
+                    frame->thisObj = NULL;
+                    frame->executingClass = NULL;
                     
                      
                     envTop++;
-                    envStack[envTop].IV = NULL;
-                    envStack[envTop].FV = NULL;
-                    envStack[envTop].CV = NULL;
-                    envStack[envTop].BV = NULL;
-                    envStack[envTop].IA = NULL;
-                    envStack[envTop].FA = NULL;
-                    envStack[envTop].CA = NULL;
-                    envStack[envTop].BA = NULL;
-                    envStack[envTop].LV = NULL;
+                    initEnvironmentFrame(&envStack[envTop]);
                     
                      
                     for (int p = 0; p < argCount && p < func->paramCount; p++) {
@@ -227,6 +485,9 @@ void resolve_complex_types(char *expr) {
                             appendL_ref(&envStack[envTop].LV, func->params[p].name, (struct lV*)argVals[p].ptr);
                         } else if (func->params[p].type == 11) {
                             appendM_copy(&envStack[envTop].MV, func->params[p].name, (struct mV*)argVals[p].ptr);
+                        } else if (func->params[p].type == 12) {
+                            struct objInstance *inst = (argVals[p].type == VAL_OBJECT) ? (struct objInstance*)argVals[p].ptr : NULL;
+                            appendO(&envStack[envTop].OV, func->params[p].name, "", inst);
                         }
                     }
                     
@@ -266,6 +527,14 @@ void resolve_complex_types(char *expr) {
                     char resStr[1000];
                     if (retVal.type == VAL_STRING) {
                         format_string_token(resStr, sizeof(resStr), retVal.s);
+                    } else if (retVal.type == VAL_OBJECT) {
+                        struct objInstance *inst = (struct objInstance*)retVal.ptr;
+                        if (inst) {
+                            snprintf(resStr, sizeof(resStr), "__obj_%d", inst->id);
+                            appendO(&envStack[envTop].OV, resStr, inst->cls ? inst->cls->name : "", inst);
+                        } else {
+                            strcpy(resStr, "null");
+                        }
                     } else {
                         sprintf(resStr, "%f", retVal.f);
                     }
@@ -281,8 +550,385 @@ void resolve_complex_types(char *expr) {
         }
     }
 
-    
-     
+    // Resolve member method calls and field accesses: receiver . member and receiver.member
+    int resolvedMember = 1;
+    while (resolvedMember) {
+        resolvedMember = 0;
+
+        // 1. Spaced method call: tokens[i] . tokens[i+2] ( ... )
+        for (int i = 0; i < tokenCount; i++) {
+            if (i + 3 < tokenCount && strcmp(tokens[i+1], ".") == 0 && strcmp(tokens[i+3], "(") == 0) {
+                int isReceiver = 0;
+                struct objInstance *inst = NULL;
+                if (!strcmp(tokens[i], "this")) {
+                    isReceiver = 1;
+                    inst = (callStackTop >= 0) ? callStack[callStackTop].thisObj : NULL;
+                    if (!inst) printf("Error: 'this' used outside of an instance method or on null receiver\n");
+                } else if (!strncmp(tokens[i], "__obj_", 6)) {
+                    isReceiver = 1;
+                    struct Value rVal = valFetcherGlobal(tokens[i]);
+                    if (rVal.type == VAL_OBJECT) inst = (struct objInstance*)rVal.ptr;
+                } else if (typeFetcher(tokens[i]) == 12) {
+                    isReceiver = 1;
+                    struct Value rVal = valFetcherGlobal(tokens[i]);
+                    if (rVal.type == VAL_OBJECT) inst = (struct objInstance*)rVal.ptr;
+                }
+
+                if (isReceiver) {
+                    char methodName[100];
+                    snprintf(methodName, sizeof(methodName), "%s", tokens[i+2]);
+
+                    int brackets = 1;
+                    int j = i + 4;
+                    char argExpr[1000] = "";
+                    while (j < tokenCount && brackets > 0) {
+                        if (strcmp(tokens[j], "(") == 0) brackets++;
+                        if (strcmp(tokens[j], ")") == 0) brackets--;
+                        if (brackets > 0) {
+                            strcat(argExpr, tokens[j]);
+                            strcat(argExpr, " ");
+                        }
+                        j++;
+                    }
+
+                    if (!inst) {
+                        printf("Error: Null reference: cannot call method '%s' on null receiver '%s'\n", methodName, tokens[i]);
+                        strcpy(tokens[i], "0");
+                    } else {
+                        struct classMethod *method = findClassMethod(inst->cls, methodName);
+                        if (!method) {
+                            printf("Error: Method '%s' not found in class '%s'\n", methodName, inst->cls ? inst->cls->name : "<unknown>");
+                            strcpy(tokens[i], "0");
+                        } else {
+                            struct Value argVals[10];
+                            int argCount = 0;
+                            parseCallArguments(argExpr, argVals, &argCount);
+
+                            if (argCount != method->func->paramCount) {
+                                printf("Error: Argument count mismatch for method '%s' in class '%s': expected %d, got %d\n",
+                                       methodName, inst->cls ? inst->cls->name : "<unknown>", method->func->paramCount, argCount);
+                                strcpy(tokens[i], "0");
+                            } else {
+                                struct Value retVal = executeMethod(inst, method, argVals, argCount);
+                                if (retVal.type == VAL_ERROR) {
+                                    strcpy(tokens[i], "0");
+                                } else if (retVal.type == VAL_STRING) {
+                                    format_string_token(tokens[i], sizeof(tokens[i]), retVal.s);
+                                } else if (retVal.type == VAL_OBJECT) {
+                                    struct objInstance *rInst = (struct objInstance*)retVal.ptr;
+                                    if (rInst) {
+                                        snprintf(tokens[i], sizeof(tokens[i]), "__obj_%d", rInst->id);
+                                        appendO(&envStack[envTop].OV, tokens[i], rInst->cls ? rInst->cls->name : "", rInst);
+                                    } else {
+                                        strcpy(tokens[i], "null");
+                                    }
+                                } else {
+                                    sprintf(tokens[i], "%f", retVal.f);
+                                }
+                            }
+                        }
+                    }
+
+                    int shift = j - (i + 1);
+                    for (int k = i + 1; k < tokenCount - shift; k++) {
+                        strcpy(tokens[k], tokens[k + shift]);
+                    }
+                    tokenCount -= shift;
+                    resolvedMember = 1;
+                    break;
+                }
+            }
+            // 2. Unspaced method call: tokens[i] contains '.' and tokens[i+1] == "("
+            else if (i + 1 < tokenCount && !strcmp(tokens[i+1], "(") && tokens[i][0] != '"' && !isdigit(tokens[i][0]) && !(tokens[i][0] == '-' && isdigit(tokens[i][1]))) {
+                char *lastDot = strrchr(tokens[i], '.');
+                if (lastDot != NULL) {
+                    int rLen = lastDot - tokens[i];
+                    char recPath[100], methodName[100];
+                    if (rLen > 0 && rLen < 95) {
+                        strncpy(recPath, tokens[i], rLen);
+                        recPath[rLen] = '\0';
+                        strncpy(methodName, lastDot + 1, sizeof(methodName) - 1);
+                        methodName[sizeof(methodName) - 1] = '\0';
+
+                        int isRec = 0;
+                        struct objInstance *inst = NULL;
+                        char *curDot = strchr(recPath, '.');
+                        if (curDot == NULL) {
+                            if (!strcmp(recPath, "this")) {
+                                isRec = 1;
+                                inst = (callStackTop >= 0) ? callStack[callStackTop].thisObj : NULL;
+                                if (!inst) printf("Error: 'this' used outside of an instance method or on null receiver\n");
+                            } else if (!strncmp(recPath, "__obj_", 6)) {
+                                isRec = 1;
+                                struct Value rVal = valFetcherGlobal(recPath);
+                                if (rVal.type == VAL_OBJECT) inst = (struct objInstance*)rVal.ptr;
+                            } else if (typeFetcher(recPath) == 12) {
+                                isRec = 1;
+                                struct Value rVal = valFetcherGlobal(recPath);
+                                if (rVal.type == VAL_OBJECT) inst = (struct objInstance*)rVal.ptr;
+                            }
+                        } else {
+                            char rootName[100];
+                            int rootLen = curDot - recPath;
+                            strncpy(rootName, recPath, rootLen);
+                            rootName[rootLen] = '\0';
+                            if (!strcmp(rootName, "this")) {
+                                isRec = 1;
+                                inst = (callStackTop >= 0) ? callStack[callStackTop].thisObj : NULL;
+                                if (!inst) printf("Error: 'this' used outside of an instance method or on null receiver\n");
+                            } else if (!strncmp(rootName, "__obj_", 6)) {
+                                isRec = 1;
+                                struct Value rVal = valFetcherGlobal(rootName);
+                                if (rVal.type == VAL_OBJECT) inst = (struct objInstance*)rVal.ptr;
+                            } else if (typeFetcher(rootName) == 12) {
+                                isRec = 1;
+                                struct Value rVal = valFetcherGlobal(rootName);
+                                if (rVal.type == VAL_OBJECT) inst = (struct objInstance*)rVal.ptr;
+                            }
+                            if (isRec && inst) {
+                                char *seg = curDot + 1;
+                                while (seg && *seg) {
+                                    char *nd = strchr(seg, '.');
+                                    char mf[100];
+                                    int slen = nd ? (int)(nd - seg) : (int)strlen(seg);
+                                    if (slen >= (int)sizeof(mf)) slen = sizeof(mf) - 1;
+                                    memcpy(mf, seg, slen);
+                                    mf[slen] = '\0';
+                                    int fFound = 0;
+                                    struct Value fv = getFieldValue(inst, mf, &fFound);
+                                    if (fFound <= 0 || fv.type != VAL_OBJECT) { inst = NULL; break; }
+                                    inst = (struct objInstance*)fv.ptr;
+                                    seg = nd ? (nd + 1) : NULL;
+                                }
+                            }
+                        }
+
+                        if (isRec && methodName[0] != '\0') {
+                            int brackets = 1;
+                            int j = i + 2;
+                            char argExpr[1000] = "";
+                            while (j < tokenCount && brackets > 0) {
+                                if (strcmp(tokens[j], "(") == 0) brackets++;
+                                if (strcmp(tokens[j], ")") == 0) brackets--;
+                                if (brackets > 0) {
+                                    strcat(argExpr, tokens[j]);
+                                    strcat(argExpr, " ");
+                                }
+                                j++;
+                            }
+
+                            if (!inst) {
+                                printf("Error: Null reference: cannot call method '%s' on null receiver '%s'\n", methodName, recPath);
+                                strcpy(tokens[i], "0");
+                            } else {
+                                struct classMethod *method = findClassMethod(inst->cls, methodName);
+                                if (!method) {
+                                    printf("Error: Method '%s' not found in class '%s'\n", methodName, inst->cls ? inst->cls->name : "<unknown>");
+                                    strcpy(tokens[i], "0");
+                                } else {
+                                    struct Value argVals[10];
+                                    int argCount = 0;
+                                    parseCallArguments(argExpr, argVals, &argCount);
+
+                                    if (argCount != method->func->paramCount) {
+                                        printf("Error: Argument count mismatch for method '%s' in class '%s': expected %d, got %d\n",
+                                               methodName, inst->cls ? inst->cls->name : "<unknown>", method->func->paramCount, argCount);
+                                        strcpy(tokens[i], "0");
+                                    } else {
+                                        struct Value retVal = executeMethod(inst, method, argVals, argCount);
+                                        if (retVal.type == VAL_ERROR) {
+                                            strcpy(tokens[i], "0");
+                                        } else if (retVal.type == VAL_STRING) {
+                                            format_string_token(tokens[i], sizeof(tokens[i]), retVal.s);
+                                        } else if (retVal.type == VAL_OBJECT) {
+                                            struct objInstance *rInst = (struct objInstance*)retVal.ptr;
+                                            if (rInst) {
+                                                snprintf(tokens[i], sizeof(tokens[i]), "__obj_%d", rInst->id);
+                                                appendO(&envStack[envTop].OV, tokens[i], rInst->cls ? rInst->cls->name : "", rInst);
+                                            } else {
+                                                strcpy(tokens[i], "null");
+                                            }
+                                        } else {
+                                            sprintf(tokens[i], "%f", retVal.f);
+                                        }
+                                    }
+                                }
+                            }
+
+                            int shift = j - (i + 1);
+                            for (int k = i + 1; k < tokenCount - shift; k++) {
+                                strcpy(tokens[k], tokens[k + shift]);
+                            }
+                            tokenCount -= shift;
+                            resolvedMember = 1;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (resolvedMember) continue;
+
+        // 3. Spaced field access: tokens[i] . tokens[i+2] (when tokens[i+3] != "(")
+        for (int i = 0; i < tokenCount; i++) {
+            if (i + 2 < tokenCount && !strcmp(tokens[i+1], ".")) {
+                if (i + 3 < tokenCount && !strcmp(tokens[i+3], "(")) {
+                    continue;
+                }
+                
+                int isReceiver = 0;
+                struct objInstance *inst = NULL;
+                if (!strcmp(tokens[i], "this")) {
+                    isReceiver = 1;
+                    inst = (callStackTop >= 0) ? callStack[callStackTop].thisObj : NULL;
+                    if (!inst) {
+                        printf("Error: 'this' used outside of an instance method or on null receiver\n");
+                    }
+                } else if (!strncmp(tokens[i], "__obj_", 6)) {
+                    isReceiver = 1;
+                    struct Value rVal = valFetcherGlobal(tokens[i]);
+                    if (rVal.type == VAL_OBJECT) inst = (struct objInstance*)rVal.ptr;
+                } else if (typeFetcher(tokens[i]) == 12) {
+                    isReceiver = 1;
+                    struct Value rVal = valFetcherGlobal(tokens[i]);
+                    if (rVal.type == VAL_OBJECT) inst = (struct objInstance*)rVal.ptr;
+                }
+                
+                if (isReceiver) {
+                    char *fieldName = tokens[i+2];
+                    if (!inst) {
+                        printf("Error: Null reference: cannot read field '%s' on null receiver '%s'\n", fieldName, tokens[i]);
+                        strcpy(tokens[i], "null");
+                    } else {
+                        int found = 0;
+                        struct Value fVal = getFieldValue(inst, fieldName, &found);
+                        if (found == 0) {
+                            printf("Error: Field '%s' not found in class '%s'\n", fieldName, inst->cls ? inst->cls->name : "<unknown>");
+                            strcpy(tokens[i], "0");
+                        } else if (found < 0) {
+                            strcpy(tokens[i], "null");
+                        } else {
+                            if (fVal.type == VAL_STRING) {
+                                format_string_token(tokens[i], sizeof(tokens[i]), fVal.s);
+                            } else if (fVal.type == VAL_OBJECT) {
+                                struct objInstance *fInst = (struct objInstance*)fVal.ptr;
+                                if (fInst) {
+                                    snprintf(tokens[i], sizeof(tokens[i]), "__obj_%d", fInst->id);
+                                    appendO(&envStack[envTop].OV, tokens[i], fInst->cls ? fInst->cls->name : "", fInst);
+                                } else {
+                                    strcpy(tokens[i], "null");
+                                }
+                            } else if (fVal.type == VAL_FLOAT) {
+                                snprintf(tokens[i], sizeof(tokens[i]), "%f", fVal.f);
+                            } else {
+                                char sBuf[1000] = "";
+                                value_to_string(fVal, sBuf, sizeof(sBuf));
+                                format_string_token(tokens[i], sizeof(tokens[i]), sBuf);
+                            }
+                        }
+                    }
+                    int shift = 2;
+                    for (int k = i + 1; k < tokenCount - shift; k++) {
+                        strcpy(tokens[k], tokens[k + shift]);
+                    }
+                    tokenCount -= shift;
+                    resolvedMember = 1;
+                    break;
+                }
+            }
+            // 4. Unspaced field access: tokens[i] contains '.' and tokens[i+1] != "("
+            else if (tokens[i][0] != '"' && !isdigit(tokens[i][0]) && !(tokens[i][0] == '-' && isdigit(tokens[i][1]))) {
+                char *dot = strchr(tokens[i], '.');
+                if (dot != NULL) {
+                    if (i + 1 < tokenCount && !strcmp(tokens[i+1], "(")) {
+                        continue;
+                    }
+                    int rLen = dot - tokens[i];
+                    if (rLen > 0 && rLen < 95) {
+                        char rec[100], fld[100];
+                        strncpy(rec, tokens[i], rLen);
+                        rec[rLen] = '\0';
+                        char *secondDot = strchr(dot + 1, '.');
+                        int fLen = secondDot ? (int)(secondDot - (dot + 1)) : (int)strlen(dot + 1);
+                        if (fLen >= (int)sizeof(fld)) fLen = (int)sizeof(fld) - 1;
+                        memcpy(fld, dot + 1, fLen);
+                        fld[fLen] = '\0';
+                        char *rest = secondDot ? secondDot : "";
+                        
+                        int isRec = 0;
+                        struct objInstance *inst = NULL;
+                        if (!strcmp(rec, "this")) {
+                            isRec = 1;
+                            inst = (callStackTop >= 0) ? callStack[callStackTop].thisObj : NULL;
+                            if (!inst) printf("Error: 'this' used outside of an instance method or on null receiver\n");
+                        } else if (!strncmp(rec, "__obj_", 6)) {
+                            isRec = 1;
+                            struct Value rVal = valFetcherGlobal(rec);
+                            if (rVal.type == VAL_OBJECT) inst = (struct objInstance*)rVal.ptr;
+                        } else if (typeFetcher(rec) == 12) {
+                            isRec = 1;
+                            struct Value rVal = valFetcherGlobal(rec);
+                            if (rVal.type == VAL_OBJECT) inst = (struct objInstance*)rVal.ptr;
+                        }
+                        
+                        if (isRec && fld[0] != '\0') {
+                            if (!inst) {
+                                printf("Error: Null reference: cannot read field '%s' on null receiver '%s'\n", fld, rec);
+                                strcpy(tokens[i], "null");
+                            } else {
+                                int found = 0;
+                                struct Value fVal = getFieldValue(inst, fld, &found);
+                                if (found == 0) {
+                                    printf("Error: Field '%s' not found in class '%s'\n", fld, inst->cls ? inst->cls->name : "<unknown>");
+                                    strcpy(tokens[i], "0");
+                                } else if (found < 0) {
+                                    strcpy(tokens[i], "null");
+                                } else if (rest[0] != '\0') {
+                                    if (fVal.type == VAL_OBJECT) {
+                                        struct objInstance *fInst = (struct objInstance*)fVal.ptr;
+                                        if (fInst) {
+                                            char oName[100];
+                                            snprintf(oName, sizeof(oName), "__obj_%d", fInst->id);
+                                            appendO(&envStack[envTop].OV, oName, fInst->cls ? fInst->cls->name : "", fInst);
+                                            snprintf(tokens[i], sizeof(tokens[i]), "%s%s", oName, rest);
+                                        } else {
+                                            printf("Error: Null reference: cannot access field on null object\n");
+                                            strcpy(tokens[i], "null");
+                                        }
+                                    } else {
+                                        printf("Error: Cannot access member on non-object value\n");
+                                        strcpy(tokens[i], "0");
+                                    }
+                                } else {
+                                    if (fVal.type == VAL_STRING) {
+                                        format_string_token(tokens[i], sizeof(tokens[i]), fVal.s);
+                                    } else if (fVal.type == VAL_OBJECT) {
+                                        struct objInstance *fInst = (struct objInstance*)fVal.ptr;
+                                        if (fInst) {
+                                            snprintf(tokens[i], sizeof(tokens[i]), "__obj_%d", fInst->id);
+                                            appendO(&envStack[envTop].OV, tokens[i], fInst->cls ? fInst->cls->name : "", fInst);
+                                        } else {
+                                            strcpy(tokens[i], "null");
+                                        }
+                                    } else if (fVal.type == VAL_FLOAT) {
+                                        snprintf(tokens[i], sizeof(tokens[i]), "%f", fVal.f);
+                                    } else {
+                                        char sBuf[1000] = "";
+                                        value_to_string(fVal, sBuf, sizeof(sBuf));
+                                        format_string_token(tokens[i], sizeof(tokens[i]), sBuf);
+                                    }
+                                }
+                            }
+                            resolvedMember = 1;
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     for (int i = 0; i < tokenCount; i++) {
         if (i < tokenCount - 3 && strcmp(tokens[i+1], "[") == 0) {
             int type = typeFetcher(tokens[i]);
@@ -511,7 +1157,7 @@ struct Value val(char *buff)
         else if( *buff == ')' && !in_quotes)
         {
             opr = pop ( &Stack) ;
-			while ( ( opr ) != '(' )
+			while ( ( opr ) != '(' && ( opr ) != ' ' )
 			{
                 *pf= ' ';
                 pf++;
@@ -569,9 +1215,10 @@ struct Value val(char *buff)
             if (strlen(temp) > 0) {
                 if (!strcmp(temp, "true")) { { struct Value v; v.type=VAL_FLOAT; v.f=1.0; pushV(v, &PFEval); } }
                 else if (!strcmp(temp, "false")) { { struct Value v; v.type=VAL_FLOAT; v.f=0.0; pushV(v, &PFEval); } }
+                else if (!strcmp(temp, "null")) { { struct Value v; v.type=VAL_OBJECT; v.f=0.0; v.ptr=NULL; v.s[0]='\0'; pushV(v, &PFEval); } }
                 else {
                     c= typeFetcher(temp);
-                    if (c >= 1 && c <= 11) { pushV(valFetcherGlobal(temp), &PFEval); }
+                    if (c >= 1 && c <= 12) { pushV(valFetcherGlobal(temp), &PFEval); }
                     else if (temp[0] == '"' || (temp[0] == '\\' && temp[1] == '"')) {
                         struct Value v; v.type = VAL_STRING;
                         char *start = (temp[0] == '\\' && temp[1] == '"') ? temp + 2 : temp + 1;
@@ -593,6 +1240,10 @@ struct Value val(char *buff)
                         v.s[d] = '\0';
                         pushV(v, &PFEval);
                     }
+                    else if (temp[0] == '\'') {
+                        char chVal = (temp[1] == '\\') ? ((temp[2] == 'n') ? '\n' : ((temp[2] == 't') ? '\t' : temp[2])) : temp[1];
+                        struct Value v; v.type = VAL_FLOAT; v.f = (float)chVal; pushV(v, &PFEval);
+                    }
                     else if(isdigit(temp[0]) || (temp[0] == '-' && isdigit(temp[1]))) { x= atof(temp);  { struct Value v; v.type=VAL_FLOAT; v.f=x; pushV(v, &PFEval); } }
                 }
             }
@@ -606,6 +1257,45 @@ struct Value val(char *buff)
             tot.type = VAL_FLOAT;
             tot.f = 0.0;
              
+            if (n1.type == VAL_OBJECT || n2.type == VAL_OBJECT) {
+                if (*pf == '+') {
+                    tot.type = VAL_STRING;
+                    char s1[1000] = "", s2[1000] = "";
+                    value_to_string(n2, s2, sizeof(s2));
+                    value_to_string(n1, s1, sizeof(s1));
+                    snprintf(tot.s, sizeof(tot.s), "%s%s", s2, s1);
+                    pushV(tot, &PFEval);
+                    pf++;
+                    continue;
+                } else if (*pf == '~' || *pf == '#') {
+                    tot.type = VAL_FLOAT;
+                    if (n1.type == VAL_OBJECT && n2.type == VAL_OBJECT) {
+                        tot.f = (n1.ptr == n2.ptr) ? 1.0 : 0.0;
+                    } else {
+                        tot.f = 0.0;
+                    }
+                    pushV(tot, &PFEval);
+                    pf++;
+                    continue;
+                } else if (*pf == '!' || *pf == '@') {
+                    tot.type = VAL_FLOAT;
+                    if (n1.type == VAL_OBJECT && n2.type == VAL_OBJECT) {
+                        tot.f = (n1.ptr != n2.ptr) ? 1.0 : 0.0;
+                    } else {
+                        tot.f = 1.0;
+                    }
+                    pushV(tot, &PFEval);
+                    pf++;
+                    continue;
+                } else {
+                    tot.type = VAL_ERROR;
+                    tot.f = 0.0;
+                    pushV(tot, &PFEval);
+                    pf++;
+                    continue;
+                }
+            }
+
             if (n1.type >= VAL_INT_ARRAY || n2.type >= VAL_INT_ARRAY) {
                 if (*pf == '+') {
                     tot.type = VAL_STRING;

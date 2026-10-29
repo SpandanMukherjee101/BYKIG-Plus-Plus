@@ -1,0 +1,20 @@
+class Point
+{
+    public float x ;
+    public float y ;
+}
+
+Point p1 = new Point ( ) ;
+Point p2 = new Point ( ) ;
+
+out p1 + "%n" ;
+out p2 + "%n" ;
+
+out ( p1 == p1 ) + "%n" ;
+out ( p1 == p2 ) + "%n" ;
+out ( p1 != p2 ) + "%n" ;
+
+out object_id ( p1 ) + "%n" ;
+out object_id ( p2 ) + "%n" ;
+.
+

@@ -1,0 +1,41 @@
+class LevelA
+{
+    public float a ;
+}
+
+class LevelB extends LevelA
+{
+    public float b ;
+}
+
+class LevelC extends LevelB
+{
+    public float c ;
+}
+
+class LevelD extends LevelC
+{
+    public float d ;
+}
+
+LevelD dObj = new LevelD ( ) ;
+LevelB bObj = new LevelB ( ) ;
+LevelA aObj = new LevelA ( ) ;
+
+
+out is_instance ( dObj , "LevelD" ) ;
+out is_instance ( dObj , "LevelC" ) ;
+out is_instance ( dObj , "LevelB" ) ;
+out is_instance ( dObj , "LevelA" ) ;
+
+
+out is_instance ( bObj , "LevelA" ) ;
+out is_instance ( bObj , "LevelB" ) ;
+out is_instance ( bObj , "LevelC" ) ;
+out is_instance ( bObj , "LevelD" ) ;
+
+
+out is_instance ( aObj , "LevelA" ) ;
+out is_instance ( aObj , "LevelB" ) ;
+out is_instance ( aObj , "LevelC" ) ;
+out is_instance ( aObj , "LevelD" ) ;

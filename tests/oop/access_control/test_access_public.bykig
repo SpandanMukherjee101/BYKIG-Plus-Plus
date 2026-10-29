@@ -1,0 +1,32 @@
+class Account
+{
+    public float balance ;
+    float score ;
+
+    public func construct ( float initialBalance , float initialScore )
+    {
+        this . balance = initialBalance ;
+        this . score = initialScore ;
+    }
+
+    public func getBalance ( )
+    {
+        return this . balance ;
+    }
+
+    func getScore ( )
+    {
+        return this . score ;
+    }
+}
+
+Account acc = new Account ( 100.5 , 750 ) ;
+out acc . balance ;
+out acc . score ;
+out acc . getBalance ( ) ;
+out acc . getScore ( ) ;
+
+acc . balance = 250.75 ;
+acc . score = 800 ;
+out acc . balance ;
+out acc . score ;

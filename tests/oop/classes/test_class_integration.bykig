@@ -1,0 +1,32 @@
+int globalX = 100 ;
+
+func globalHelper ( int val )
+{
+    return val * 2 ;
+}
+
+class Widget
+{
+    public int width ;
+    public int height ;
+
+    public func construct ( int w , int h )
+    {
+        this . width = w ;
+        this . height = h ;
+    }
+}
+
+int computed = globalHelper ( globalX ) ;
+out "Computed global: " + computed + "%n" ;
+
+int sum = 0 ;
+for int i = 1 ; i <= 5 ; i = i + 1
+{
+    sum = sum + i ;
+}
+out "Loop sum: " + sum + "%n" ;
+
+out "Widget exists: " + class_exists ( "Widget" ) + "%n" ;
+out "PASS: Class integration test%n" ;
+.

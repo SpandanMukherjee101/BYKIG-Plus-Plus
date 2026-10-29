@@ -1,0 +1,34 @@
+class Dummy
+{
+    public float x ;
+
+    public func test ( )
+    {
+
+        Dummy other = new Dummy ( ) ;
+        this = other ;
+    }
+}
+
+
+this . x = 10.0 ;
+
+
+this . test ( ) ;
+
+
+out this + "%n" ;
+
+
+func badFunc ( )
+{
+    out this . x ;
+}
+badFunc ( ) ;
+
+
+Dummy d = new Dummy ( ) ;
+d . test ( ) ;
+
+out "Invalid this tests completed" + "%n" ;
+.

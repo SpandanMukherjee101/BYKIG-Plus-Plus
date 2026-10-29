@@ -1,0 +1,76 @@
+class Base
+{
+    private float baseSecret ;
+    public float basePublic ;
+
+    public func construct ( float sec , float pub )
+    {
+        this . baseSecret = sec ;
+        this . basePublic = pub ;
+    }
+
+    private func basePrivateMethod ( )
+    {
+        return this . baseSecret * 2.0 ;
+    }
+
+    public func getBaseSecret ( )
+    {
+
+        return this . baseSecret ;
+    }
+
+    public func setBaseSecret ( float s )
+    {
+
+        this . baseSecret = s ;
+    }
+}
+
+class Derived extends Base
+{
+    public float derivedField ;
+
+    public func construct ( float sec , float pub , float d )
+    {
+
+        this . basePublic = pub ;
+        this . derivedField = d ;
+    }
+
+    public func tryAccessParentPrivateField ( )
+    {
+
+        return this . baseSecret ;
+    }
+
+    public func tryCallParentPrivateMethod ( )
+    {
+
+        return this . basePrivateMethod ( ) ;
+    }
+}
+
+Base b = new Base ( 111.0 , 222.0 ) ;
+
+out b . getBaseSecret ( ) ;
+
+Derived d = new Derived ( 333.0 , 444.0 , 555.0 ) ;
+d . setBaseSecret ( 777.0 ) ;
+
+out d . getBaseSecret ( ) ;
+
+
+out d . tryAccessParentPrivateField ( ) ;
+
+
+out d . tryCallParentPrivateMethod ( ) ;
+
+
+out d . baseSecret ;
+
+
+out d . basePrivateMethod ( ) ;
+
+
+out d . basePublic ;

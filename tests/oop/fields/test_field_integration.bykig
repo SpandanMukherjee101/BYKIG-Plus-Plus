@@ -1,0 +1,30 @@
+class Point
+{
+    public float x ;
+    public float y ;
+}
+
+Point p = new Point ( ) ;
+p . x = 5.0 ;
+p . y = 10.0 ;
+
+
+if ( p . x > 2.0 )
+{
+    p . x = p . x + 1.0 ;
+}
+
+out p . x + "%n" ;
+
+
+while ( p . x < 10.0 )
+{
+    p . x = p . x + 2.0 ;
+}
+
+out p . x + "%n" ;
+
+
+float distSq = ( p . x * p . x ) + ( p . y * p . y ) ;
+out distSq + "%n" ;
+.

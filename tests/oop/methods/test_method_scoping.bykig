@@ -1,0 +1,33 @@
+class Dog
+{
+    public string name ;
+
+    public func describe ( )
+    {
+        return "Dog: " + this . name ;
+    }
+}
+
+class Car
+{
+    public string model ;
+
+    public func describe ( )
+    {
+        return "Car: " + this . model ;
+    }
+}
+
+Dog d = new Dog ( ) ;
+d . name = "Buddy" ;
+
+Car c = new Car ( ) ;
+c . model = "Tesla" ;
+
+string s1 = d . describe ( ) ;
+out s1 + "%n" ;
+
+string s2 = c . describe ( ) ;
+out s2 + "%n" ;
+.
+

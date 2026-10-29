@@ -1,0 +1,34 @@
+class Animal
+{
+    public func speak ( ) { return "Animal" ; }
+}
+
+class Dog extends Animal
+{
+    public func speak ( ) { return "Dog" ; }
+}
+
+class Vehicle
+{
+    public func drive ( ) { return "Vroom" ; }
+}
+
+
+Animal badDecl = new Vehicle ( ) ;
+out badDecl ;
+
+
+Animal goodDecl = new Dog ( ) ;
+out goodDecl . speak ( ) ;
+
+
+Animal reassign = new Animal ( ) ;
+out reassign . speak ( ) ;
+
+reassign = new Vehicle ( ) ;
+
+out reassign . speak ( ) ;
+
+
+reassign = new Dog ( ) ;
+out reassign . speak ( ) ;

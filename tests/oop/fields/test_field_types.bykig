@@ -1,0 +1,28 @@
+class AllTypes
+{
+    public int i ;
+    public float f ;
+    public char c ;
+    public bool b ;
+    public string s ;
+}
+
+AllTypes obj = new AllTypes ( ) ;
+
+out obj . i + "%n" ;
+out obj . f + "%n" ;
+out obj . b + "%n" ;
+
+obj . i = 42 ;
+obj . f = 3.14 ;
+obj . c = 'Z' ;
+obj . b = true ;
+obj . s = "hello oop" ;
+
+out obj . i + "%n" ;
+out obj . f + "%n" ;
+out obj . c + "%n" ;
+out obj . b + "%n" ;
+out obj . s + "%n" ;
+.
+

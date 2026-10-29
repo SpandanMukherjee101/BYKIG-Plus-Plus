@@ -1,0 +1,43 @@
+class BaseEntity
+{
+    public string tag ;
+
+    public func construct ( string t )
+    {
+        this . tag = t ;
+    }
+
+    public func getTag ( )
+    {
+        return this . tag ;
+    }
+
+    public func getSelf ( )
+    {
+        return this ;
+    }
+}
+
+class ExtendedEntity extends BaseEntity
+{
+    public float extra ;
+
+    public func construct ( string t , float e )
+    {
+        this . tag = t ;
+        this . extra = e ;
+    }
+}
+
+BaseEntity baseObj = new BaseEntity ( "BaseTag" ) ;
+out baseObj ;
+
+ExtendedEntity extObj = new ExtendedEntity ( "ExtTag" , 42.0 ) ;
+out extObj ;
+
+
+BaseEntity returnedSelf = extObj . getSelf ( ) ;
+out returnedSelf ;
+
+out extObj . getTag ( ) ;
+out extObj . extra ;

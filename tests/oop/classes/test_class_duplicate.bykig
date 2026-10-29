@@ -1,0 +1,14 @@
+class UniqueClass
+{
+    public int a ;
+}
+
+
+class UniqueClass
+{
+    public int b ;
+}
+
+out "UniqueClass exists: " + class_exists ( "UniqueClass" ) + "%n" ;
+out "PASS: Duplicate class rejection test%n" ;
+.

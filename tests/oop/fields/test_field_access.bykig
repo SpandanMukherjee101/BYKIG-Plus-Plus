@@ -1,0 +1,24 @@
+class Point
+{
+    public float x ;
+    public float y ;
+}
+
+Point p = new Point ( ) ;
+
+out p . x + "%n" ;
+out p . y + "%n" ;
+
+p . x = 15.0 ;
+p . y = 25.5 ;
+
+out p . x + "%n" ;
+out p . y + "%n" ;
+
+float sum = p . x + p . y ;
+out sum + "%n" ;
+
+p . x = 100.0 ;
+out p . x + "%n" ;
+.
+

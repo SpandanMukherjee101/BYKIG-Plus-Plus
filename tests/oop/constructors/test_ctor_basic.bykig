@@ -1,0 +1,14 @@
+class Point
+{
+    public float x ;
+
+    public func construct ( float initialX )
+    {
+        this . x = initialX ;
+    }
+}
+
+Point p = new Point ( 10.5 ) ;
+out p . x + "%n" ;
+.
+

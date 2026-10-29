@@ -1,0 +1,26 @@
+class Item
+{
+    public float val ;
+
+    public func getVal ( )
+    {
+        return this . val ;
+    }
+
+    public func computeComplex ( Item other )
+    {
+
+        float result = this . val + other . getVal ( ) + this . val ;
+        return result ;
+    }
+}
+
+Item a = new Item ( ) ;
+a . val = 100.0 ;
+
+Item b = new Item ( ) ;
+b . val = 25.0 ;
+
+float combo = a . computeComplex ( b ) ;
+out combo + "%n" ;
+.

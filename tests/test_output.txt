@@ -1,19 +1,19 @@
 ================================================================================
                            BYKIG++ TEST SUITE REPORT
 ================================================================================
-Date / Time   : 2026-10-29 12:28:06
+Date / Time   : 2026-10-29 16:49:13
 Interpreter   : C:\Users\spand\OneDrive\Documents\MyFiles\BYKIG++\Interpreter.exe
 Working Dir   : C:\Users\spand\OneDrive\Documents\MyFiles\BYKIG++
-Total Tests   : 79
-Passed        : 78
+Total Tests   : 154
+Passed        : 152
 Failed        : 0
-Timeout / Hung: 1
+Timeout / Hung: 2
 Pass Rate     : 98.7%
 ================================================================================
 
 SUMMARY
 --------------------------------------------------------------------------------
-PASSED (78):
+PASSED (152):
   + tests/basics/assign_test.bykig
   + tests/basics/boolean_test.bykig
   + tests/basics/comment_test.bykig
@@ -65,7 +65,6 @@ PASSED (78):
   + tests/functions/global_func.bykig
   + tests/functions/mutual_test.bykig
   + tests/functions/nested_call_test.bykig
-  + tests/functions/overflow_test.bykig
   + tests/functions/recursion.bykig
   + tests/functions/recursion_stress.bykig
   + tests/functions/recursion_test.bykig
@@ -92,47 +91,123 @@ PASSED (78):
   + tests/modules/strlib.bykig
   + tests/modules/test_circular.bykig
   + tests/modules/test_import.bykig
+  + tests/oop/access_control/test_access_expressions_aliases.bykig
+  + tests/oop/access_control/test_access_inheritance.bykig
+  + tests/oop/access_control/test_access_internal.bykig
+  + tests/oop/access_control/test_access_private_field.bykig
+  + tests/oop/access_control/test_access_private_method.bykig
+  + tests/oop/access_control/test_access_public.bykig
+  + tests/oop/access_control/test_access_same_class_instances.bykig
+  + tests/oop/audit/test_audit_collections_with_objects.bykig
+  + tests/oop/audit/test_audit_cyclic_references.bykig
+  + tests/oop/audit/test_audit_deep_recursion_polymorphic.bykig
+  + tests/oop/audit/test_audit_method_capacity.bykig
+  + tests/oop/audit/test_audit_null_and_constructor_guards.bykig
+  + tests/oop/classes/test_class_duplicate.bykig
+  + tests/oop/classes/test_class_empty.bykig
+  + tests/oop/classes/test_class_fields.bykig
+  + tests/oop/classes/test_class_integration.bykig
+  + tests/oop/classes/test_class_malformed.bykig
+  + tests/oop/classes/test_class_methods.bykig
+  + tests/oop/constructors/test_ctor_basic.bykig
+  + tests/oop/constructors/test_ctor_default.bykig
+  + tests/oop/constructors/test_ctor_errors.bykig
+  + tests/oop/constructors/test_ctor_loop.bykig
+  + tests/oop/constructors/test_ctor_nested.bykig
+  + tests/oop/constructors/test_ctor_params.bykig
+  + tests/oop/fields/test_field_access.bykig
+  + tests/oop/fields/test_field_aliasing.bykig
+  + tests/oop/fields/test_field_collections_objects.bykig
+  + tests/oop/fields/test_field_distinct.bykig
+  + tests/oop/fields/test_field_errors.bykig
+  + tests/oop/fields/test_field_integration.bykig
+  + tests/oop/fields/test_field_types.bykig
+  + tests/oop/fields/test_field_unspaced.bykig
+  + tests/oop/inheritance/test_inherit_access_control.bykig
+  + tests/oop/inheritance/test_inherit_basic.bykig
+  + tests/oop/inheritance/test_inherit_capacity.bykig
+  + tests/oop/inheritance/test_inherit_constructor_semantics.bykig
+  + tests/oop/inheritance/test_inherit_cycles_unknown.bykig
+  + tests/oop/inheritance/test_inherit_duplicate_field.bykig
+  + tests/oop/inheritance/test_inherit_multilevel.bykig
+  + tests/oop/inheritance/test_inherit_runtime_class.bykig
+  + tests/oop/instances/test_instance_aliasing.bykig
+  + tests/oop/instances/test_instance_creation.bykig
+  + tests/oop/instances/test_instance_distinct.bykig
+  + tests/oop/instances/test_instance_functions.bykig
+  + tests/oop/instances/test_instance_lifecycle.bykig
+  + tests/oop/instances/test_instance_null.bykig
+  + tests/oop/instances/test_instance_unknown_class.bykig
+  + tests/oop/methods/module_class.bykig
+  + tests/oop/methods/test_method_basic.bykig
+  + tests/oop/methods/test_method_chained.bykig
+  + tests/oop/methods/test_method_errors.bykig
+  + tests/oop/methods/test_method_module.bykig
+  + tests/oop/methods/test_method_nested.bykig
+  + tests/oop/methods/test_method_params.bykig
+  + tests/oop/methods/test_method_recursion.bykig
+  + tests/oop/methods/test_method_returns.bykig
+  + tests/oop/methods/test_method_scoping.bykig
+  + tests/oop/overriding/test_override_basic.bykig
+  + tests/oop/overriding/test_override_invalid_signature.bykig
+  + tests/oop/overriding/test_override_multilevel.bykig
+  + tests/oop/overriding/test_override_nested_recursion.bykig
+  + tests/oop/overriding/test_override_polymorphic_reference.bykig
+  + tests/oop/overriding/test_override_type_mismatch.bykig
+  + tests/oop/overriding/test_override_virtual_this.bykig
+  + tests/oop/this/test_this_fields.bykig
+  + tests/oop/this/test_this_global_func.bykig
+  + tests/oop/this/test_this_invalid.bykig
+  + tests/oop/this/test_this_isolation.bykig
+  + tests/oop/this/test_this_methods.bykig
+  + tests/oop/this/test_this_nested_objects.bykig
+  + tests/oop/this/test_this_self_return.bykig
+  + tests/oop/type_checks/test_is_instance_basic.bykig
+  + tests/oop/type_checks/test_is_instance_edge_cases.bykig
+  + tests/oop/type_checks/test_is_instance_hierarchy.bykig
+  + tests/oop/type_checks/test_is_instance_polymorphic.bykig
 
 FAILED (0):
   (none)
 
-TIMEOUT / HUNG (1):
+TIMEOUT / HUNG (2):
+  ? tests/functions/overflow_test.bykig
   ? tests/misc/Try.bykig
 --------------------------------------------------------------------------------
 
 DETAILED TEST EXECUTION RESULTS
 ================================================================================
 
-[01/79] PASSED: tests/basics/assign_test.bykig
-  (Duration: 0.045s, Return Code: 0)
+[01/154] PASSED: tests/basics/assign_test.bykig
+  (Duration: 0.010s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 10
 --------------------------------------------------------------------------------
 
-[02/79] PASSED: tests/basics/boolean_test.bykig
-  (Duration: 0.009s, Return Code: 0)
+[02/154] PASSED: tests/basics/boolean_test.bykig
+  (Duration: 0.011s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | true
 --------------------------------------------------------------------------------
 
-[03/79] PASSED: tests/basics/comment_test.bykig
-  (Duration: 0.010s, Return Code: 0)
+[03/154] PASSED: tests/basics/comment_test.bykig
+  (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 1
 --------------------------------------------------------------------------------
 
-[04/79] PASSED: tests/basics/conversion_test.bykig
-  (Duration: 0.010s, Return Code: 0)
+[04/154] PASSED: tests/basics/conversion_test.bykig
+  (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 10.500000
 --------------------------------------------------------------------------------
 
-[05/79] PASSED: tests/basics/edge_types.bykig
-  (Duration: 0.010s, Return Code: 0)
+[05/154] PASSED: tests/basics/edge_types.bykig
+  (Duration: 0.008s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | --- Edge Types Test ---
@@ -143,15 +218,15 @@ STDOUT:
   | --- Edge Types Test Complete ---
 --------------------------------------------------------------------------------
 
-[06/79] PASSED: tests/basics/expressions.bykig
-  (Duration: 0.008s, Return Code: 0)
+[06/154] PASSED: tests/basics/expressions.bykig
+  (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 7.000000
 --------------------------------------------------------------------------------
 
-[07/79] PASSED: tests/basics/shadowing.bykig
-  (Duration: 0.010s, Return Code: 0)
+[07/154] PASSED: tests/basics/shadowing.bykig
+  (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | --- Shadowing Test ---
@@ -164,35 +239,35 @@ STDOUT:
   | --- Shadowing Test Complete ---
 --------------------------------------------------------------------------------
 
-[08/79] PASSED: tests/basics/string_test.bykig
+[08/154] PASSED: tests/basics/string_test.bykig
   (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | Hello
 --------------------------------------------------------------------------------
 
-[09/79] PASSED: tests/basics/test_file_io.bykig
+[09/154] PASSED: tests/basics/test_file_io.bykig
   (Duration: 0.011s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 1.000000
 --------------------------------------------------------------------------------
 
-[10/79] PASSED: tests/basics/test_simple.bykig
-  (Duration: 0.008s, Return Code: 0)
+[10/154] PASSED: tests/basics/test_simple.bykig
+  (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | Simple
 --------------------------------------------------------------------------------
 
-[11/79] PASSED: tests/basics/variables.bykig
-  (Duration: 0.008s, Return Code: 0)
+[11/154] PASSED: tests/basics/variables.bykig
+  (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 1
 --------------------------------------------------------------------------------
 
-[12/79] PASSED: tests/builtins/file_io_edge.bykig
+[12/154] PASSED: tests/builtins/file_io_edge.bykig
   (Duration: 0.010s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
@@ -203,7 +278,7 @@ STDOUT:
   | --- File IO Edge Test Complete ---
 --------------------------------------------------------------------------------
 
-[13/79] PASSED: tests/builtins/file_scanner_test.bykig
+[13/154] PASSED: tests/builtins/file_scanner_test.bykig
   (Duration: 0.010s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
@@ -216,28 +291,28 @@ STDOUT:
   | --- File Scanner Test Complete ---
 --------------------------------------------------------------------------------
 
-[14/79] PASSED: tests/control_flow/comparison_test.bykig
+[14/154] PASSED: tests/control_flow/comparison_test.bykig
   (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | Yes
 --------------------------------------------------------------------------------
 
-[15/79] PASSED: tests/control_flow/complex_logic.bykig
-  (Duration: 0.009s, Return Code: 0)
+[15/154] PASSED: tests/control_flow/complex_logic.bykig
+  (Duration: 0.011s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | Nested
 --------------------------------------------------------------------------------
 
-[16/79] PASSED: tests/control_flow/conditions.bykig
+[16/154] PASSED: tests/control_flow/conditions.bykig
   (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | True
 --------------------------------------------------------------------------------
 
-[17/79] PASSED: tests/control_flow/deep_nesting.bykig
+[17/154] PASSED: tests/control_flow/deep_nesting.bykig
   (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
@@ -248,21 +323,21 @@ STDOUT:
   | --- Deep Nesting Test Complete ---
 --------------------------------------------------------------------------------
 
-[18/79] PASSED: tests/control_flow/eq_test.bykig
-  (Duration: 0.008s, Return Code: 0)
+[18/154] PASSED: tests/control_flow/eq_test.bykig
+  (Duration: 0.010s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | Eq
 --------------------------------------------------------------------------------
 
-[19/79] PASSED: tests/control_flow/if_test.bykig
-  (Duration: 0.008s, Return Code: 0)
+[19/154] PASSED: tests/control_flow/if_test.bykig
+  (Duration: 0.010s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | Neq
 --------------------------------------------------------------------------------
 
-[20/79] PASSED: tests/control_flow/loop_break_edge.bykig
+[20/154] PASSED: tests/control_flow/loop_break_edge.bykig
   (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
@@ -273,15 +348,15 @@ STDOUT:
   | --- Loop Break Edge Test Complete ---
 --------------------------------------------------------------------------------
 
-[21/79] PASSED: tests/control_flow/loop_control_test.bykig
-  (Duration: 0.010s, Return Code: 0)
+[21/154] PASSED: tests/control_flow/loop_control_test.bykig
+  (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 1
 --------------------------------------------------------------------------------
 
-[22/79] PASSED: tests/control_flow/loops.bykig
-  (Duration: 0.009s, Return Code: 0)
+[22/154] PASSED: tests/control_flow/loops.bykig
+  (Duration: 0.010s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 0
@@ -289,72 +364,35 @@ STDOUT:
   | 2
 --------------------------------------------------------------------------------
 
-[23/79] PASSED: tests/control_flow/loops_advanced.bykig
-  (Duration: 0.009s, Return Code: 0)
---------------------------------------------------------------------------------
-STDOUT:
-  | 0
-  | 1
-  | 0
-  | 1
---------------------------------------------------------------------------------
-
-[24/79] PASSED: tests/control_flow/test_for_loops.bykig
+[23/154] PASSED: tests/control_flow/loops_advanced.bykig
   (Duration: 0.012s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
+  | 0
+  | 1
+  | 0
+  | 1
+--------------------------------------------------------------------------------
+
+[24/154] PASSED: tests/control_flow/test_for_loops.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
   | sum=10
-  | LINE 176: rhsBuf=[10;], rVal.type=0, rVal.s=[]
   | j=10
-  | LINE 176: rhsBuf=[j+ 1;], rVal.type=0, rVal.s=[]
   | j=11
-  | LINE 176: rhsBuf=[j+ 1;], rVal.type=0, rVal.s=[]
   | j=12
-  | LINE 176: rhsBuf=[j+ 1;], rVal.type=0, rVal.s=[]
   | final_j=13
-  | LINE 176: rhsBuf=[k- 2;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[k- 2;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[k- 2;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[k- 2;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[k- 2;], rVal.type=0, rVal.s=[]
   | count=5
-  | LINE 176: rhsBuf=[b+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[b+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[b+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[b+ 1;], rVal.type=0, rVal.s=[]
   | b_val=4
-  | LINE 176: rhsBuf=[c+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[c+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[c+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[c+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[c+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[c+ 1;], rVal.type=0, rVal.s=[]
   | odds=9
-  | LINE 176: rhsBuf=[y+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[y+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[x+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[y+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[y+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[x+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[y+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[y+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[x+ 1;], rVal.type=0, rVal.s=[]
   | nested_sum=6
   | ran=0
   | inf_count=3
-  | LINE 176: rhsBuf=[n+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[n+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[n+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[n+ 1;], rVal.type=0, rVal.s=[]
   | no_paren_sum=6
 --------------------------------------------------------------------------------
 
-[25/79] PASSED: tests/data_structures/array_bounds.bykig
+[25/154] PASSED: tests/data_structures/array_bounds.bykig
   (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
@@ -367,22 +405,22 @@ STDOUT:
   | --- Array Bounds Test Complete ---
 --------------------------------------------------------------------------------
 
-[26/79] PASSED: tests/data_structures/array_test.bykig
-  (Duration: 0.010s, Return Code: 0)
+[26/154] PASSED: tests/data_structures/array_test.bykig
+  (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 42.000000
 --------------------------------------------------------------------------------
 
-[27/79] PASSED: tests/data_structures/builtins.bykig
-  (Duration: 0.009s, Return Code: 0)
+[27/154] PASSED: tests/data_structures/builtins.bykig
+  (Duration: 0.010s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 1.000000
 --------------------------------------------------------------------------------
 
-[28/79] PASSED: tests/data_structures/collection_refs.bykig
-  (Duration: 0.009s, Return Code: 0)
+[28/154] PASSED: tests/data_structures/collection_refs.bykig
+  (Duration: 0.031s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | --- Collection Refs Test ---
@@ -393,8 +431,8 @@ STDOUT:
   | --- Collection Refs Test Complete ---
 --------------------------------------------------------------------------------
 
-[29/79] PASSED: tests/data_structures/generic_list.bykig
-  (Duration: 0.010s, Return Code: 0)
+[29/154] PASSED: tests/data_structures/generic_list.bykig
+  (Duration: 0.018s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | hello
@@ -403,29 +441,29 @@ STDOUT:
   | popped
 --------------------------------------------------------------------------------
 
-[30/79] PASSED: tests/data_structures/test_builtins.bykig
-  (Duration: 0.008s, Return Code: 0)
+[30/154] PASSED: tests/data_structures/test_builtins.bykig
+  (Duration: 0.014s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 1.000000
 --------------------------------------------------------------------------------
 
-[31/79] PASSED: tests/data_structures/test_list.bykig
-  (Duration: 0.013s, Return Code: 0)
+[31/154] PASSED: tests/data_structures/test_list.bykig
+  (Duration: 0.012s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 1.000000
 --------------------------------------------------------------------------------
 
-[32/79] PASSED: tests/data_structures/test_map.bykig
+[32/154] PASSED: tests/data_structures/test_map.bykig
   (Duration: 0.011s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 1.000000
 --------------------------------------------------------------------------------
 
-[33/79] PASSED: tests/data_structures/test_map_generic.bykig
-  (Duration: 0.012s, Return Code: 0)
+[33/154] PASSED: tests/data_structures/test_map_generic.bykig
+  (Duration: 0.011s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | title=BYKIG++
@@ -444,246 +482,96 @@ STDOUT:
   | has_author=0.000000
   | func_title=InsideFunc
   | caller_title=AdvancedBYKIG
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
-  | LINE 176: rhsBuf=[i+ 1;], rVal.type=0, rVal.s=[�^ �]
   | big_len=150.000000
   | bigMap_149=298.000000
 --------------------------------------------------------------------------------
 
-[34/79] PASSED: tests/errors/errors_missing.bykig
-  (Duration: 0.011s, Return Code: 0)
+[34/154] PASSED: tests/errors/errors_missing.bykig
+  (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT: (none)
 --------------------------------------------------------------------------------
 
-[35/79] PASSED: tests/errors/omitted.bykig
-  (Duration: 0.008s, Return Code: 0)
+[35/154] PASSED: tests/errors/omitted.bykig
+  (Duration: 0.011s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 0
 --------------------------------------------------------------------------------
 
-[36/79] PASSED: tests/errors/return_err.bykig
+[36/154] PASSED: tests/errors/return_err.bykig
   (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT: (none)
 --------------------------------------------------------------------------------
 
-[37/79] PASSED: tests/errors/test_err_args.bykig
+[37/154] PASSED: tests/errors/test_err_args.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT: (none)
+--------------------------------------------------------------------------------
+
+[38/154] PASSED: tests/errors/test_err_arr.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT: (none)
+--------------------------------------------------------------------------------
+
+[39/154] PASSED: tests/errors/test_err_div.bykig
   (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT: (none)
 --------------------------------------------------------------------------------
 
-[38/79] PASSED: tests/errors/test_err_arr.bykig
-  (Duration: 0.008s, Return Code: 0)
---------------------------------------------------------------------------------
-STDOUT: (none)
---------------------------------------------------------------------------------
-
-[39/79] PASSED: tests/errors/test_err_div.bykig
-  (Duration: 0.008s, Return Code: 0)
---------------------------------------------------------------------------------
-STDOUT: (none)
---------------------------------------------------------------------------------
-
-[40/79] PASSED: tests/errors/test_err_name.bykig
-  (Duration: 0.009s, Return Code: 0)
+[40/154] PASSED: tests/errors/test_err_name.bykig
+  (Duration: 0.010s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | Neither variable nor keyword nor function: "y" (eof=0, err=0, ftell=10)!!!
 --------------------------------------------------------------------------------
 
-[41/79] PASSED: tests/errors/test_line_complex.bykig
+[41/154] PASSED: tests/errors/test_line_complex.bykig
   (Duration: 0.010s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT: (none)
 --------------------------------------------------------------------------------
 
-[42/79] PASSED: tests/errors/test_line_div.bykig
-  (Duration: 0.010s, Return Code: 0)
+[42/154] PASSED: tests/errors/test_line_div.bykig
+  (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT: (none)
 --------------------------------------------------------------------------------
 
-[43/79] PASSED: tests/errors/test_missing.bykig
-  (Duration: 0.012s, Return Code: 0)
+[43/154] PASSED: tests/errors/test_missing.bykig
+  (Duration: 0.016s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | Neither variable nor keyword nor function: "=" (eof=0, err=0, ftell=12)!!!
 --------------------------------------------------------------------------------
 
-[44/79] PASSED: tests/functions/func_call_test.bykig
-  (Duration: 0.012s, Return Code: 0)
+[44/154] PASSED: tests/functions/func_call_test.bykig
+  (Duration: 0.026s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 4.000000
 --------------------------------------------------------------------------------
 
-[45/79] PASSED: tests/functions/func_min_test.bykig
-  (Duration: 0.012s, Return Code: 0)
+[45/154] PASSED: tests/functions/func_min_test.bykig
+  (Duration: 0.021s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 2.000000
 --------------------------------------------------------------------------------
 
-[46/79] PASSED: tests/functions/func_reg_test.bykig
-  (Duration: 0.010s, Return Code: 0)
+[46/154] PASSED: tests/functions/func_reg_test.bykig
+  (Duration: 0.011s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 1.000000
 --------------------------------------------------------------------------------
 
-[47/79] PASSED: tests/functions/func_shadow_builtins.bykig
-  (Duration: 0.011s, Return Code: 0)
+[47/154] PASSED: tests/functions/func_shadow_builtins.bykig
+  (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | --- Function Shadowing Built-ins Test ---
@@ -692,50 +580,49 @@ STDOUT:
   | --- Function Shadowing Built-ins Test Complete ---
 --------------------------------------------------------------------------------
 
-[48/79] PASSED: tests/functions/functions.bykig
-  (Duration: 0.012s, Return Code: 0)
+[48/154] PASSED: tests/functions/functions.bykig
+  (Duration: 0.010s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 5.000000
 --------------------------------------------------------------------------------
 
-[49/79] PASSED: tests/functions/global_func.bykig
-  (Duration: 0.010s, Return Code: 0)
+[49/154] PASSED: tests/functions/global_func.bykig
+  (Duration: 0.014s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 10.000000
 --------------------------------------------------------------------------------
 
-[50/79] PASSED: tests/functions/mutual_test.bykig
+[50/154] PASSED: tests/functions/mutual_test.bykig
   (Duration: 0.010s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 0.000000
 --------------------------------------------------------------------------------
 
-[51/79] PASSED: tests/functions/nested_call_test.bykig
-  (Duration: 0.010s, Return Code: 0)
+[51/154] PASSED: tests/functions/nested_call_test.bykig
+  (Duration: 0.011s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 3.000000
 --------------------------------------------------------------------------------
 
-[52/79] PASSED: tests/functions/overflow_test.bykig
-  (Duration: 0.011s, Return Code: 0)
+[52/154] TIMEOUT: tests/functions/overflow_test.bykig
+  (Duration: 1.016s, Terminated after 1.0s)
 --------------------------------------------------------------------------------
-STDOUT:
-  | 16.000000
+STDOUT: (none)
 --------------------------------------------------------------------------------
 
-[53/79] PASSED: tests/functions/recursion.bykig
-  (Duration: 0.010s, Return Code: 0)
+[53/154] PASSED: tests/functions/recursion.bykig
+  (Duration: 0.014s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 120.000000
 --------------------------------------------------------------------------------
 
-[54/79] PASSED: tests/functions/recursion_stress.bykig
-  (Duration: 0.008s, Return Code: 0)
+[54/154] PASSED: tests/functions/recursion_stress.bykig
+  (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | --- Recursion Stress Test ---
@@ -743,36 +630,36 @@ STDOUT:
   | --- Recursion Stress Test Complete ---
 --------------------------------------------------------------------------------
 
-[55/79] PASSED: tests/functions/recursion_test.bykig
-  (Duration: 0.011s, Return Code: 0)
+[55/154] PASSED: tests/functions/recursion_test.bykig
+  (Duration: 0.010s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 15.000000
 --------------------------------------------------------------------------------
 
-[56/79] PASSED: tests/functions/return_test.bykig
-  (Duration: 0.012s, Return Code: 0)
+[56/154] PASSED: tests/functions/return_test.bykig
+  (Duration: 0.011s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 5.000000
 --------------------------------------------------------------------------------
 
-[57/79] PASSED: tests/functions/scope_test.bykig
+[57/154] PASSED: tests/functions/scope_test.bykig
   (Duration: 0.009s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 2.000000
 --------------------------------------------------------------------------------
 
-[58/79] PASSED: tests/functions/simple_ret.bykig
-  (Duration: 0.010s, Return Code: 0)
+[58/154] PASSED: tests/functions/simple_ret.bykig
+  (Duration: 0.011s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 10.000000
 --------------------------------------------------------------------------------
 
-[59/79] PASSED: tests/integration/bubble_sort.bykig
-  (Duration: 0.010s, Return Code: 0)
+[59/154] PASSED: tests/integration/bubble_sort.bykig
+  (Duration: 0.012s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | --- Integration Test: Bubble Sort ---
@@ -783,8 +670,8 @@ STDOUT:
   | --- Bubble Sort Complete ---
 --------------------------------------------------------------------------------
 
-[60/79] PASSED: tests/integration/file_io_analyzer.bykig
-  (Duration: 0.011s, Return Code: 0)
+[60/154] PASSED: tests/integration/file_io_analyzer.bykig
+  (Duration: 0.012s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | --- Integration Test: File IO Analyzer ---
@@ -797,8 +684,8 @@ STDOUT:
   | TEST PASSED: File IO Analyzer
 --------------------------------------------------------------------------------
 
-[61/79] PASSED: tests/integration/mock_database.bykig
-  (Duration: 0.010s, Return Code: 0)
+[61/154] PASSED: tests/integration/mock_database.bykig
+  (Duration: 0.011s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | --- Integration Test: Mock Database ---
@@ -812,7 +699,7 @@ STDOUT:
   | --- Mock Database Complete ---
 --------------------------------------------------------------------------------
 
-[62/79] PASSED: tests/integration/prime_sieve.bykig
+[62/154] PASSED: tests/integration/prime_sieve.bykig
   (Duration: 0.013s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
@@ -823,8 +710,8 @@ STDOUT:
   | --- Prime Number Generator Complete ---
 --------------------------------------------------------------------------------
 
-[63/79] TIMEOUT: tests/misc/Try.bykig
-  (Duration: 1.020s, Terminated after 1.0s)
+[63/154] TIMEOUT: tests/misc/Try.bykig
+  (Duration: 1.011s, Terminated after 1.0s)
 --------------------------------------------------------------------------------
 STDOUT:
   | List of program you will see:
@@ -836,14 +723,14 @@ STDOUT:
   | Enter the number of rows of star pattern-
 --------------------------------------------------------------------------------
 
-[64/79] PASSED: tests/misc/cli_help.bykig
-  (Duration: 0.009s, Return Code: 0)
+[64/154] PASSED: tests/misc/cli_help.bykig
+  (Duration: 0.012s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | CLI Help Test
 --------------------------------------------------------------------------------
 
-[65/79] PASSED: tests/misc/complex_test.bykig
+[65/154] PASSED: tests/misc/complex_test.bykig
   (Duration: 0.012s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
@@ -858,29 +745,29 @@ STDOUT:
   | All complex features tested successfully!
 --------------------------------------------------------------------------------
 
-[66/79] PASSED: tests/misc/debug.bykig
+[66/154] PASSED: tests/misc/debug.bykig
   (Duration: 0.011s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | Debug
 --------------------------------------------------------------------------------
 
-[67/79] PASSED: tests/misc/debug_ret.bykig
-  (Duration: 0.009s, Return Code: 0)
+[67/154] PASSED: tests/misc/debug_ret.bykig
+  (Duration: 0.011s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | Debug Ret
 --------------------------------------------------------------------------------
 
-[68/79] PASSED: tests/misc/mod_test.bykig
-  (Duration: 0.010s, Return Code: 0)
+[68/154] PASSED: tests/misc/mod_test.bykig
+  (Duration: 0.014s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 1
 --------------------------------------------------------------------------------
 
-[69/79] PASSED: tests/misc/test_features.bykig
-  (Duration: 0.011s, Return Code: 0)
+[69/154] PASSED: tests/misc/test_features.bykig
+  (Duration: 0.014s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | === Test 1: Standalone block scoping ===
@@ -910,70 +797,781 @@ STDOUT:
   | dataset['scores'][1] after update = 100.000000
 --------------------------------------------------------------------------------
 
-[70/79] PASSED: tests/misc/test_while_shadow.bykig
-  (Duration: 0.009s, Return Code: 0)
+[70/154] PASSED: tests/misc/test_while_shadow.bykig
+  (Duration: 0.014s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 10
 --------------------------------------------------------------------------------
 
-[71/79] PASSED: tests/modules/circular_a.bykig
+[71/154] PASSED: tests/modules/circular_a.bykig
   (Duration: 0.012s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT: (none)
 --------------------------------------------------------------------------------
 
-[72/79] PASSED: tests/modules/circular_b.bykig
+[72/154] PASSED: tests/modules/circular_b.bykig
+  (Duration: 0.012s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT: (none)
+--------------------------------------------------------------------------------
+
+[73/154] PASSED: tests/modules/imported_loop.bykig
   (Duration: 0.011s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT: (none)
 --------------------------------------------------------------------------------
 
-[73/79] PASSED: tests/modules/imported_loop.bykig
-  (Duration: 0.010s, Return Code: 0)
+[74/154] PASSED: tests/modules/mathlib.bykig
+  (Duration: 0.012s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT: (none)
 --------------------------------------------------------------------------------
 
-[74/79] PASSED: tests/modules/mathlib.bykig
-  (Duration: 0.010s, Return Code: 0)
---------------------------------------------------------------------------------
-STDOUT: (none)
---------------------------------------------------------------------------------
-
-[75/79] PASSED: tests/modules/module_loop.bykig
-  (Duration: 0.014s, Return Code: 0)
+[75/154] PASSED: tests/modules/module_loop.bykig
+  (Duration: 0.012s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 2
 --------------------------------------------------------------------------------
 
-[76/79] PASSED: tests/modules/modules.bykig
+[76/154] PASSED: tests/modules/modules.bykig
   (Duration: 0.011s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 3.141500
 --------------------------------------------------------------------------------
 
-[77/79] PASSED: tests/modules/strlib.bykig
+[77/154] PASSED: tests/modules/strlib.bykig
   (Duration: 0.011s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT: (none)
 --------------------------------------------------------------------------------
 
-[78/79] PASSED: tests/modules/test_circular.bykig
-  (Duration: 0.014s, Return Code: 0)
+[78/154] PASSED: tests/modules/test_circular.bykig
+  (Duration: 0.012s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | 12
   | 3
 --------------------------------------------------------------------------------
 
-[79/79] PASSED: tests/modules/test_import.bykig
-  (Duration: 0.011s, Return Code: 0)
+[79/154] PASSED: tests/modules/test_import.bykig
+  (Duration: 0.012s, Return Code: 0)
 --------------------------------------------------------------------------------
 STDOUT:
   | Hello
+--------------------------------------------------------------------------------
+
+[80/154] PASSED: tests/oop/access_control/test_access_expressions_aliases.bykig
+  (Duration: 0.009s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Error: Cannot access private member 'key' of class 'SecureData' from context '<global>'
+  | nullError: Cannot access private member 'key' of class 'SecureData' from context '<global>'
+  | Error: Cannot access private member 'key' of class 'SecureData' from context '<global>'
+  | nullError: Cannot access private member 'key' of class 'SecureData' from context '<global>'
+  | Error: Cannot access private member 'key' of class 'SecureData' from context '<global>'
+  | null10.000000Error: Cannot access private member 'key' of class 'SecureData' from context '<global>'
+  | null12345.0000001.000000
+--------------------------------------------------------------------------------
+
+[81/154] PASSED: tests/oop/access_control/test_access_inheritance.bykig
+  (Duration: 0.016s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 111.000000777.000000Error: Cannot access private member 'baseSecret' of class 'Base' from context 'Derived'
+  | nullError: Cannot access private member 'basePrivateMethod' of class 'Base' from context 'Derived'
+  | 0.000000Error: Cannot access private member 'baseSecret' of class 'Base' from context '<global>'
+  | nullError: Cannot access private member 'basePrivateMethod' of class 'Base' from context '<global>'
+  | 0.000000444.000000
+--------------------------------------------------------------------------------
+
+[82/154] PASSED: tests/oop/access_control/test_access_internal.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 3709.00000012970.00000012970.000000
+--------------------------------------------------------------------------------
+
+[83/154] PASSED: tests/oop/access_control/test_access_private_field.bykig
+  (Duration: 0.013s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Error: Cannot access private member 'secretData' of class 'SecretBox' from context '<global>'
+  | nullError: Cannot access private member 'secretData' of class 'SecretBox' from context '<global>'
+  | Error: Cannot access private member 'secretData' of class 'SecretBox' from context 'Hacker'
+  | nullError: Cannot access private member 'secretData' of class 'SecretBox' from context 'Hacker'
+  | 100.000000
+--------------------------------------------------------------------------------
+
+[84/154] PASSED: tests/oop/access_control/test_access_private_method.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Error: Cannot access private member 'internalReset' of class 'Device' from context '<global>'
+  | 0.000000Error: Cannot access private member 'internalReset' of class 'Device' from context 'Remote'
+  | 0.000000100.000000
+--------------------------------------------------------------------------------
+
+[85/154] PASSED: tests/oop/access_control/test_access_public.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 100.500000750.000000100.500000750.000000250.750000800.000000
+--------------------------------------------------------------------------------
+
+[86/154] PASSED: tests/oop/access_control/test_access_same_class_instances.bykig
+  (Duration: 0.012s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 30.000000120.000000120.000000
+--------------------------------------------------------------------------------
+
+[87/154] PASSED: tests/oop/audit/test_audit_collections_with_objects.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 2.000000Collections with objects test passed.
+--------------------------------------------------------------------------------
+
+[88/154] PASSED: tests/oop/audit/test_audit_cyclic_references.bykig
+  (Duration: 0.012s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 101.000000102.000000101.000000102.000000999.000000999.000000999.0000001.0000002.0000003.000000Cyclic references test passed.
+--------------------------------------------------------------------------------
+
+[89/154] PASSED: tests/oop/audit/test_audit_deep_recursion_polymorphic.bykig
+  (Duration: 0.012s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 50.000000Deep recursion polymorphic test passed.
+--------------------------------------------------------------------------------
+
+[90/154] PASSED: tests/oop/audit/test_audit_method_capacity.bykig
+  (Duration: 0.012s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Error: Class 'MethodHeavyClass' exceeds maximum method capacity of 64
+  | Error: Class 'MethodHeavyClass' exceeds maximum method capacity of 64
+  | 1.00000064.0000001000.000000
+--------------------------------------------------------------------------------
+
+[91/154] PASSED: tests/oop/audit/test_audit_null_and_constructor_guards.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 0.000000Error: Null reference: cannot assign to field 'x' on null receiver
+  | Error: Null reference: cannot read field 'x' on null receiver 'uninit'
+  | Error: Null reference: cannot call method 'getX' on null receiver 'uninit'
+  | Error: Argument count mismatch for constructor in class 'SafePoint': expected 2, got 1
+  | 0.0000001.000000Error: Null reference: cannot assign to field 'x' on null receiver
+  | 0.000000Null and constructor guards test passed.
+--------------------------------------------------------------------------------
+
+[92/154] PASSED: tests/oop/classes/test_class_duplicate.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Error: Duplicate class 'UniqueClass'
+  | UniqueClass exists: 1.000000
+  | PASS: Duplicate class rejection test
+--------------------------------------------------------------------------------
+
+[93/154] PASSED: tests/oop/classes/test_class_empty.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Class exists: 1.000000
+  | Fake class exists: 0.000000
+  | PASS: Empty class test
+--------------------------------------------------------------------------------
+
+[94/154] PASSED: tests/oop/classes/test_class_fields.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Entity class exists: 1.000000
+  | PASS: Class with fields test
+--------------------------------------------------------------------------------
+
+[95/154] PASSED: tests/oop/classes/test_class_integration.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Computed global: 200
+  | Loop sum: 15
+  | Widget exists: 1.000000
+  | PASS: Class integration test
+--------------------------------------------------------------------------------
+
+[96/154] PASSED: tests/oop/classes/test_class_malformed.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Error: Duplicate field 'alpha' in class 'RobustClass'
+  | Error: Duplicate method 'execute' in class 'RobustClass'
+  | RobustClass exists: 1.000000
+  | PASS: Malformed and duplicate member test
+--------------------------------------------------------------------------------
+
+[97/154] PASSED: tests/oop/classes/test_class_methods.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Calculator class exists: 1.000000
+  | PASS: Class with methods test
+--------------------------------------------------------------------------------
+
+[98/154] PASSED: tests/oop/constructors/test_ctor_basic.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 10.500000
+--------------------------------------------------------------------------------
+
+[99/154] PASSED: tests/oop/constructors/test_ctor_default.bykig
+  (Duration: 0.012s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 0.000000
+  | 
+  | 42.000000
+--------------------------------------------------------------------------------
+
+[100/154] PASSED: tests/oop/constructors/test_ctor_errors.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Error: Argument count mismatch for constructor in class 'Box': expected 1, got 0
+  | null
+  | Error: Argument count mismatch for constructor in class 'Box': expected 1, got 2
+  | null
+  | Error: Class 'NoCtor' has no constructor matching 1 argument(s)
+  | null
+  | Error: Unknown class 'GhostClass'
+  | null
+  | Ctor error tests complete
+--------------------------------------------------------------------------------
+
+[101/154] PASSED: tests/oop/constructors/test_ctor_loop.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | P#1.000000 E=10.000000
+  | P#2.000000 E=20.000000
+  | P#3.000000 E=30.000000
+  | P#4.000000 E=40.000000
+  | P#5.000000 E=50.000000
+  | Total energy: 150.000000
+--------------------------------------------------------------------------------
+
+[102/154] PASSED: tests/oop/constructors/test_ctor_nested.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 10.000000
+  | 20.000000
+  | 5.000000
+  | 15.000000
+  | 480000.000000
+  | 1.000000
+  | 4.000000
+--------------------------------------------------------------------------------
+
+[103/154] PASSED: tests/oop/constructors/test_ctor_params.bykig
+  (Duration: 0.015s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Alice (30) ID=1001
+  | Bob (25) ID=1002
+--------------------------------------------------------------------------------
+
+[104/154] PASSED: tests/oop/fields/test_field_access.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 0.000000
+  | 0.000000
+  | 15.000000
+  | 25.500000
+  | 40.500000
+  | 100.000000
+--------------------------------------------------------------------------------
+
+[105/154] PASSED: tests/oop/fields/test_field_aliasing.bykig
+  (Duration: 0.009s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 5.000000
+  | 42.000000
+  | 42.000000
+--------------------------------------------------------------------------------
+
+[106/154] PASSED: tests/oop/fields/test_field_collections_objects.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 2.500000
+  | 100.000000
+  | 250.000000
+  | 250.000000
+  | 625.000000
+--------------------------------------------------------------------------------
+
+[107/154] PASSED: tests/oop/fields/test_field_distinct.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 10.000000
+  | 20.000000
+  | 30.000000
+  | 40.000000
+--------------------------------------------------------------------------------
+
+[108/154] PASSED: tests/oop/fields/test_field_errors.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Error: Field 'missing' not found in class 'Point'
+  | Error: Field 'notAField' not found in class 'Point'
+  | Error: Null reference: cannot assign to field 'x' on null receiver
+  | Error: Null reference: cannot read field 'x' on null receiver 'uninit'
+  | Error: Type mismatch: cannot assign non-numeric value to numeric field 'x' in class 'Point'
+  | 10.000000
+--------------------------------------------------------------------------------
+
+[109/154] PASSED: tests/oop/fields/test_field_integration.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 6.000000
+  | 10.000000
+  | 200.000000
+--------------------------------------------------------------------------------
+
+[110/154] PASSED: tests/oop/fields/test_field_types.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 0.000000
+  | 0.000000
+  | 0.000000
+  | 42.000000
+  | 3.140000
+  | 90.000000
+  | 1.000000
+  | hello oop
+--------------------------------------------------------------------------------
+
+[111/154] PASSED: tests/oop/fields/test_field_unspaced.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 12.500000
+  | 50.000000
+  | 62.500000
+--------------------------------------------------------------------------------
+
+[112/154] PASSED: tests/oop/inheritance/test_inherit_access_control.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 999.000000Error: Cannot access private member 'middleSecret' of class 'Middle' from context 'Leaf'
+  | nullError: Cannot access private member 'rootSecret' of class 'Root' from context 'Leaf'
+  | nullError: Cannot access private member 'rootSecret' of class 'Root' from context 'Middle'
+  | nullError: Cannot access private member 'rootSecret' of class 'Root' from context '<global>'
+  | nullError: Cannot access private member 'middleSecret' of class 'Middle' from context '<global>'
+  | null600.000000
+--------------------------------------------------------------------------------
+
+[113/154] PASSED: tests/oop/inheritance/test_inherit_basic.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | CreatureGeneric soundCreatureBuddyGolden RetrieverGeneric soundBuddyWoof!Buddy the Golden RetrieverCreatureMax
+--------------------------------------------------------------------------------
+
+[114/154] PASSED: tests/oop/inheritance/test_inherit_capacity.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Error: Class 'ChildNearLimit' exceeds maximum field capacity of 64
+  | 1.00000064.000000
+--------------------------------------------------------------------------------
+
+[115/154] PASSED: tests/oop/inheritance/test_inherit_constructor_semantics.bykig
+  (Duration: 0.014s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 0.0000000.0000000.000000Error: Class 'NoCtorChild' has no constructor matching 2 argument(s)
+  | null10.00000020.00000030.00000060.00000030.000000
+--------------------------------------------------------------------------------
+
+[116/154] PASSED: tests/oop/inheritance/test_inherit_cycles_unknown.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Error: Unknown superclass 'GhostClass' for class 'InvalidSub'
+  | Error: Circular inheritance detected: class 'LoopClass' cannot extend itself
+  | Error: Unknown class 'InvalidSub'
+  | 0.000000Error: Unknown class 'LoopClass'
+  | 0.000000777.000000
+--------------------------------------------------------------------------------
+
+[117/154] PASSED: tests/oop/inheritance/test_inherit_duplicate_field.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Error: Duplicate field 'sharedValue' in class 'SubB'
+  | Error: Duplicate method 'action' in class 'SubB'
+  | 10.00000020.00000030.0000001.000000
+--------------------------------------------------------------------------------
+
+[118/154] PASSED: tests/oop/inheritance/test_inherit_multilevel.bykig
+  (Duration: 0.012s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 101.000000101.000000MammalMammalBeagleBeagleMammal Beagle202.000000CaninePoodleCanine Poodle
+--------------------------------------------------------------------------------
+
+[119/154] PASSED: tests/oop/inheritance/test_inherit_runtime_class.bykig
+  (Duration: 0.009s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | <Object BaseEntity#1><Object ExtendedEntity#2><Object ExtendedEntity#2>ExtTag42.000000
+--------------------------------------------------------------------------------
+
+[120/154] PASSED: tests/oop/instances/test_instance_aliasing.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | <Object Point#1>
+  | <Object Point#1>
+  | <Object Point#1>
+  | 1.000000
+  | 1.000000
+  | 1.000000
+  | 0.000000
+  | 1.000000
+--------------------------------------------------------------------------------
+
+[121/154] PASSED: tests/oop/instances/test_instance_creation.bykig
+  (Duration: 0.009s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | <Object Point#1>
+  | <Object Point#2>
+  | 1.000000
+  | 0.000000
+  | 1.000000
+  | 1.000000
+  | 2.000000
+--------------------------------------------------------------------------------
+
+[122/154] PASSED: tests/oop/instances/test_instance_distinct.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | <Object Counter#1>
+  | <Object Counter#2>
+  | <Object Counter#3>
+  | 1.000000
+  | 1.000000
+  | 1.000000
+  | 1.000000
+  | 2.000000
+  | 3.000000
+  | 1.000000
+  | 1.000000
+--------------------------------------------------------------------------------
+
+[123/154] PASSED: tests/oop/instances/test_instance_functions.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | <Object Point#1>
+  | <Object Point#2>
+  | 0.000000
+  | 1.000000
+  | 1.000000
+--------------------------------------------------------------------------------
+
+[124/154] PASSED: tests/oop/instances/test_instance_lifecycle.bykig
+  (Duration: 0.014s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 1.000000
+  | 1.000000
+  | 1.000000
+  | 5
+  | <Object Item#1>
+  | <Object Item#2>
+--------------------------------------------------------------------------------
+
+[125/154] PASSED: tests/oop/instances/test_instance_null.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | null
+  | 1.000000
+  | 1.000000
+  | 0.000000
+  | 0.000000
+  | 0.000000
+  | 1.000000
+  | 0.000000
+  | 1.000000
+  | 1.000000
+  | 1.000000
+  | null
+  | 1.000000
+--------------------------------------------------------------------------------
+
+[126/154] PASSED: tests/oop/instances/test_instance_unknown_class.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Error: Unknown class 'Ghost'
+  | Error: Unknown class 'Phantom'
+  | 1.000000
+  | <Object RealClass#1>
+--------------------------------------------------------------------------------
+
+[127/154] PASSED: tests/oop/methods/module_class.bykig
+  (Duration: 0.009s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT: (none)
+--------------------------------------------------------------------------------
+
+[128/154] PASSED: tests/oop/methods/test_method_basic.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 0.000000
+  | 42.500000
+--------------------------------------------------------------------------------
+
+[129/154] PASSED: tests/oop/methods/test_method_chained.bykig
+  (Duration: 0.009s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 123.000000
+  | 123.000000
+  | 123.000000
+  | 555.000000
+  | 555.000000
+--------------------------------------------------------------------------------
+
+[130/154] PASSED: tests/oop/methods/test_method_errors.bykig
+  (Duration: 0.009s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Error: Method 'nonexistent' not found in class 'Greeter'
+  | Error: Argument count mismatch for method 'sayHello' in class 'Greeter': expected 1, got 0
+  | Error: Null reference: cannot call method 'sayHello' on null receiver 'nullG'
+  | Done
+--------------------------------------------------------------------------------
+
+[131/154] PASSED: tests/oop/methods/test_method_module.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 49.000000
+--------------------------------------------------------------------------------
+
+[132/154] PASSED: tests/oop/methods/test_method_nested.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 40.000000
+  | 25.000000
+  | 50.000000
+--------------------------------------------------------------------------------
+
+[133/154] PASSED: tests/oop/methods/test_method_params.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 31.000000
+  | 31.000000
+  | 17.500000
+  | Hello Alice
+  | Hello Alice
+  | 1.000000
+--------------------------------------------------------------------------------
+
+[134/154] PASSED: tests/oop/methods/test_method_recursion.bykig
+  (Duration: 0.015s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 120.000000
+  | 8.000000
+--------------------------------------------------------------------------------
+
+[135/154] PASSED: tests/oop/methods/test_method_returns.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 99.000000
+  | BoxOne
+--------------------------------------------------------------------------------
+
+[136/154] PASSED: tests/oop/methods/test_method_scoping.bykig
+  (Duration: 0.012s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Dog: Buddy
+  | Car: Tesla
+--------------------------------------------------------------------------------
+
+[137/154] PASSED: tests/oop/overriding/test_override_basic.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Generic soundWoof!Meow!Zzz...Zzz...Zzz...
+--------------------------------------------------------------------------------
+
+[138/154] PASSED: tests/oop/overriding/test_override_invalid_signature.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Error: Method override signature mismatch for 'foo' in class 'InvalidOverrides': expected 1 parameter(s), got 2
+  | Error: Method override parameter 1 type mismatch in method 'bar' of class 'InvalidOverrides'
+  | Error: Cannot reduce visibility of inherited method 'baz' from public to private in class 'InvalidOverrides'
+  | 6.00000050.000000100.000000
+--------------------------------------------------------------------------------
+
+[139/154] PASSED: tests/oop/overriding/test_override_multilevel.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 6.00000010.00000010.00000050.0000006.000000LevelA10.000000LevelB10.000000LevelC50.000000LevelD
+--------------------------------------------------------------------------------
+
+[140/154] PASSED: tests/oop/overriding/test_override_nested_recursion.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 155.000000160.000000
+--------------------------------------------------------------------------------
+
+[141/154] PASSED: tests/oop/overriding/test_override_polymorphic_reference.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Woof!DogWoof!Meow!CatMeow!Generic soundAnimalGeneric sound
+--------------------------------------------------------------------------------
+
+[142/154] PASSED: tests/oop/overriding/test_override_type_mismatch.bykig
+  (Duration: 0.536s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Error: Type mismatch: cannot assign instance of class 'Vehicle' to variable 'badDecl' of class 'Animal'
+  | nullDogAnimalError: Type mismatch: cannot assign instance of class 'Vehicle' to variable 'reassign' of class 'Animal'
+  | AnimalDog
+--------------------------------------------------------------------------------
+
+[143/154] PASSED: tests/oop/overriding/test_override_virtual_this.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 20.00000060.00000010.000000
+--------------------------------------------------------------------------------
+
+[144/154] PASSED: tests/oop/this/test_this_fields.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Apples: 10
+  | Apples: 15
+  | Apples: 35
+--------------------------------------------------------------------------------
+
+[145/154] PASSED: tests/oop/this/test_this_global_func.bykig
+  (Duration: 0.012s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 25.000000
+  | 10.000000
+--------------------------------------------------------------------------------
+
+[146/154] PASSED: tests/oop/this/test_this_invalid.bykig
+  (Duration: 0.014s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | Error: 'this' used outside of an instance method or on null receiver
+  | Error: Null reference: cannot assign to field 'x' on null receiver
+  | Error: 'this' used outside of an instance method or on null receiver
+  | Error: 'this' used outside of an instance method or on null receiver
+  | Error: Null reference: cannot call method 'test' on null receiver 'this'
+  | Error: 'this' used outside of an instance method
+  | null
+  | Error: 'this' used outside of an instance method or on null receiver
+  | Error: Null reference: cannot read field 'x' on null receiver 'this'
+  | nullError: Cannot assign to read-only variable 'this'
+  | Invalid this tests completed
+--------------------------------------------------------------------------------
+
+[147/154] PASSED: tests/oop/this/test_this_isolation.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 225.000000
+--------------------------------------------------------------------------------
+
+[148/154] PASSED: tests/oop/this/test_this_methods.bykig
+  (Duration: 0.013s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 40.000000
+  | 47.000000
+--------------------------------------------------------------------------------
+
+[149/154] PASSED: tests/oop/this/test_this_nested_objects.bykig
+  (Duration: 0.012s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 115.000000
+  | 115.000000
+  | 5.000000
+--------------------------------------------------------------------------------
+
+[150/154] PASSED: tests/oop/this/test_this_self_return.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 35.000000
+  | 35.000000
+--------------------------------------------------------------------------------
+
+[151/154] PASSED: tests/oop/type_checks/test_is_instance_basic.bykig
+  (Duration: 0.013s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 1.0000001.0000001.0000001.0000000.0000000.0000000.0000000.000000
+--------------------------------------------------------------------------------
+
+[152/154] PASSED: tests/oop/type_checks/test_is_instance_edge_cases.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 0.0000000.0000000.0000000.0000000.0000000.0000000.0000000.000000
+--------------------------------------------------------------------------------
+
+[153/154] PASSED: tests/oop/type_checks/test_is_instance_hierarchy.bykig
+  (Duration: 0.010s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 1.0000001.0000001.0000001.0000001.0000001.0000000.0000000.0000001.0000000.0000000.0000000.000000
+--------------------------------------------------------------------------------
+
+[154/154] PASSED: tests/oop/type_checks/test_is_instance_polymorphic.bykig
+  (Duration: 0.011s, Return Code: 0)
+--------------------------------------------------------------------------------
+STDOUT:
+  | 1.0000001.0000000.0000001.0000000.000000100.000000200.000000Done
 --------------------------------------------------------------------------------
 
 ================================================================================

@@ -14,13 +14,25 @@ BYKIG++/
 ├── Keywords.h               # Keyword-to-mode classification
 ├── BYKIG.c                  # Core support routines
 ├── tests/                   # Regression test suites and automated test runner
-│   ├── run_tests.py         # Test execution harness (79 tests)
+│   ├── run_tests.py         # Test execution harness (154 tests)
 │   ├── basics/              # Core types, expressions, shadowing, strings
 │   ├── control_flow/        # Conditionals, while loops, for loops, break/continue
 │   ├── data_structures/     # Arrays, dynamic lists, generic maps, collection references
 │   ├── functions/           # Function calls, recursion, scope, return values
 │   ├── modules/             # File imports, circular dependency tests
-│   └── integration/         # Sorting, mock database, prime sieve, file analyzers
+│   ├── integration/         # Sorting, mock database, prime sieve, file analyzers
+│   └── oop/                 # Complete OOP test suite organized by subsystem:
+│       ├── classes/         # Class declaration, duplicate/malformed validation
+│       ├── instances/       # Instantiation, identity, null references, aliases
+│       ├── fields/          # Instance field access, typing, collections as fields
+│       ├── methods/         # Instance methods, params, recursion, module methods
+│       ├── this/            # Receiver binding, call isolation, self returns
+│       ├── constructors/    # Explicit construct methods, default ctor, errors
+│       ├── access_control/  # Public and private member encapsulation
+│       ├── inheritance/     # Single inheritance, multilevel, duplicate guards
+│       ├── overriding/      # Dynamic virtual dispatch, signature compatibility
+│       ├── type_checks/     # is_instance runtime checks across hierarchies
+│       └── audit/           # Memory safety, cyclic references, capacity bounds
 └── mini-bykig++/            # Self-hosted companion interpreter written in BYKIG++
     ├── main.bykig           # CLI loop, statement dispatch, block execution
     ├── memory.bykig         # Lexical environments, heap lists/maps, function registry
@@ -101,7 +113,8 @@ enum ValueType {
     VAL_BOOL_ARRAY,
     VAL_LIST,
     VAL_MAP,
-    VAL_ERROR
+    VAL_ERROR,
+    VAL_OBJECT
 };
 ```
 
@@ -123,11 +136,12 @@ VAL_FLOAT      → f
 VAL_STRING     → s
 VAL_LIST       → ptr points to struct lV
 VAL_MAP        → ptr points to struct mV
+VAL_OBJECT     → ptr points to struct objInstance
 array types    → ptr points to typed array struct
 VAL_ERROR      → error state
 ```
 
-The `Value` object is the runtime transport format. String conversion is handled via `value_to_string(struct Value v, char *dest, size_t dest_sz)`.
+The `Value` object is the runtime transport format. String conversion is handled via `value_to_string(struct Value v, char *dest, size_t dest_sz)`. For objects, `value_to_string()` produces `<Object ClassName#id>` or `null`.
 
 ## 5. Environment model
 
@@ -137,6 +151,7 @@ An environment is represented by the storage pointers inside `callFrame`:
 IV/FV/CV/BV/SV   (primitive variables)
 IA/FA/CA/BA      (typed arrays)
 LV/MV            (dynamic lists and generic maps)
+OV               (object instance reference variables)
 ```
 
 `envStack[envTop]` is the active environment.
@@ -388,7 +403,99 @@ struct mV {
 - **Dynamic Growth**: Entries buffer automatically reallocates (`realloc`) when capacity is exceeded.
 - **Generic Values**: Elements can store numbers, strings, lists, or nested maps.
 
-## 14. Modules
+## 14. Object-Oriented Runtime Architecture
+
+The OOP subsystem adds classes, instances, encapsulation, single inheritance, and virtual dispatch while strictly preserving the interpreter's direct, token-driven architecture.
+
+### 14.1 Class Registry (`struct classDef`, `CLASS_REGISTRY`)
+
+Classes are declared using `class Name [extends Parent]` and registered in the global linked list `CLASS_REGISTRY`:
+
+```c
+struct classDef {
+    char name[100];
+    char parentName[100];
+    struct classDef *parent;
+    struct classField fields[MAX_CLASS_FIELDS];
+    int fieldCount;
+    struct classMethod methods[MAX_CLASS_METHODS];
+    int methodCount;
+    struct funcDef *constructor;
+    struct classDef *next;
+};
+```
+
+- **Bounds Enforcement**: Up to `MAX_CLASS_FIELDS` (64) fields and `MAX_CLASS_METHODS` (64) methods per class. Declarations exceeding these bounds are rejected with descriptive diagnostics to prevent buffer overflows.
+- **Inherited Field Layout**: Derived classes concatenate inherited superclass fields in parent-to-child order, retaining the declaring class and visibility metadata for access checks.
+
+### 14.2 Object Heap & Instances (`struct objInstance`, `OBJECT_HEAP`)
+
+Instances are dynamically allocated on the runtime heap and tracked globally:
+
+```c
+struct objInstance {
+    int id;
+    struct classDef *cls;
+    struct objFieldVal *fields;
+    int fieldCount;
+    struct objInstance *next;
+};
+```
+
+- **Centralized Heap Ownership**: All instances are linked through `inst->next` into `OBJECT_HEAP`. Environment stack variables (`struct oV`) and object fields hold non-owning references.
+- **Deterministic Shutdown Teardown**: `freeAllObjects(&OBJECT_HEAP)` traverses the intrusive heap chain linearly at process termination, freeing `fields` buffers and instance structs without risk of infinite loops or memory leaks from cyclic user references.
+
+### 14.3 Receiver Binding and Call Frames
+
+When invoking an instance method (`inst . method ( args )`):
+
+1. `callStackTop++` pushes a new frame and stores `callStack[callStackTop].thisObj = inst`.
+2. `callStack[callStackTop].executingClass = method->declaringClass` records the declaring class for access control.
+3. An environment frame is initialized (`envTop++`), and local variable `"this"` is bound to `inst`.
+4. Parameters are copied into the callee environment frame.
+5. `run_interpreter_loop()` executes the method body starting at `func->bodyPos`.
+6. Upon return or unwind, the caller's environment frames and receiver state are restored (`callStackTop--`).
+7. Free function calls explicitly set `thisObj = NULL` and `executingClass = NULL`, preventing receiver leakage.
+
+### 14.4 Virtual Dispatch & Inheritance
+
+Method dispatch uses `findClassMethod(inst->cls, methodName)`:
+
+```c
+static inline struct classMethod* findClassMethod(struct classDef *cls, const char *name) {
+    struct classDef *curr = cls;
+    while (curr) {
+        for (int i = 0; i < curr->methodCount; i++) {
+            if (!strcmp(curr->methods[i].name, name)) return &curr->methods[i];
+        }
+        curr = curr->parent;
+    }
+    return NULL;
+}
+```
+
+Method lookup starts at the receiver's actual dynamic runtime class (`inst->cls`) and walks upward through `parent` links, achieving dynamic runtime polymorphism.
+
+### 14.5 Access Control and Context Tracking
+
+Private members are guarded against unauthorized callers by comparing the declaring class against the currently executing method:
+
+```c
+struct classDef *callerContext = (callStackTop >= 0) ? callStack[callStackTop].executingClass : NULL;
+struct classDef *declaringClass = member->declaringClass ? member->declaringClass : inst->cls;
+if (callerContext != declaringClass) {
+    // Access denied: cannot access private member from outside context
+}
+```
+
+This ensures inherited methods executing on child instances can access their declaring class's private members while foreign, global, or derived-class methods are blocked.
+
+### 14.6 Constructors and Type Predicates
+
+- **Constructors**: Explicitly identified by the name `construct`. Looked up via `findConstructor(cls)` strictly in the target class (constructors are not automatically inherited or chained).
+- **Subclass Compatibility**: `isSubclassOf(child, parent)` traverses `child->parent` to validate assignment compatibility and powers the `is_instance(obj, "ClassName")` built-in.
+
+## 15. Modules
 
 `use` opens another `.bykig` file and invokes:
 
@@ -398,7 +505,7 @@ run_interpreter_loop(mod_fp, resolved_path);
 
 The interpreter temporarily changes `current_fp` to the module and restores it afterward. Imported code runs in the current environment. Function definitions created while importing retain the module path in `funcDef.filepath`, allowing subsequent calls to reopen the defining file and seek to `bodyPos`.
 
-## 15. Source-position control
+## 16. Source-position control
 
 The interpreter relies heavily on:
 
@@ -414,7 +521,7 @@ for:
 - module switching
 - caller-position restoration
 
-## 16. Self-hosting & `mini-bykig++`
+## 17. Self-hosting & `mini-bykig++`
 
 `mini-bykig++` is an interpreter for `.mini` written entirely in BYKIG++, located in `mini-bykig++/`:
 
@@ -423,7 +530,7 @@ for:
 - **Expression Evaluation** (`evaluator.bykig`): Builds expression strings and leverages BYKIG++'s built-in `eval()` and `quote()`.
 - **Parsing** (`main.bykig`): Uses `file_scan_*` built-ins to tokenize `.mini` scripts and drive control-flow and statement execution.
 
-## 17. Error handling
+## 18. Error handling
 
 `safe_fscanf()` turns required-token read failures into a fatal error instead of allowing execution to continue with missing input.
 
@@ -434,8 +541,11 @@ Other runtime checks include:
 - break/continue outside loops
 - collection index out-of-bounds protection
 - file open/read/write failures
+- null receiver member access guards
+- private member access violation guards
+- class and method capacity limits
 
-## 18. Practical development checklist
+## 19. Practical development checklist
 
 Before considering an interpreter feature complete, test:
 1. Normal execution
@@ -444,5 +554,6 @@ Before considering an interpreter feature complete, test:
 4. Function parameter passing (value copy vs. reference)
 5. Recursion and frame cleanup
 6. Collection mutation (`push`, `pop`, `delete`, index assignment)
-7. Error paths and bounds checks
-8. Full regression suite (`python tests/run_tests.py`)
+7. OOP features (classes, constructors, methods, `this`, access control, inheritance, polymorphism)
+8. Error paths and bounds checks
+9. Full regression suite (`python tests/run_tests.py`)

@@ -1,0 +1,35 @@
+class Vault
+{
+    private float secretPin ;
+    private float pinHash ;
+
+    public func construct ( float pin )
+    {
+        this . secretPin = pin ;
+        this . pinHash = this . computeHash ( pin ) ;
+    }
+
+    private func computeHash ( float p )
+    {
+        return p * 3.0 + 7.0 ;
+    }
+
+    public func getHash ( )
+    {
+        return this . pinHash ;
+    }
+
+    public func changePin ( float newPin )
+    {
+        this . secretPin = newPin ;
+        this . pinHash = this . computeHash ( newPin ) ;
+        return this . pinHash ;
+    }
+}
+
+Vault v = new Vault ( 1234 ) ;
+out v . getHash ( ) ;
+float updated = v . changePin ( 4321 ) ;
+out updated ;
+out v . getHash ( ) ;
+

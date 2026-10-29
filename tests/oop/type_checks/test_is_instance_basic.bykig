@@ -1,0 +1,34 @@
+class Animal
+{
+    public string name ;
+}
+
+class Dog extends Animal
+{
+    public string breed ;
+}
+
+class Vehicle
+{
+    public float wheels ;
+}
+
+Animal a = new Animal ( ) ;
+Dog d = new Dog ( ) ;
+Vehicle v = new Vehicle ( ) ;
+
+
+out is_instance ( a , "Animal" ) ;
+out is_instance ( d , "Dog" ) ;
+out is_instance ( v , "Vehicle" ) ;
+
+
+out is_instance ( d , "Animal" ) ;
+
+
+out is_instance ( a , "Dog" ) ;
+
+
+out is_instance ( d , "Vehicle" ) ;
+out is_instance ( v , "Animal" ) ;
+out is_instance ( v , "Dog" ) ;

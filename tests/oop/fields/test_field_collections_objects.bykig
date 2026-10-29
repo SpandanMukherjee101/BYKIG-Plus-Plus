@@ -1,0 +1,29 @@
+class Inner
+{
+    public float val ;
+}
+
+class Outer
+{
+    public Inner inner ;
+    public float scale ;
+}
+
+Outer o = new Outer ( ) ;
+o . scale = 2.5 ;
+out o . scale + "%n" ;
+
+Inner in1 = new Inner ( ) ;
+in1 . val = 100.0 ;
+
+o . inner = in1 ;
+out o . inner . val + "%n" ;
+
+o . inner . val = 250.0 ;
+out in1 . val + "%n" ;
+out o . inner . val + "%n" ;
+
+float computed = o . scale * o . inner . val ;
+out computed + "%n" ;
+.
+

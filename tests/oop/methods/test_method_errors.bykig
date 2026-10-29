@@ -1,0 +1,22 @@
+class Greeter
+{
+    public func sayHello ( string name )
+    {
+        return "Hello " + name ;
+    }
+}
+
+Greeter g = new Greeter ( ) ;
+
+
+g . nonexistent ( ) ;
+
+
+g . sayHello ( ) ;
+
+
+Greeter nullG ;
+nullG . sayHello ( "World" ) ;
+
+out "Done" + "%n" ;
+.

@@ -1,0 +1,41 @@
+class BaseCounter
+{
+    public float count ;
+
+    public func construct ( )
+    {
+        this . count = 0.0 ;
+    }
+
+    public func step ( float n )
+    {
+        return n ;
+    }
+}
+
+class AdvancedCounter extends BaseCounter
+{
+    public float multiplier ;
+
+    public func construct ( float mult )
+    {
+        this . count = 0.0 ;
+        this . multiplier = mult ;
+    }
+
+    public func step ( float n )
+    {
+        if ( n <= 1.0 )
+        {
+            return this . multiplier ;
+        }
+        float prev = this . step ( n - 1.0 ) ;
+        return prev + this . multiplier ;
+    }
+}
+
+AdvancedCounter ac = new AdvancedCounter ( 5.0 ) ;
+float res = ac . step ( 10.0 ) ;
+out res ;
+
+out "Deep recursion polymorphic test passed." ;

@@ -1,0 +1,48 @@
+class Node
+{
+    public float val ;
+
+    public func construct ( float v )
+    {
+        this . val = v ;
+    }
+
+    public func sumTree ( )
+    {
+        return this . val ;
+    }
+}
+
+class Branch extends Node
+{
+    public Node left ;
+    public Node right ;
+
+    public func construct ( float v , Node l , Node r )
+    {
+        this . val = v ;
+        this . left = l ;
+        this . right = r ;
+    }
+
+    public func sumTree ( )
+    {
+        return this . val + this . left . sumTree ( ) + this . right . sumTree ( ) ;
+    }
+}
+
+Node l1 = new Node ( 5.0 ) ;
+Node l2 = new Node ( 15.0 ) ;
+Node l3 = new Node ( 25.0 ) ;
+
+Branch b1 = new Branch ( 10.0 , l1 , l2 ) ;
+Branch root = new Branch ( 100.0 , b1 , l3 ) ;
+
+
+
+Node polyRoot = root ;
+out polyRoot . sumTree ( ) ;
+
+
+float total = polyRoot . sumTree ( ) + l1 . sumTree ( ) ;
+out total ;

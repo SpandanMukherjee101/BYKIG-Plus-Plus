@@ -1,0 +1,8 @@
+class EmptyClass
+{
+}
+
+out "Class exists: " + class_exists ( "EmptyClass" ) + "%n" ;
+out "Fake class exists: " + class_exists ( "FakeClass" ) + "%n" ;
+out "PASS: Empty class test%n" ;
+.

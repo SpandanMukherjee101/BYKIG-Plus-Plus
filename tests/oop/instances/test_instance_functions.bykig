@@ -1,0 +1,32 @@
+class Point
+{
+    public float x ;
+    public float y ;
+}
+
+func makePoint ( )
+{
+    Point p = new Point ( ) ;
+    return p ;
+}
+
+func isSame ( Point a , Point b )
+{
+    return a == b ;
+}
+
+Point pt1 = makePoint ( ) ;
+Point pt2 = makePoint ( ) ;
+Point pt3 = pt1 ;
+
+out pt1 + "%n" ;
+out pt2 + "%n" ;
+
+out isSame ( pt1 , pt2 ) + "%n" ;
+out isSame ( pt1 , pt3 ) + "%n" ;
+
+float id1 = object_id ( pt1 ) ;
+float id2 = object_id ( pt2 ) ;
+out ( id2 > id1 ) + "%n" ;
+.
+

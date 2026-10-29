@@ -12,6 +12,7 @@ enum ValueType {
     VAL_BOOL_ARRAY,
     VAL_LIST,
     VAL_MAP,
+    VAL_OBJECT,
     VAL_ERROR
 };
 
@@ -48,6 +49,68 @@ struct mV {
 
 struct funcParam { int type; char name[100]; };
 struct funcDef { char name[100]; int paramCount; struct funcParam params[10]; long bodyPos; char filepath[1000]; struct funcDef *next; };
+
+#define MAX_CLASS_FIELDS 64
+#define MAX_CLASS_METHODS 64
+
+struct classDef;
+
+struct classField {
+    char name[100];
+    int type;          // 1=int, 2=float, 3=char, 4=bool, 5=string, 6=intarr, 7=floatarr, 8=chararr, 9=boolarr, 10=list, 11=map, 12=object
+    int isPrivate;     // 0=public, 1=private
+    struct classDef *declaringClass;
+};
+
+struct classMethod {
+    char name[100];
+    int isPrivate;     // 0=public, 1=private
+    struct classDef *declaringClass;
+    struct funcDef *func;
+};
+
+struct classDef {
+    char name[100];
+    char parentName[100];
+    struct classDef *parent;
+    
+    struct classField fields[MAX_CLASS_FIELDS];
+    int fieldCount;
+    
+    struct classMethod methods[MAX_CLASS_METHODS];
+    int methodCount;
+    
+    struct funcDef *constructor;
+    struct classDef *next;
+};
+
+extern struct classDef *CLASS_REGISTRY;
+
+struct objFieldVal {
+    char name[100];
+    int type;          // 1=int, 2=float, 3=char, 4=bool, 5=string, 6=intarr, 7=floatarr, 8=chararr, 9=boolarr, 10=list, 11=map, 12=object
+    int isPrivate;     // 0=public, 1=private
+    struct classDef *declaringClass;
+    struct Value val;  // Unified runtime Value representation
+};
+
+struct objInstance {
+    int id;                     // Unique integer instance ID
+    struct classDef *cls;       // Class definition
+    int fieldCount;
+    struct objFieldVal *fields; // Dynamically allocated field array
+    struct objInstance *next;   // Linked list in global OBJECT_HEAP
+};
+
+extern struct objInstance *OBJECT_HEAP;
+extern int NEXT_OBJECT_ID;
+
+struct oV {
+    char name[100];
+    char className[100];
+    struct objInstance *instance;
+    struct oV *next;
+};
 
 struct savedVar { char name[100]; int type; int intVal; float floatVal; char charVal; char strVal[1000]; };
 
@@ -133,6 +196,13 @@ static inline void value_to_string(struct Value v, char *out, size_t max_len) {
             }
         }
         strncat(out, "]", max_len - strlen(out) - 1);
+    } else if (v.type == VAL_OBJECT) {
+        struct objInstance *inst = (struct objInstance*)v.ptr;
+        if (!inst) {
+            snprintf(out, max_len, "null");
+        } else {
+            snprintf(out, max_len, "<Object %s#%d>", (inst->cls && inst->cls->name[0]) ? inst->cls->name : "Unknown", inst->id);
+        }
     } else {
         snprintf(out, max_len, "null");
     }
@@ -142,6 +212,9 @@ struct callFrame {
     struct iV *IV; struct fV *FV; struct cV *CV; struct bV *BV; struct sV *SV;
     struct iA *IA; struct fA *FA; struct cA *CA; struct bA *BA;
     struct lV *LV; struct mV *MV;
+    struct oV *OV;
+    struct objInstance *thisObj;
+    struct classDef *executingClass;
     long returnPos; 
     int hasReturn; 
     struct Value returnValue;
@@ -175,6 +248,9 @@ void cleanupFrame(struct callFrame *frame) {
     struct bA *ba = frame->BA; while(ba) { struct bA *n = ba->next; free(ba->data); free(ba); ba = n; } frame->BA = NULL;
     struct lV *lv = frame->LV; while(lv) { struct lV *n = lv->next; if (!lv->ref) free(lv->data); free(lv); lv = n; } frame->LV = NULL;
     struct mV *mv = frame->MV; while(mv) { struct mV *n = mv->next; if (mv->entries) free(mv->entries); free(mv); mv = n; } frame->MV = NULL;
+    struct oV *ov = frame->OV; while(ov) { struct oV *n = ov->next; free(ov); ov = n; } frame->OV = NULL;
+    frame->thisObj = NULL;
+    frame->executingClass = NULL;
 }
 
 void appendI(struct iV **q, char *name, int n) {
@@ -248,7 +324,247 @@ int setS_scope(char *name, char *val) {
     return 0;
 }
 
+static inline void appendO(struct oV **q, const char *name, const char *className, struct objInstance *inst) {
+    struct oV *temp = *q;
+    while (temp) {
+        if (!strcmp(temp->name, name)) {
+            temp->instance = inst;
+            if (className && className[0]) {
+                snprintf(temp->className, sizeof(temp->className), "%s", className);
+            }
+            return;
+        }
+        temp = temp->next;
+    }
+    struct oV *nnode = (struct oV*)malloc(sizeof(struct oV));
+    snprintf(nnode->name, sizeof(nnode->name), "%s", name);
+    if (className && className[0]) {
+        snprintf(nnode->className, sizeof(nnode->className), "%s", className);
+    } else {
+        nnode->className[0] = '\0';
+    }
+    nnode->instance = inst;
+    nnode->next = *q;
+    *q = nnode;
+}
+
+static inline int setO_scope(const char *name, struct objInstance *inst) {
+    for (int idx = envTop; idx >= 0; idx--) {
+        struct oV *ov = envStack[idx].OV;
+        while (ov) {
+            if (!strcmp(ov->name, name)) {
+                ov->instance = inst;
+                return 1;
+            }
+            ov = ov->next;
+        }
+    }
+    return 0;
+}
+
+static inline struct oV* findObj_scope(const char *name) {
+    for (int idx = envTop; idx >= 0; idx--) {
+        struct oV *ov = envStack[idx].OV;
+        while (ov) {
+            if (!strcmp(ov->name, name)) return ov;
+            ov = ov->next;
+        }
+    }
+    return NULL;
+}
+
+static inline struct objInstance* allocateObject(struct classDef *cls) {
+    if (!cls) return NULL;
+    struct objInstance *inst = (struct objInstance*)malloc(sizeof(struct objInstance));
+    if (!inst) return NULL;
+    inst->id = NEXT_OBJECT_ID++;
+    inst->cls = cls;
+    inst->fieldCount = cls->fieldCount;
+    if (cls->fieldCount > 0) {
+        inst->fields = (struct objFieldVal*)calloc(cls->fieldCount, sizeof(struct objFieldVal));
+        if (!inst->fields) {
+            free(inst);
+            return NULL;
+        }
+        for (int i = 0; i < cls->fieldCount; i++) {
+            snprintf(inst->fields[i].name, sizeof(inst->fields[i].name), "%s", cls->fields[i].name);
+            inst->fields[i].type = cls->fields[i].type;
+            inst->fields[i].isPrivate = cls->fields[i].isPrivate;
+            inst->fields[i].declaringClass = cls->fields[i].declaringClass ? cls->fields[i].declaringClass : cls;
+            if (cls->fields[i].type == 5) {
+                inst->fields[i].val.type = VAL_STRING;
+                inst->fields[i].val.s[0] = '\0';
+                inst->fields[i].val.f = 0.0f;
+                inst->fields[i].val.ptr = NULL;
+            } else if (cls->fields[i].type == 10) {
+                inst->fields[i].val.type = VAL_LIST;
+                inst->fields[i].val.ptr = NULL;
+                inst->fields[i].val.s[0] = '\0';
+                inst->fields[i].val.f = 0.0f;
+            } else if (cls->fields[i].type == 11) {
+                inst->fields[i].val.type = VAL_MAP;
+                inst->fields[i].val.ptr = NULL;
+                inst->fields[i].val.s[0] = '\0';
+                inst->fields[i].val.f = 0.0f;
+            } else if (cls->fields[i].type == 12) {
+                inst->fields[i].val.type = VAL_OBJECT;
+                inst->fields[i].val.ptr = NULL;
+                inst->fields[i].val.s[0] = '\0';
+                inst->fields[i].val.f = 0.0f;
+            } else if (cls->fields[i].type >= 6 && cls->fields[i].type <= 9) {
+                inst->fields[i].val.type = (enum ValueType)(cls->fields[i].type - 4);
+                inst->fields[i].val.ptr = NULL;
+                inst->fields[i].val.s[0] = '\0';
+                inst->fields[i].val.f = 0.0f;
+            } else {
+                inst->fields[i].val.type = VAL_FLOAT;
+                inst->fields[i].val.f = 0.0f;
+                inst->fields[i].val.s[0] = '\0';
+                inst->fields[i].val.ptr = NULL;
+            }
+        }
+    } else {
+        inst->fields = NULL;
+    }
+    inst->next = OBJECT_HEAP;
+    OBJECT_HEAP = inst;
+    return inst;
+}
+
+static inline void freeAllObjects(struct objInstance **heap) {
+    if (!heap) return;
+    struct objInstance *cur = *heap;
+    while (cur) {
+        struct objInstance *nxt = cur->next;
+        if (cur->fields) {
+            free(cur->fields);
+            cur->fields = NULL;
+        }
+        free(cur);
+        cur = nxt;
+    }
+    *heap = NULL;
+}
+
+static inline struct Value getFieldValue(struct objInstance *inst, const char *fieldName, int *found) {
+    struct Value v;
+    memset(&v, 0, sizeof(v));
+    v.type = VAL_ERROR;
+    *found = 0;
+    if (!inst) return v;
+    for (int f = 0; f < inst->fieldCount; f++) {
+        if (!strcmp(inst->fields[f].name, fieldName)) {
+            if (inst->fields[f].isPrivate) {
+                struct classDef *callerContext = (callStackTop >= 0) ? callStack[callStackTop].executingClass : NULL;
+                struct classDef *declaringClass = inst->fields[f].declaringClass ? inst->fields[f].declaringClass : inst->cls;
+                if (callerContext != declaringClass) {
+                    printf("Error: Cannot access private member '%s' of class '%s' from context '%s'\n",
+                           fieldName,
+                           declaringClass ? declaringClass->name : "<unknown>",
+                           callerContext ? callerContext->name : "<global>");
+                    *found = -1;
+                    return v;
+                }
+            }
+            *found = 1;
+            return inst->fields[f].val;
+        }
+    }
+    return v;
+}
+
+static inline int assignFieldValue(struct objInstance *inst, const char *fieldName, struct Value rhsVal) {
+    if (!inst) {
+        printf("Error: Null reference: cannot assign to field '%s' on null receiver\n", fieldName);
+        return 0;
+    }
+    int fieldIdx = -1;
+    for (int f = 0; f < inst->fieldCount; f++) {
+        if (!strcmp(inst->fields[f].name, fieldName)) {
+            fieldIdx = f;
+            break;
+        }
+    }
+    if (fieldIdx == -1) {
+        printf("Error: Field '%s' not found in class '%s'\n", fieldName, inst->cls ? inst->cls->name : "<unknown>");
+        return 0;
+    }
+    
+    struct objFieldVal *field = &inst->fields[fieldIdx];
+    
+    if (field->isPrivate) {
+        struct classDef *callerContext = (callStackTop >= 0) ? callStack[callStackTop].executingClass : NULL;
+        struct classDef *declaringClass = field->declaringClass ? field->declaringClass : inst->cls;
+        if (callerContext != declaringClass) {
+            printf("Error: Cannot access private member '%s' of class '%s' from context '%s'\n",
+                   fieldName,
+                   declaringClass ? declaringClass->name : "<unknown>",
+                   callerContext ? callerContext->name : "<global>");
+            return 0;
+        }
+    }
+    
+    if (field->type == 12) {
+        if (rhsVal.type == VAL_OBJECT) {
+            field->val.type = VAL_OBJECT;
+            field->val.ptr = rhsVal.ptr;
+            field->val.f = (rhsVal.ptr != NULL) ? 1.0f : 0.0f;
+            return 1;
+        } else {
+            printf("Error: Cannot assign non-object value to object field '%s' in class '%s'\n", fieldName, inst->cls ? inst->cls->name : "");
+            return 0;
+        }
+    } else if (field->type == 5) {
+        field->val.type = VAL_STRING;
+        if (rhsVal.type == VAL_STRING) {
+            snprintf(field->val.s, sizeof(field->val.s), "%s", rhsVal.s);
+        } else {
+            value_to_string(rhsVal, field->val.s, sizeof(field->val.s));
+        }
+        return 1;
+    } else if (field->type >= 1 && field->type <= 4) {
+        if (rhsVal.type == VAL_STRING || rhsVal.type == VAL_OBJECT) {
+            printf("Error: Type mismatch: cannot assign non-numeric value to numeric field '%s' in class '%s'\n", fieldName, inst->cls ? inst->cls->name : "");
+            return 0;
+        }
+        field->val.type = VAL_FLOAT;
+        if (field->type == 1) {
+            field->val.f = (float)(int)rhsVal.f;
+        } else if (field->type == 2) {
+            field->val.f = rhsVal.f;
+        } else if (field->type == 3) {
+            field->val.f = (float)(char)rhsVal.f;
+        } else if (field->type == 4) {
+            field->val.f = (rhsVal.f != 0.0f) ? 1.0f : 0.0f;
+        }
+        return 1;
+    } else if (field->type == 10) {
+        if (rhsVal.type == VAL_LIST) {
+            field->val = rhsVal;
+            return 1;
+        } else {
+            printf("Error: Type mismatch: cannot assign non-list value to list field '%s' in class '%s'\n", fieldName, inst->cls ? inst->cls->name : "");
+            return 0;
+        }
+    } else if (field->type == 11) {
+        if (rhsVal.type == VAL_MAP) {
+            field->val = rhsVal;
+            return 1;
+        } else {
+            printf("Error: Type mismatch: cannot assign non-map value to map field '%s' in class '%s'\n", fieldName, inst->cls ? inst->cls->name : "");
+            return 0;
+        }
+    } else if (field->type >= 6 && field->type <= 9) {
+        field->val = rhsVal;
+        return 1;
+    }
+    
+    field->val = rhsVal;
+    return 1;
+}
+
 int typeFetcher(char *name) {
+    if (!strcmp(name, "this")) return 12;
     for (int idx=envTop; idx>=0; idx--) {
         int i = idx;
         struct iV *iv = envStack[i].IV; while (iv) { if (!strcmp(iv->name, name)) return 1; iv = iv->next; }
@@ -266,6 +582,7 @@ int typeFetcher(char *name) {
         struct bA *ba = envStack[i].BA; while (ba) { if (!strcmp(ba->name, name)) return 9; ba = ba->next; }
         struct lV *lv = envStack[i].LV; while (lv) { if (!strcmp(lv->name, name)) return 10; lv = lv->next; }
         struct mV *mv = envStack[i].MV; while (mv) { if (!strcmp(mv->name, name)) return 11; mv = mv->next; }
+        struct oV *ov = envStack[i].OV; while (ov) { if (!strcmp(ov->name, name)) return 12; ov = ov->next; }
     }
     return 0;
 }
@@ -275,6 +592,19 @@ struct Value valFetcherGlobal(char *name) {
     v.type = VAL_ERROR;
     v.f = 0.0;
     v.ptr = NULL;
+
+    if (!strcmp(name, "this")) {
+        if (callStackTop >= 0 && callStack[callStackTop].thisObj != NULL) {
+            v.type = VAL_OBJECT;
+            v.ptr = (void*)callStack[callStackTop].thisObj;
+            v.f = 1.0f;
+            return v;
+        } else {
+            printf("Error: 'this' used outside of an instance method\n");
+            v.type = VAL_ERROR;
+            return v;
+        }
+    }
 
     for (int idx=envTop; idx>=0; idx--) {
         int i = idx;
@@ -289,6 +619,15 @@ struct Value valFetcherGlobal(char *name) {
         struct bA *ba = envStack[i].BA; while (ba) { if (!strcmp(ba->name, name)) { v.type=VAL_BOOL_ARRAY; v.ptr=(void*)ba; return v; } ba = ba->next; }
         struct lV *lv = envStack[i].LV; while (lv) { if (!strcmp(lv->name, name)) { v.type=VAL_LIST; v.ptr=(void*)lv; return v; } lv = lv->next; }
         struct mV *mv = envStack[i].MV; while (mv) { if (!strcmp(mv->name, name)) { v.type=VAL_MAP; v.ptr=(void*)mv; return v; } mv = mv->next; }
+        struct oV *ov = envStack[i].OV; while (ov) {
+            if (!strcmp(ov->name, name)) {
+                v.type = VAL_OBJECT;
+                v.ptr = (void*)ov->instance;
+                v.f = (ov->instance != NULL) ? 1.0f : 0.0f;
+                return v;
+            }
+            ov = ov->next;
+        }
     }
     
     return v;
@@ -581,6 +920,65 @@ struct funcDef* findFunc(struct funcDef *list, char *name) {
     return NULL;
 }
 
+struct classDef* findClass(struct classDef *list, const char *name) {
+    while (list) {
+        if (!strcmp(list->name, name)) return list;
+        list = list->next;
+    }
+    return NULL;
+}
+
+static inline struct classMethod* findClassMethod(struct classDef *cls, const char *name) {
+    struct classDef *curr = cls;
+    while (curr) {
+        for (int i = 0; i < curr->methodCount; i++) {
+            if (!strcmp(curr->methods[i].name, name)) {
+                return &curr->methods[i];
+            }
+        }
+        curr = curr->parent;
+    }
+    return NULL;
+}
+
+static inline struct classMethod* findConstructor(struct classDef *cls) {
+    if (!cls) return NULL;
+    for (int i = 0; i < cls->methodCount; i++) {
+        if (!strcmp(cls->methods[i].name, "construct")) {
+            return &cls->methods[i];
+        }
+    }
+    return NULL;
+}
+
+static inline int isSubclassOf(struct classDef *child, struct classDef *parent) {
+    if (!child || !parent) return 0;
+    struct classDef *curr = child;
+    while (curr) {
+        if (curr == parent || !strcmp(curr->name, parent->name)) {
+            return 1;
+        }
+        curr = curr->parent;
+    }
+    return 0;
+}
+
+void freeClassRegistry(struct classDef **head) {
+    struct classDef *cur = *head;
+    while (cur) {
+        struct classDef *next = cur->next;
+        for (int m = 0; m < cur->methodCount; m++) {
+            if (cur->methods[m].func) {
+                free(cur->methods[m].func);
+                cur->methods[m].func = NULL;
+            }
+        }
+        free(cur);
+        cur = next;
+    }
+    *head = NULL;
+}
+
 
 void scopeSetSV(char *name, char *val) {
     appendS(&envStack[envTop].SV, name, val);
@@ -710,5 +1108,6 @@ void scopeDeleteValue(char *name) {
         struct bA **ba = &envStack[scope].BA; while (*ba) { if (!strcmp((*ba)->name, name)) { struct bA *node = *ba; *ba = node->next; free(node->data); free(node); return; } ba = &(*ba)->next; }
         struct lV **lv = &envStack[scope].LV; while (*lv) { if (!strcmp((*lv)->name, name)) { struct lV *node = *lv; *lv = node->next; if (!node->ref) free(node->data); free(node); return; } lv = &(*lv)->next; }
         struct mV **mv = &envStack[scope].MV; while (*mv) { if (!strcmp((*mv)->name, name)) { struct mV *node = *mv; *mv = node->next; if (node->entries) free(node->entries); free(node); return; } mv = &(*mv)->next; }
+        struct oV **ov = &envStack[scope].OV; while (*ov) { if (!strcmp((*ov)->name, name)) { struct oV *node = *ov; *ov = node->next; free(node); return; } ov = &(*ov)->next; }
     }
 }

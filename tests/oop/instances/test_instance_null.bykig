@@ -1,0 +1,29 @@
+class Point
+{
+    public float x ;
+    public float y ;
+}
+
+Point uninit ;
+out uninit + "%n" ;
+out is_null ( uninit ) + "%n" ;
+out ( uninit == null ) + "%n" ;
+out ( uninit != null ) + "%n" ;
+
+Point p = new Point ( ) ;
+out is_null ( p ) + "%n" ;
+out ( p == null ) + "%n" ;
+out ( p != null ) + "%n" ;
+out ( uninit == p ) + "%n" ;
+out ( uninit != p ) + "%n" ;
+
+p = null ;
+out is_null ( p ) + "%n" ;
+out ( p == null ) + "%n" ;
+out p + "%n" ;
+
+Point a ;
+Point b ;
+out ( a == b ) + "%n" ;
+.
+

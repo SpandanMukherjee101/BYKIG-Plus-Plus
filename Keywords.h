@@ -50,6 +50,8 @@ int whichone(char *c)
     else if (!(strcmp(c, "continue"))) return 26;
     else if (!(strcmp(c, "for"))) return 27;
     else if (!(strcmp(c, "{"))) return 28;
+    else if (!(strcmp(c, "class"))) return 29;
+    else if (!(strcmp(c, "new"))) return 30;
     
     else return 11;
 }

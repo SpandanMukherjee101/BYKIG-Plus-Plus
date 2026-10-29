@@ -1,0 +1,7 @@
+use "tests/oop/methods/module_class.bykig" ;
+
+Calculator calc = new Calculator ( ) ;
+float res = calc . square ( 7.0 ) ;
+out res + "%n" ;
+.
+

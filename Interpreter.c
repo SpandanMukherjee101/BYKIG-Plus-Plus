@@ -1,12 +1,34 @@
 #include <stdio.h>
-
 #include <stdlib.h>
+#include <ctype.h>
 void safe_fscanf(FILE* fp, const char* fmt, char* buf) {
     if (fscanf(fp, fmt, buf) <= 0) {
         printf("Error: Unexpected EOF or read error.\n");
         fflush(stdout);
         exit(1);
     }
+}
+
+static inline void read_token_skip_comments(FILE *fp, char *buf) {
+    while (1) {
+        safe_fscanf(fp, "%s", buf);
+        if (buf[0] == '/' && buf[1] == '/') {
+            fgets(buf, 1000, fp);
+            continue;
+        }
+        break;
+    }
+}
+
+static inline int is_member_dot(FILE *fp) {
+    long dotPos = ftell(fp);
+    char peekTok[100] = "";
+    int hasPeek = (fscanf(fp, "%99s", peekTok) == 1);
+    fseek(fp, dotPos, SEEK_SET);
+    if (hasPeek && (isalpha(peekTok[0]) || peekTok[0] == '_')) {
+        return 1;
+    }
+    return 0;
 }
 
 #include <string.h>
@@ -20,6 +42,9 @@ int callStackTop = -1;
 struct callFrame envStack[10000];
 int envTop = 0;
 struct funcDef *FN = NULL;
+struct classDef *CLASS_REGISTRY = NULL;
+struct objInstance *OBJECT_HEAP = NULL;
+int NEXT_OBJECT_ID = 1;
 FILE *current_fp = NULL;
 struct Value global_return_val;
 FILE *global_fp = NULL;
@@ -174,7 +199,6 @@ void execute_for_stmt(char *raw_stmt) {
                     char rhsBuf[1024];
                     snprintf(rhsBuf, sizeof(rhsBuf), "%s ;", rhs);
                     struct Value rVal = val(rhsBuf);
-                    printf("LINE 176: rhsBuf=[%s], rVal.type=%d, rVal.s=[%s]\n", rhsBuf, rVal.type, rVal.s);
                     
                     char *bracket = strchr(lhs, '[');
                     if (bracket) {
@@ -327,7 +351,7 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                 int pDepth = 0;
                 while (1) {
                     safe_fscanf(fp, "%s", tD);
-                    if (!strcmp(tD, ".")) { goto ERROR; }
+                    if (!strcmp(tD, ".")) { if (!is_member_dot(fp)) { goto ERROR; } }
                       if (!strcmp(tD, "(")) pDepth++;
                     else if (!strcmp(tD, ")")) pDepth--;
                     
@@ -378,7 +402,7 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                 int pDepth = 0;
                 while (1) {
                     safe_fscanf(fp, "%s", tD);
-                    if (!strcmp(tD, ".")) { goto ERROR; }
+                    if (!strcmp(tD, ".")) { if (!is_member_dot(fp)) { goto ERROR; } }
                       if (!strcmp(tD, "(")) pDepth++;
                     else if (!strcmp(tD, ")")) pDepth--;
                     
@@ -817,7 +841,7 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                         if (strData) printf("%s", strData);
                         else printf("\nVariable not found!!!\n");
                     }
-                    else if (type >= 6 && type <= 11)
+                    else if (type >= 6 && type <= 12)
                     {
                         char outBuf[4096];
                         value_to_string(valFetcherGlobal(tempS), outBuf, sizeof(outBuf));
@@ -948,6 +972,105 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
             
             if (type == 0)
             {
+                char *dot = strchr(buffer, '.');
+                if (dot != NULL && !isdigit(buffer[0]) && !(buffer[0] == '-' && isdigit(buffer[1]))) {
+                    int rLen = dot - buffer;
+                    char recName[100], fldName[100];
+                    if (rLen > 0 && rLen < 95) {
+                        strncpy(recName, buffer, rLen);
+                        recName[rLen] = '\0';
+                        int isRec = 0;
+                        struct objInstance *inst = NULL;
+                        if (!strcmp(recName, "this")) {
+                            isRec = 1;
+                            inst = (callStackTop >= 0) ? callStack[callStackTop].thisObj : NULL;
+                            if (!inst) printf("Error: 'this' used outside of an instance method or on null receiver\n");
+                        } else if (typeFetcher(recName) == 12) {
+                            isRec = 1;
+                            struct Value rVal = valFetcherGlobal(recName);
+                            if (rVal.type == VAL_OBJECT) inst = (struct objInstance*)rVal.ptr;
+                        }
+
+                        if (isRec) {
+                            char *segment = dot + 1;
+                            while (1) {
+                                char *nextDot = strchr(segment, '.');
+                                if (nextDot != NULL) {
+                                    int segLen = nextDot - segment;
+                                    char midFld[100];
+                                    if (segLen >= (int)sizeof(midFld)) segLen = (int)sizeof(midFld) - 1;
+                                    memcpy(midFld, segment, segLen);
+                                    midFld[segLen] = '\0';
+                                    if (!inst) {
+                                        printf("Error: Null reference: cannot access field '%s' on null receiver\n", midFld);
+                                        break;
+                                    }
+                                    int found = 0;
+                                    struct Value mVal = getFieldValue(inst, midFld, &found);
+                                    if (found == 0) {
+                                        printf("Error: Field '%s' not found or not an object in class '%s'\n", midFld, inst->cls ? inst->cls->name : "");
+                                        inst = NULL;
+                                        break;
+                                    } else if (found < 0) {
+                                        inst = NULL;
+                                        break;
+                                    } else if (mVal.type != VAL_OBJECT) {
+                                        printf("Error: Field '%s' not found or not an object in class '%s'\n", midFld, inst->cls ? inst->cls->name : "");
+                                        inst = NULL;
+                                        break;
+                                    }
+                                    inst = (struct objInstance*)mVal.ptr;
+                                    segment = nextDot + 1;
+                                } else {
+                                    strncpy(fldName, segment, sizeof(fldName) - 1);
+                                    fldName[sizeof(fldName) - 1] = '\0';
+                                    break;
+                                }
+                            }
+
+                            if (fldName[0] != '\0') {
+                                char nextTok[100];
+                                read_token_skip_comments(fp, nextTok);
+                                if (!strcmp(nextTok, "=")) {
+                                    char exprBuf[1000] = "";
+                                    int pDepth = 0;
+                                    char tD[100];
+                                    while (1) {
+                                        read_token_skip_comments(fp, tD);
+                                        if (!strcmp(tD, ".")) { if (!is_member_dot(fp)) { goto ERROR; } }
+                                        if (!strcmp(tD, "(")) pDepth++;
+                                        else if (!strcmp(tD, ")")) pDepth--;
+                                        if (pDepth == 0 && !strcmp(tD, ";")) break;
+                                        strcat(exprBuf, tD);
+                                        strcat(exprBuf, " ");
+                                    }
+                                    strcat(exprBuf, ";");
+                                    struct Value rhsVal = val(exprBuf);
+                                    assignFieldValue(inst, fldName, rhsVal);
+                                    break;
+                                } else if (!strcmp(nextTok, "(")) {
+                                    char exprBuf[2048] = "";
+                                    snprintf(exprBuf, sizeof(exprBuf), "%s ( ", buffer);
+                                    int pDepth = 1;
+                                    char tD[100];
+                                    while (1) {
+                                        read_token_skip_comments(fp, tD);
+                                        if (!strcmp(tD, ".")) { if (!is_member_dot(fp)) { goto ERROR; } }
+                                        if (!strcmp(tD, "(")) pDepth++;
+                                        else if (!strcmp(tD, ")")) pDepth--;
+                                        strcat(exprBuf, tD);
+                                        strcat(exprBuf, " ");
+                                        if (pDepth == 0 && (!strcmp(tD, ";") || strchr(tD, ';'))) break;
+                                        if (feof(fp)) break;
+                                    }
+                                    val(exprBuf);
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if (findFunc(FN, buffer) != NULL || findBuiltin(buffer) != NULL) {
                     char exprBuf[1000] = "";
                     strcpy(exprBuf, buffer);
@@ -956,8 +1079,8 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                     char tD[100];
                     while (1) {
                         safe_fscanf(fp, "%s", tD);
-                        if (!strcmp(tD, ".")) { goto ERROR; }
-                      strcat(exprBuf, tD);
+                        if (!strcmp(tD, ".")) { if (!is_member_dot(fp)) { goto ERROR; } }
+                        strcat(exprBuf, tD);
                         strcat(exprBuf, " ");
                         if (!strcmp(tD, "(")) pDepth++;
                         else if (!strcmp(tD, ")")) pDepth--;
@@ -965,6 +1088,73 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                     }
                     val(exprBuf);
                     break;
+                }
+                
+                struct classDef *cls = findClass(CLASS_REGISTRY, buffer);
+                if (cls != NULL) {
+                startO:
+                    read_token_skip_comments(fp, buffer);
+                    strcpy(name, buffer);
+                    struct objInstance *inst = NULL;
+
+                    read_token_skip_comments(fp, buffer);
+                    if (!strcmp(buffer, ",")) {
+                        appendO(&envStack[envTop].OV, name, cls->name, inst);
+                        goto startO;
+                    }
+                    else if (!strcmp(buffer, "=")) {
+                        char exprBuf[1000] = "";
+                        int pDepth = 0;
+                        while (1) {
+                            read_token_skip_comments(fp, tD);
+                            if (!strcmp(tD, ".")) { if (!is_member_dot(fp)) { goto ERROR; } }
+                            if (!strcmp(tD, "(")) pDepth++;
+                            else if (!strcmp(tD, ")")) pDepth--;
+                            
+                            if (pDepth == 0 && (!strcmp(tD, ",") || !strcmp(tD, ";"))) {
+                                strcpy(buffer, tD);
+                                break;
+                            }
+                            strcat(exprBuf, tD);
+                            strcat(exprBuf, " ");
+                        }
+                        strcat(exprBuf, ";");
+                        struct Value rhsVal = val(exprBuf);
+                        if (rhsVal.type == VAL_OBJECT) {
+                            inst = (struct objInstance*)rhsVal.ptr;
+                            if (inst != NULL && inst->cls != NULL && !isSubclassOf(inst->cls, cls)) {
+                                printf("Error: Type mismatch: cannot assign instance of class '%s' to variable '%s' of class '%s'\n",
+                                       inst->cls->name, name, cls->name);
+                                inst = NULL;
+                            }
+                        } else {
+                            printf("Error: Cannot assign non-object value to object '%s' of class '%s'\n", name, cls->name);
+                            inst = NULL;
+                        }
+                        appendO(&envStack[envTop].OV, name, cls->name, inst);
+                        if (!strcmp(buffer, ",")) {
+                            goto startO;
+                        }
+                    }
+                    else if (!strcmp(buffer, ";")) {
+                        appendO(&envStack[envTop].OV, name, cls->name, inst);
+                    }
+                    break;
+                } else {
+                    long pos = ftell(fp);
+                    char nextTok1[100] = "", nextTok2[100] = "";
+                    if (fscanf(fp, "%99s", nextTok1) == 1) {
+                        if (fscanf(fp, "%99s", nextTok2) == 1) {
+                            if (!strcmp(nextTok2, "=") || !strcmp(nextTok2, ";") || !strcmp(nextTok2, ",")) {
+                                printf("Error: Unknown class '%s'\n", buffer);
+                                while (strcmp(nextTok2, ";") != 0) {
+                                    if (fscanf(fp, "%99s", nextTok2) != 1 || !strcmp(nextTok2, ".")) break;
+                                }
+                                break;
+                            }
+                        }
+                    }
+                    fseek(fp, pos, SEEK_SET);
                 }
                 goto ERROR;
             }            
@@ -999,7 +1189,7 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                 int pDepth = 0;
                 while (1) {
                     safe_fscanf(fp, "%s", tD);
-                    if (!strcmp(tD, ".")) { goto ERROR; }
+                    if (!strcmp(tD, ".")) { if (!is_member_dot(fp)) { goto ERROR; } }
                     if (!strcmp(tD, "(")) pDepth++;
                     else if (!strcmp(tD, ")")) pDepth--;
                     if (pDepth == 0 && (!strcmp(tD, ";"))) {
@@ -1115,6 +1305,96 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                         if (ba && idx >= 0 && idx < ba->size) ba->data[idx] = (int)rhsVal.f;
                     }
                 }
+            } else if (next_ch == '.') {
+                char fullExpr[2048] = "";
+                snprintf(fullExpr, sizeof(fullExpr), "%s . ", name);
+
+                struct objInstance *inst = NULL;
+                if (!strcmp(name, "this")) {
+                    inst = (callStackTop >= 0) ? callStack[callStackTop].thisObj : NULL;
+                    if (!inst) {
+                        printf("Error: 'this' used outside of an instance method or on null receiver\n");
+                    }
+                } else {
+                    struct Value rVal = valFetcherGlobal(name);
+                    if (rVal.type != VAL_OBJECT) {
+                        printf("Error: Receiver '%s' is not an object\n", name);
+                    } else {
+                        inst = (struct objInstance*)rVal.ptr;
+                    }
+                }
+
+                char fieldName[100];
+                read_token_skip_comments(fp, fieldName);
+                strcat(fullExpr, fieldName);
+                strcat(fullExpr, " ");
+
+                while (1) {
+                    char nextTok[100];
+                    read_token_skip_comments(fp, nextTok);
+                    if (!strcmp(nextTok, ".")) {
+                        strcat(fullExpr, ". ");
+                        if (!inst) {
+                            printf("Error: Null reference: cannot access field '%s' on null receiver\n", fieldName);
+                        } else {
+                            int found = 0;
+                            struct Value mVal = getFieldValue(inst, fieldName, &found);
+                            if (found == 0) {
+                                printf("Error: Field '%s' not found in class '%s'\n", fieldName, inst->cls ? inst->cls->name : "");
+                                inst = NULL;
+                            } else if (found < 0) {
+                                inst = NULL;
+                            } else if (mVal.type != VAL_OBJECT) {
+                                printf("Error: Cannot access member of non-object field '%s'\n", fieldName);
+                                inst = NULL;
+                            } else {
+                                inst = (struct objInstance*)mVal.ptr;
+                            }
+                        }
+                        read_token_skip_comments(fp, fieldName);
+                        strcat(fullExpr, fieldName);
+                        strcat(fullExpr, " ");
+                    } else if (!strcmp(nextTok, "=")) {
+                        char exprBuf[1000] = "";
+                        int pDepth = 0;
+                        char tD[100];
+                        while (1) {
+                            read_token_skip_comments(fp, tD);
+                            if (!strcmp(tD, ".")) { if (!is_member_dot(fp)) { goto ERROR; } }
+                            if (!strcmp(tD, "(")) pDepth++;
+                            else if (!strcmp(tD, ")")) pDepth--;
+                            if (pDepth == 0 && !strcmp(tD, ";")) break;
+                            strcat(exprBuf, tD);
+                            strcat(exprBuf, " ");
+                        }
+                        strcat(exprBuf, ";");
+                        struct Value rhsVal = val(exprBuf);
+                        assignFieldValue(inst, fieldName, rhsVal);
+                        break;
+                    } else if (!strcmp(nextTok, "(")) {
+                        strcat(fullExpr, "( ");
+                        int pDepth = 1;
+                        char tD[100];
+                        while (1) {
+                            read_token_skip_comments(fp, tD);
+                            if (!strcmp(tD, ".")) { if (!is_member_dot(fp)) { goto ERROR; } }
+                            if (!strcmp(tD, "(")) pDepth++;
+                            else if (!strcmp(tD, ")")) pDepth--;
+                            strcat(fullExpr, tD);
+                            strcat(fullExpr, " ");
+                            if (pDepth == 0 && (!strcmp(tD, ";") || strchr(tD, ';'))) break;
+                            if (feof(fp)) break;
+                        }
+                        val(fullExpr);
+                        break;
+                    } else {
+                        printf("Error: Expected '=' or '(' after member '%s', got '%s'\n", fieldName, nextTok);
+                        while (strcmp(nextTok, ";") != 0 && strcmp(nextTok, ".") != 0 && !feof(fp)) {
+                            read_token_skip_comments(fp, nextTok);
+                        }
+                        break;
+                    }
+                }
             } else {
                 if (next_ch != EOF) ungetc(next_ch, fp);
                 fgets(buffer, 1000, fp);
@@ -1207,6 +1487,31 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                         }
                     }
                 }
+                else if (type == 12) {
+                    if (!strcmp(name, "this")) {
+                        printf("Error: Cannot assign to read-only variable 'this'\n");
+                    } else {
+                        char *eq = strchr(buffer, '=');
+                        if (eq) {
+                            struct Value rhsVal = val(eq + 1);
+                            if (rhsVal.type == VAL_OBJECT) {
+                                struct objInstance *rInst = (struct objInstance*)rhsVal.ptr;
+                                struct oV *ov = findObj_scope(name);
+                                struct classDef *varCls = (ov && ov->className[0] != '\0') ? findClass(CLASS_REGISTRY, ov->className) : NULL;
+                                if (varCls != NULL && rInst != NULL && rInst->cls != NULL && !isSubclassOf(rInst->cls, varCls)) {
+                                    printf("Error: Type mismatch: cannot assign instance of class '%s' to variable '%s' of class '%s'\n",
+                                           rInst->cls->name, name, varCls->name);
+                                } else {
+                                    if (!setO_scope(name, rInst)) {
+                                        appendO(&envStack[envTop].OV, name, varCls ? varCls->name : "", rInst);
+                                    }
+                                }
+                            } else {
+                                printf("Error: Cannot assign non-object value to object variable '%s'\n", name);
+                            }
+                        }
+                    }
+                }
             }
             break;
 
@@ -1227,7 +1532,7 @@ case 14:
                 int pDepth = 0;
                 while (1) {
                     safe_fscanf(fp, "%s", tD);
-                    if (!strcmp(tD, ".")) { goto ERROR; }
+                    if (!strcmp(tD, ".")) { if (!is_member_dot(fp)) { goto ERROR; } }
                     if (!strcmp(tD, "(")) pDepth++;
                     else if (!strcmp(tD, ")")) pDepth--;
                     
@@ -1478,6 +1783,7 @@ case 15:
                         else if (!strcmp(buffer, "boolarr")) pType = 9;
                         else if (!strcmp(buffer, "list")) pType = 10;
                         else if (!strcmp(buffer, "map")) pType = 11;
+                        else if (findClass(CLASS_REGISTRY, buffer) != NULL || !strcmp(buffer, "object")) pType = 12;
                         
                         params[paramCount].type = pType;
                         safe_fscanf(fp, "%s", params[paramCount].name);  
@@ -1517,7 +1823,7 @@ case 15:
                 char tD[100];
                 while (1) {
                     safe_fscanf(fp, "%s", tD);
-                    if (!strcmp(tD, ".")) { goto ERROR; }
+                    if (!strcmp(tD, ".")) { if (!is_member_dot(fp)) { goto ERROR; } }
                       if (!strcmp(tD, "(")) pDepth++;
                     else if (!strcmp(tD, ")")) pDepth--;
                     
@@ -1906,6 +2212,366 @@ case 15:
             blockEnv[p] = 1;
             break;
 
+        case 29:
+            {
+                char className[100];
+                read_token_skip_comments(fp, className);
+                
+                // 1. Validate class name: cannot be empty or keyword
+                int kw = whichone(className);
+                if (kw != 11 || className[0] == '\0') {
+                    printf("Error: Invalid class name '%s' (cannot be a keyword or empty)\n", className);
+                    break;
+                }
+                
+                // 2. Reject duplicate class name
+                if (findClass(CLASS_REGISTRY, className) != NULL) {
+                    printf("Error: Duplicate class '%s'\n", className);
+                    char skipBuf[1000];
+                    while (1) {
+                        read_token_skip_comments(fp, skipBuf);
+                        if (!strcmp(skipBuf, "{")) break;
+                    }
+                    int bDepth = 1;
+                    while (bDepth > 0) {
+                        read_token_skip_comments(fp, skipBuf);
+                        if (!strcmp(skipBuf, "{")) bDepth++;
+                        else if (!strcmp(skipBuf, "}")) bDepth--;
+                    }
+                    break;
+                }
+                
+                // 3. Expect opening '{' or 'extends'
+                char nextTok[100];
+                read_token_skip_comments(fp, nextTok);
+                char parentName[100] = "";
+                struct classDef *parentClass = NULL;
+                int parentError = 0;
+                if (!strcmp(nextTok, "extends")) {
+                    read_token_skip_comments(fp, parentName);
+                    if (!strcmp(parentName, className)) {
+                        printf("Error: Circular inheritance detected: class '%s' cannot extend itself\n", className);
+                        parentError = 1;
+                    } else {
+                        parentClass = findClass(CLASS_REGISTRY, parentName);
+                        if (!parentClass) {
+                            printf("Error: Unknown superclass '%s' for class '%s'\n", parentName, className);
+                            parentError = 1;
+                        } else {
+                            struct classDef *cur = parentClass;
+                            while (cur) {
+                                if (!strcmp(cur->name, className)) {
+                                    printf("Error: Circular inheritance detected for class '%s' extending '%s'\n", className, parentName);
+                                    parentError = 1;
+                                    break;
+                                }
+                                cur = cur->parent;
+                            }
+                        }
+                    }
+                    read_token_skip_comments(fp, nextTok);
+                }
+                if (strcmp(nextTok, "{") != 0) {
+                    printf("Error: Expected '{' after class name '%s', got '%s'\n", className, nextTok);
+                    break;
+                }
+                if (parentError) {
+                    int bDepth = 1;
+                    char skipBuf[100];
+                    while (bDepth > 0 && !feof(fp)) {
+                        read_token_skip_comments(fp, skipBuf);
+                        if (!strcmp(skipBuf, "{")) bDepth++;
+                        else if (!strcmp(skipBuf, "}")) bDepth--;
+                    }
+                    break;
+                }
+                
+                // 4. Allocate and register new class
+                struct classDef *cls = (struct classDef*)malloc(sizeof(struct classDef));
+                if (!cls) {
+                    printf("Error: Memory allocation failed for class '%s'\n", className);
+                    break;
+                }
+                memset(cls, 0, sizeof(struct classDef));
+                snprintf(cls->name, sizeof(cls->name), "%s", className);
+                if (parentClass) {
+                    snprintf(cls->parentName, sizeof(cls->parentName), "%s", parentName);
+                    cls->parent = parentClass;
+                    if (parentClass->fieldCount > MAX_CLASS_FIELDS) {
+                        printf("Error: Class '%s' exceeds maximum field capacity of %d (inheriting %d fields from '%s')\n",
+                               className, MAX_CLASS_FIELDS, parentClass->fieldCount, parentName);
+                    }
+                    for (int pf = 0; pf < parentClass->fieldCount && cls->fieldCount < MAX_CLASS_FIELDS; pf++) {
+                        cls->fields[cls->fieldCount] = parentClass->fields[pf];
+                        cls->fieldCount++;
+                    }
+                } else {
+                    cls->parentName[0] = '\0';
+                    cls->parent = NULL;
+                }
+                cls->methodCount = 0;
+                cls->constructor = NULL;
+                cls->next = CLASS_REGISTRY;
+                CLASS_REGISTRY = cls;
+                
+                // 5. Parse class body until matching '}'
+                int classDeclError = 0;
+                while (1) {
+                    char tok[100];
+                    read_token_skip_comments(fp, tok);
+                    if (!strcmp(tok, "}")) {
+                        break;
+                    }
+                    if (!strcmp(tok, ".") || feof(fp)) {
+                        printf("Error: Unexpected EOF or program terminator inside class '%s'\n", className);
+                        classDeclError = 1;
+                        break;
+                    }
+                    
+                    int isPrivate = 0;
+                    if (!strcmp(tok, "public")) {
+                        isPrivate = 0;
+                        read_token_skip_comments(fp, tok);
+                    } else if (!strcmp(tok, "private")) {
+                        isPrivate = 1;
+                        read_token_skip_comments(fp, tok);
+                    }
+                    
+                    if (!strcmp(tok, "func") || !strcmp(tok, "construct")) {
+                        char methodName[100];
+                        if (!strcmp(tok, "construct")) {
+                            strcpy(methodName, "construct");
+                        } else {
+                            read_token_skip_comments(fp, methodName);
+                        }
+                        
+                        char pParen[100];
+                        read_token_skip_comments(fp, pParen);
+                        if (strcmp(pParen, "(") != 0) {
+                            printf("Error: Expected '(' after method name '%s' in class '%s'\n", methodName, className);
+                            classDeclError = 1;
+                            break;
+                        }
+                        
+                        int paramCount = 0;
+                        struct funcParam params[10];
+                        read_token_skip_comments(fp, buffer);
+                        while (strcmp(buffer, ")") != 0) {
+                            if (strcmp(buffer, ",") != 0) {
+                                int pType = 0;
+                                if (!strcmp(buffer, "int")) pType = 1;
+                                else if (!strcmp(buffer, "float")) pType = 2;
+                                else if (!strcmp(buffer, "char")) pType = 3;
+                                else if (!strcmp(buffer, "bool")) pType = 4;
+                                else if (!strcmp(buffer, "string")) pType = 5;
+                                else if (!strcmp(buffer, "intarr")) pType = 6;
+                                else if (!strcmp(buffer, "floatarr")) pType = 7;
+                                else if (!strcmp(buffer, "chararr")) pType = 8;
+                                else if (!strcmp(buffer, "boolarr")) pType = 9;
+                                else if (!strcmp(buffer, "list")) pType = 10;
+                                else if (!strcmp(buffer, "map")) pType = 11;
+                                else if (findClass(CLASS_REGISTRY, buffer) != NULL || !strcmp(buffer, "object")) pType = 12;
+                                else {
+                                    printf("Error: Unknown parameter type '%s' in method '%s' of class '%s'\n", buffer, methodName, className);
+                                }
+                                
+                                if (paramCount < 10) {
+                                    params[paramCount].type = pType;
+                                    read_token_skip_comments(fp, params[paramCount].name);
+                                    paramCount++;
+                                } else {
+                                    char ignoredName[100];
+                                    read_token_skip_comments(fp, ignoredName);
+                                }
+                            }
+                            read_token_skip_comments(fp, buffer);
+                        }
+                        
+                        char mBrace[100];
+                        read_token_skip_comments(fp, mBrace);
+                        if (strcmp(mBrace, "{") != 0) {
+                            printf("Error: Expected '{' for body of method '%s' in class '%s'\n", methodName, className);
+                            classDeclError = 1;
+                            break;
+                        }
+                        
+                        long bodyPos = ftell(fp);
+                        
+                        int isDupMethod = 0;
+                        for (int m = 0; m < cls->methodCount; m++) {
+                            if (!strcmp(cls->methods[m].name, methodName)) {
+                                printf("Error: Duplicate method '%s' in class '%s'\n", methodName, className);
+                                isDupMethod = 1;
+                                break;
+                            }
+                        }
+                        
+                        if (cls->methodCount >= MAX_CLASS_METHODS) {
+                            printf("Error: Class '%s' exceeds maximum method capacity of %d\n", className, MAX_CLASS_METHODS);
+                            isDupMethod = 1;
+                        }
+                        
+                        if (!isDupMethod && cls->parent != NULL && strcmp(methodName, "construct") != 0) {
+                            struct classMethod *inheritedMethod = findClassMethod(cls->parent, methodName);
+                            if (inheritedMethod != NULL && inheritedMethod->func != NULL) {
+                                if (inheritedMethod->isPrivate == 0) {
+                                    if (isPrivate == 1) {
+                                        printf("Error: Cannot reduce visibility of inherited method '%s' from public to private in class '%s'\n",
+                                               methodName, className);
+                                        isDupMethod = 1;
+                                    } else if (paramCount != inheritedMethod->func->paramCount) {
+                                        printf("Error: Method override signature mismatch for '%s' in class '%s': expected %d parameter(s), got %d\n",
+                                               methodName, className, inheritedMethod->func->paramCount, paramCount);
+                                        isDupMethod = 1;
+                                    } else {
+                                        for (int pi = 0; pi < paramCount; pi++) {
+                                            if (params[pi].type != inheritedMethod->func->params[pi].type) {
+                                                printf("Error: Method override parameter %d type mismatch in method '%s' of class '%s'\n",
+                                                       pi + 1, methodName, className);
+                                                isDupMethod = 1;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (cls->methodCount >= MAX_CLASS_METHODS) {
+                            printf("Error: Class '%s' exceeds maximum method capacity of %d\n", className, MAX_CLASS_METHODS);
+                            isDupMethod = 1;
+                        }
+                        
+                        if (!isDupMethod) {
+                            struct funcDef *mDef = (struct funcDef*)malloc(sizeof(struct funcDef));
+                            if (mDef) {
+                                snprintf(mDef->name, sizeof(mDef->name), "%s", methodName);
+                                mDef->paramCount = paramCount;
+                                for (int pi = 0; pi < paramCount; pi++) mDef->params[pi] = params[pi];
+                                mDef->bodyPos = bodyPos;
+                                if (current_filepath != NULL) snprintf(mDef->filepath, sizeof(mDef->filepath), "%s", current_filepath);
+                                else mDef->filepath[0] = '\0';
+                                mDef->next = NULL;
+                                
+                                cls->methods[cls->methodCount].func = mDef;
+                                snprintf(cls->methods[cls->methodCount].name, sizeof(cls->methods[cls->methodCount].name), "%s", methodName);
+                                cls->methods[cls->methodCount].isPrivate = isPrivate;
+                                cls->methods[cls->methodCount].declaringClass = cls;
+                                cls->methodCount++;
+                                
+                                if (!strcmp(methodName, "construct")) {
+                                    cls->constructor = mDef;
+                                }
+                            }
+                        }
+                        
+                        int mDepth = 1;
+                        while (mDepth > 0) {
+                            read_token_skip_comments(fp, buffer);
+                            if (!strcmp(buffer, "{")) mDepth++;
+                            else if (!strcmp(buffer, "}")) mDepth--;
+                        }
+                    } else {
+                        int fType = 0;
+                        if (!strcmp(tok, "int")) fType = 1;
+                        else if (!strcmp(tok, "float")) fType = 2;
+                        else if (!strcmp(tok, "char")) fType = 3;
+                        else if (!strcmp(tok, "bool")) fType = 4;
+                        else if (!strcmp(tok, "string")) fType = 5;
+                        else if (!strcmp(tok, "intarr")) fType = 6;
+                        else if (!strcmp(tok, "floatarr")) fType = 7;
+                        else if (!strcmp(tok, "chararr")) fType = 8;
+                        else if (!strcmp(tok, "boolarr")) fType = 9;
+                        else if (!strcmp(tok, "list")) fType = 10;
+                        else if (!strcmp(tok, "map")) fType = 11;
+                        else if (findClass(CLASS_REGISTRY, tok) != NULL || !strcmp(tok, "object")) fType = 12;
+                        
+                        if (fType == 0) {
+                            printf("Error: Malformed class member declaration in class '%s': unexpected token '%s'\n", className, tok);
+                            classDeclError = 1;
+                            while (1) {
+                                read_token_skip_comments(fp, buffer);
+                                if (!strcmp(buffer, ";") || !strcmp(buffer, "}") || !strcmp(buffer, ".") || feof(fp)) break;
+                            }
+                            if (!strcmp(buffer, "}")) break;
+                            continue;
+                        }
+                        
+                        while (1) {
+                            char fieldName[100];
+                            read_token_skip_comments(fp, fieldName);
+                            
+                            int isDupField = 0;
+                            for (int f = 0; f < cls->fieldCount; f++) {
+                                if (!strcmp(cls->fields[f].name, fieldName)) {
+                                    printf("Error: Duplicate field '%s' in class '%s'\n", fieldName, className);
+                                    isDupField = 1;
+                                    break;
+                                }
+                            }
+                            
+                            if (cls->fieldCount >= MAX_CLASS_FIELDS) {
+                                printf("Error: Class '%s' exceeds maximum field capacity of %d\n", className, MAX_CLASS_FIELDS);
+                                isDupField = 1;
+                            }
+                            
+                            if (!isDupField) {
+                                snprintf(cls->fields[cls->fieldCount].name, sizeof(cls->fields[cls->fieldCount].name), "%s", fieldName);
+                                cls->fields[cls->fieldCount].type = fType;
+                                cls->fields[cls->fieldCount].isPrivate = isPrivate;
+                                cls->fields[cls->fieldCount].declaringClass = cls;
+                                cls->fieldCount++;
+                            }
+                            
+                            char sep[100];
+                            read_token_skip_comments(fp, sep);
+                            if (!strcmp(sep, ";")) {
+                                break;
+                            } else if (!strcmp(sep, ",")) {
+                                continue;
+                            } else if (!strcmp(sep, "=")) {
+                                int pDepth = 0;
+                                while (1) {
+                                    read_token_skip_comments(fp, sep);
+                                    if (!strcmp(sep, "(")) pDepth++;
+                                    else if (!strcmp(sep, ")")) pDepth--;
+                                    if (pDepth == 0 && (!strcmp(sep, ";") || !strcmp(sep, ","))) break;
+                                    if (!strcmp(sep, ".") || feof(fp)) break;
+                                }
+                                if (!strcmp(sep, ";")) break;
+                                else if (!strcmp(sep, ",")) continue;
+                                else break;
+                            } else {
+                                printf("Error: Expected ';' or ',' after field '%s' in class '%s', got '%s'\n", fieldName, className, sep);
+                                classDeclError = 1;
+                                break;
+                            }
+                        }
+                        if (classDeclError) break;
+                    }
+                }
+            }
+            break;
+
+        case 30:
+            {
+                char exprBuf[1000] = "new ";
+                int pDepth = 0;
+                char tD[100];
+                while (1) {
+                    read_token_skip_comments(fp, tD);
+                    if (!strcmp(tD, ".")) { if (!is_member_dot(fp)) { goto ERROR; } }
+                    if (!strcmp(tD, "(")) pDepth++;
+                    else if (!strcmp(tD, ")")) pDepth--;
+                    if (pDepth == 0 && !strcmp(tD, ";")) break;
+                    strcat(exprBuf, tD);
+                    strcat(exprBuf, " ");
+                }
+                strcat(exprBuf, ";");
+                val(exprBuf);
+            }
+            break;
+
         default:
         
             ERROR:
@@ -1946,5 +2612,7 @@ case 15:
     current_fp = fp;
     
     run_interpreter_loop(fp, argc==1 ? buffer : argv[1]);
-return 0;
+    freeAllObjects(&OBJECT_HEAP);
+    freeClassRegistry(&CLASS_REGISTRY);
+    return 0;
 }

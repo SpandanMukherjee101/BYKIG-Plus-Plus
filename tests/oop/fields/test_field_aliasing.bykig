@@ -1,0 +1,16 @@
+class Counter
+{
+    public float count ;
+}
+
+Counter c1 = new Counter ( ) ;
+c1 . count = 5.0 ;
+
+Counter c2 = c1 ;
+out c2 . count + "%n" ;
+
+c2 . count = 42.0 ;
+out c1 . count + "%n" ;
+out c2 . count + "%n" ;
+.
+

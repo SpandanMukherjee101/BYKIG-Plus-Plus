@@ -1,0 +1,96 @@
+class Root
+{
+    private float rootSecret ;
+    public float rootPublic ;
+
+    public func construct ( float rSec , float rPub )
+    {
+        this . rootSecret = rSec ;
+        this . rootPublic = rPub ;
+    }
+
+    public func getRootSecret ( )
+    {
+        return this . rootSecret ;
+    }
+
+    public func setRootSecret ( float val )
+    {
+        this . rootSecret = val ;
+    }
+}
+
+class Middle extends Root
+{
+    private float middleSecret ;
+    public float middlePublic ;
+
+    public func construct ( float rPub , float mSec , float mPub )
+    {
+        this . rootPublic = rPub ;
+        this . middleSecret = mSec ;
+        this . middlePublic = mPub ;
+    }
+
+    public func getMiddleSecret ( )
+    {
+        return this . middleSecret ;
+    }
+
+    public func tryAccessRootSecret ( )
+    {
+
+        return this . rootSecret ;
+    }
+}
+
+class Leaf extends Middle
+{
+    public float leafPublic ;
+
+    public func construct ( float rPub , float mPub , float lPub )
+    {
+        this . rootPublic = rPub ;
+        this . middlePublic = mPub ;
+        this . leafPublic = lPub ;
+    }
+
+    public func tryAccessMiddleSecret ( )
+    {
+
+        return this . middleSecret ;
+    }
+
+    public func tryAccessRootSecretFromLeaf ( )
+    {
+
+        return this . rootSecret ;
+    }
+
+    public func getAllPublic ( )
+    {
+        return this . rootPublic + this . middlePublic + this . leafPublic ;
+    }
+}
+
+Leaf l = new Leaf ( 100.0 , 200.0 , 300.0 ) ;
+
+
+l . setRootSecret ( 999.0 ) ;
+out l . getRootSecret ( ) ;
+
+
+out l . tryAccessMiddleSecret ( ) ;
+
+
+out l . tryAccessRootSecretFromLeaf ( ) ;
+
+
+out l . tryAccessRootSecret ( ) ;
+
+
+out l . rootSecret ;
+out l . middleSecret ;
+
+
+out l . getAllPublic ( ) ;

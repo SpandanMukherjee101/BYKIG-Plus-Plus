@@ -1,0 +1,34 @@
+class MathHelper
+{
+    public func factorial ( float n )
+    {
+        if ( n <= 1.0 )
+        {
+            return 1.0 ;
+        }
+        float sub = this . factorial ( n - 1.0 ) ;
+        return n * sub ;
+    }
+
+    public func fib ( float n )
+    {
+        if ( n <= 0.0 )
+        {
+            return 0.0 ;
+        }
+        if ( n == 1.0 )
+        {
+            return 1.0 ;
+        }
+        return this . fib ( n - 1.0 ) + this . fib ( n - 2.0 ) ;
+    }
+}
+
+MathHelper mh = new MathHelper ( ) ;
+float f5 = mh . factorial ( 5.0 ) ;
+out f5 + "%n" ;
+
+float fib6 = mh . fib ( 6.0 ) ;
+out fib6 + "%n" ;
+.
+

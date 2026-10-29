@@ -1,0 +1,42 @@
+class SecretBox
+{
+    private float secretData ;
+    public float publicData ;
+
+    public func construct ( float s , float p )
+    {
+        this . secretData = s ;
+        this . publicData = p ;
+    }
+}
+
+class Hacker
+{
+    public func trySteal ( SecretBox box )
+    {
+        return box . secretData ;
+    }
+
+    public func tryMutate ( SecretBox box , float val )
+    {
+        box . secretData = val ;
+    }
+}
+
+SecretBox b = new SecretBox ( 999.0 , 100.0 ) ;
+
+
+out b . secretData ;
+
+
+b . secretData = 42.0 ;
+
+
+Hacker h = new Hacker ( ) ;
+out h . trySteal ( b ) ;
+
+
+h . tryMutate ( b , 77.0 ) ;
+
+
+out b . publicData ;

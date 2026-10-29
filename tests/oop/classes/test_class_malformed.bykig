@@ -1,0 +1,19 @@
+class RobustClass
+{
+    public int alpha ;
+    public int alpha ;
+
+    public func execute ( )
+    {
+        return 1 ;
+    }
+
+    public func execute ( )
+    {
+        return 2 ;
+    }
+}
+
+out "RobustClass exists: " + class_exists ( "RobustClass" ) + "%n" ;
+out "PASS: Malformed and duplicate member test%n" ;
+.

@@ -1,0 +1,30 @@
+class Item
+{
+    public float id ;
+}
+
+Item outer = new Item ( ) ;
+Item innerAlias ;
+
+if ( 1 )
+{
+    Item shadow = new Item ( ) ;
+    innerAlias = shadow ;
+    out ( shadow == innerAlias ) + "%n" ;
+}
+
+out ( innerAlias != null ) + "%n" ;
+out ( outer != innerAlias ) + "%n" ;
+
+int count = 0 ;
+while ( count < 5 )
+{
+    Item temp = new Item ( ) ;
+    count = count + 1 ;
+}
+
+out count + "%n" ;
+out outer + "%n" ;
+out innerAlias + "%n" ;
+.
+

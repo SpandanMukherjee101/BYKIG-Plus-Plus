@@ -1,0 +1,29 @@
+class Calculator
+{
+    public float base ;
+
+    public func construct ( float initialBase )
+    {
+        this . base = initialBase ;
+    }
+
+    public func add ( float val )
+    {
+        return this . base + val ;
+    }
+
+    private func reset ( )
+    {
+        this . base = 0.0 ;
+    }
+
+    public func compute ( int count , float factor )
+    {
+        float total = 0.0 ;
+        return total + factor ;
+    }
+}
+
+out "Calculator class exists: " + class_exists ( "Calculator" ) + "%n" ;
+out "PASS: Class with methods test%n" ;
+.

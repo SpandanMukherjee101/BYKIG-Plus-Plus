@@ -1,0 +1,21 @@
+class Point
+{
+    public float x ;
+    public float y ;
+}
+
+Point p1 = new Point ( ) ;
+Point p2 = new Point ( ) ;
+
+p1 . x = 10.0 ;
+p1 . y = 20.0 ;
+
+p2 . x = 30.0 ;
+p2 . y = 40.0 ;
+
+out p1 . x + "%n" ;
+out p1 . y + "%n" ;
+out p2 . x + "%n" ;
+out p2 . y + "%n" ;
+.
+

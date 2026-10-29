@@ -1,0 +1,51 @@
+class ValueHolder
+{
+    public float v ;
+
+    public func getVal ( )
+    {
+        return this . v ;
+    }
+
+    public func setVal ( float x )
+    {
+        this . v = x ;
+    }
+}
+
+class MathOps
+{
+    public func add ( float a , float b )
+    {
+        return a + b ;
+    }
+
+    public func max ( float a , float b )
+    {
+        if ( a > b )
+        {
+            return a ;
+        }
+        return b ;
+    }
+}
+
+ValueHolder v1 = new ValueHolder ( ) ;
+v1 . setVal ( 15.0 ) ;
+
+ValueHolder v2 = new ValueHolder ( ) ;
+v2 . setVal ( 25.0 ) ;
+
+MathOps ops = new MathOps ( ) ;
+
+
+float sum = ops . add ( v1 . getVal ( ) , v2 . getVal ( ) ) ;
+out sum + "%n" ;
+
+float bigger = ops . max ( v1 . getVal ( ) , v2 . getVal ( ) ) ;
+out bigger + "%n" ;
+
+
+float combined = ops . add ( ( v1 . getVal ( ) * 2.0 ) , ( v2 . getVal ( ) - 5.0 ) ) ;
+out combined + "%n" ;
+.
