@@ -41,15 +41,40 @@ static inline struct Value builtin_len(char args[][1000], int argCount) {
     char name[100];
     strcpy(name, args[0]);
     trim_spaces(name);
+    strip_quotes(name);
     struct Value retV; retV.type=VAL_FLOAT; retV.f=scopeGetLen(name); return retV;
+}
+
+static inline void extract_key_str(char *dest, size_t dest_sz, char *arg) {
+    struct Value keyVal = val(arg);
+    if (keyVal.type == VAL_STRING) {
+        strncpy(dest, keyVal.s, dest_sz - 1);
+        dest[dest_sz - 1] = '\0';
+    } else if (keyVal.type == VAL_FLOAT) {
+        if (keyVal.f == (float)(int)keyVal.f) snprintf(dest, dest_sz, "%d", (int)keyVal.f);
+        else snprintf(dest, dest_sz, "%f", keyVal.f);
+    } else {
+        strncpy(dest, arg, dest_sz - 1);
+        dest[dest_sz - 1] = '\0';
+        trim_spaces(dest);
+        strip_quotes(dest);
+    }
 }
 
 static inline struct Value builtin_push(char args[][1000], int argCount) {
     char name[100];
     strcpy(name, args[0]);
     trim_spaces(name);
-    float valData = val(args[1]).f;
-    scopePushL(name, valData);
+    strip_quotes(name);
+    if (typeFetcher(name) == 11) {
+        if (argCount == 3) {
+            char key[1000] = "";
+            extract_key_str(key, sizeof(key), args[1]);
+            setM_Val(NULL, name, key, val(args[2]));
+        }
+    } else if (argCount == 2) {
+        scopePushL(name, val(args[1]));
+    }
     struct Value retV; retV.type=VAL_FLOAT; retV.f=0.0; return retV;
 }
 
@@ -57,39 +82,49 @@ static inline struct Value builtin_pop(char args[][1000], int argCount) {
     char name[100];
     strcpy(name, args[0]);
     trim_spaces(name);
-    struct Value retV; retV.type=VAL_FLOAT; retV.f=scopePopL(name); return retV;
+    strip_quotes(name);
+    struct Value retV; retV.type=VAL_FLOAT; retV.f=0.0;
+    if (typeFetcher(name) == 11) {
+        if (argCount == 2) {
+            char key[1000] = "";
+            extract_key_str(key, sizeof(key), args[1]);
+            retV = getM_Val(NULL, name, key);
+            scopeMapDelete(name, key);
+        }
+    } else if (argCount == 1) {
+        retV = scopePopL(name);
+    }
+    return retV;
 }
 
 static inline struct Value builtin_map_exists(char args[][1000], int argCount) {
     char name[100];
     strcpy(name, args[0]);
     trim_spaces(name);
-    struct Value keyVal = val(args[1]);
-    char key[1000] = "";
-    if (keyVal.type == 1) {  
-        strcpy(key, keyVal.s);
-    } else {
-        strcpy(key, args[1]);
-        trim_spaces(key);
-        strip_quotes(key);
+    strip_quotes(name);
+    struct Value retV; retV.type=VAL_FLOAT; retV.f=0.0;
+    if (argCount == 1) {
+        retV.f = scopeValueExists(name);
+    } else if (argCount == 2) {
+        char key[1000] = "";
+        extract_key_str(key, sizeof(key), args[1]);
+        retV.f = scopeMapExists(name, key);
     }
-    struct Value retV; retV.type=0; retV.f=scopeMapExists(name, key); return retV;
+    return retV;
 }
 
 static inline struct Value builtin_map_delete(char args[][1000], int argCount) {
     char name[100];
     strcpy(name, args[0]);
     trim_spaces(name);
-    struct Value keyVal = val(args[1]);
-    char key[1000] = "";
-    if (keyVal.type == 1) {  
-        strcpy(key, keyVal.s);
-    } else {
-        strcpy(key, args[1]);
-        trim_spaces(key);
-        strip_quotes(key);
+    strip_quotes(name);
+    if (argCount == 1) {
+        scopeDeleteValue(name);
+    } else if (argCount == 2) {
+        char key[1000] = "";
+        extract_key_str(key, sizeof(key), args[1]);
+        scopeMapDelete(name, key);
     }
-    scopeMapDelete(name, key);
     struct Value retV; retV.type=0; retV.f=0.0; return retV;
 }
 
@@ -233,10 +268,10 @@ static inline struct Value builtin_parse_float(char args[][1000], int argCount) 
 
 static struct BuiltinFunc builtins[] = {
     {"len", 1, builtin_len},
-    {"push", 2, builtin_push},
-    {"pop", 1, builtin_pop},
-    {"exists", 2, builtin_map_exists},
-    {"delete", 2, builtin_map_delete},
+    {"push", 0, builtin_push},
+    {"pop", 0, builtin_pop},
+    {"exists", 0, builtin_map_exists},
+    {"delete", 0, builtin_map_delete},
     {"file_exists", 1, builtin_file_exists},
     {"file_write", 2, builtin_file_write},
     {"file_append", 2, builtin_file_append},

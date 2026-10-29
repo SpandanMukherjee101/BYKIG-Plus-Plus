@@ -131,7 +131,9 @@ Conditions are evaluated through the expression engine. Truth is represented num
 
 ## 6. Loops
 
-Only `while` loops are implemented.
+BYKIG++ supports both `while` loops and `for` loops.
+
+### `while` loops
 
 ```bykig
 int i = 0 ;
@@ -141,6 +143,21 @@ while i < 5
     i = i + 1 ;
 }
 ```
+
+### `for` loops
+
+```bykig
+for ( int i = 0 ; i < 5 ; i = i + 1 ) {
+    out i + "%n" ;
+}
+```
+
+`for` loops support:
+- Initialization expressions, including variable declarations scoped to the loop (e.g. `int i = 0`) or assignments to existing variables (e.g. `i = 0`).
+- Condition expressions (e.g. `i < 5`), or omitted conditions (defaults to true).
+- Iteration expressions (e.g. `i = i + 1` or `i = i - 2`), executed at the end of each iteration or upon `continue`.
+- Parenthesized or non-parenthesized headers.
+- Nested loops and full integration with `break` and `continue`.
 
 Use `break` and `continue` inside loops:
 
@@ -242,15 +259,27 @@ The current implementation stores list elements as `float` values.
 
 ## 10. Maps
 
-Maps use string keys and numeric values:
+Maps are dynamic key-value collections with generic `Value` storage, supporting strings, floats, ints, and other runtime types:
 
 ```bykig
-map users = { "alice" = 40 , "bob" = 50 } ;
-users [ "carol" ] = 60 ;
-float age = users [ "alice" ] ;
+map user = { "name" : "Alice" , "age" : 30 , "score" : 95.5 } ;
+user [ "city" ] = "New York" ;
+out user [ "name" ] + "%n" ;
+float userAge = user [ "age" ] ;
+string userName = user [ "name" ] ;
 ```
 
-The map implementation uses a fixed table of up to 100 entries with linear key lookup.
+Use built-ins for mutation and queries:
+
+```bykig
+push ( user , "country" , "USA" ) ;
+float hasCountry = exists ( user , "country" ) ;
+string removed = pop ( user , "country" ) ;
+delete ( user , "city" ) ;
+float total = len ( user ) ;
+```
+
+Maps use dynamic capacity allocation (`realloc`) that automatically grows as items are inserted, removing any fixed-size limits.
 
 ## 11. Built-ins
 
@@ -258,10 +287,14 @@ Common collection built-ins:
 
 ```text
 len ( var )
-push ( collection , value )
-pop ( collection )
-exists ( ... )
-delete ( ... )
+push ( list , value )
+push ( map , key , value )
+pop ( list )
+pop ( map , key )
+exists ( name )
+exists ( map , key )
+delete ( name )
+delete ( map , key )
 parse_float ( value )
 ```
 

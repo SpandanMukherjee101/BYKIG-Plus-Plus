@@ -1,0 +1,51 @@
+map m = { "title" : "BYKIG++" , "version" : 2.5 , "year" : 2026 } ;
+out "title=" + m [ "title" ] + "%n" ;
+out "version=" + m [ "version" ] + "%n" ;
+out "year=" + m [ "year" ] + "%n" ;
+
+m [ "title" ] = "AdvancedBYKIG" ;
+m [ "author" ] = "Developer" ;
+out "updated_title=" + m [ "title" ] + "%n" ;
+out "new_author=" + m [ "author" ] + "%n" ;
+
+string s = m [ "title" ] ;
+out "s=" + s + "%n" ;
+
+float initial_len = len ( m ) ;
+out "initial_len=" + initial_len + "%n" ;
+
+push ( m , "status" , "active" ) ;
+out "status=" + m [ "status" ] + "%n" ;
+float len_after_push = len ( m ) ;
+out "len_after_push=" + len_after_push + "%n" ;
+
+float has_status = exists ( m , "status" ) ;
+float has_fake = exists ( m , "nonexistent" ) ;
+out "has_status=" + has_status + "%n" ;
+out "has_fake=" + has_fake + "%n" ;
+
+string popped = pop ( m , "status" ) ;
+out "popped=" + popped + "%n" ;
+float has_status_after_pop = exists ( m , "status" ) ;
+out "has_status_after_pop=" + has_status_after_pop + "%n" ;
+
+delete ( m , "author" ) ;
+float has_author = exists ( m , "author" ) ;
+out "has_author=" + has_author + "%n" ;
+
+func testMapCopy ( map copyM ) {
+    copyM [ "title" ] = "InsideFunc" ;
+    out "func_title=" + copyM [ "title" ] + "%n" ;
+}
+testMapCopy ( m ) ;
+out "caller_title=" + m [ "title" ] + "%n" ;
+
+map bigMap ;
+for ( int i = 0 ; i < 150 ; i = i + 1 ) {
+    push ( bigMap , i , i * 2 ) ;
+}
+float big_len = len ( bigMap ) ;
+out "big_len=" + big_len + "%n" ;
+out "bigMap_149=" + bigMap [ 149 ] + "%n" ;
+
+.

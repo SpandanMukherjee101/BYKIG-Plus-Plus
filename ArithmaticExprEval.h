@@ -75,7 +75,8 @@ void resolve_complex_types(char *expr) {
                     if (strlen(single) > 0) strcpy(rawArgs[rArgCount++], single);
                     
                     struct Value res = bfunc->handler(rawArgs, rArgCount);
-                    sprintf(tokens[i], "%f", res.f);
+                    if (res.type == VAL_STRING) snprintf(tokens[i], sizeof(tokens[i]), "\"%s\"", res.s);
+                    else sprintf(tokens[i], "%f", res.f);
                     int shift = j - (i + 1);
                     for (int k = i + 1; k < tokenCount - shift; k++) {
                         strcpy(tokens[k], tokens[k + shift]);
@@ -159,7 +160,7 @@ void resolve_complex_types(char *expr) {
                         } else if (func->params[p].type == 9) {
                             appendBA_copy(&envStack[envTop].BA, func->params[p].name, (struct bA*)argVals[p].ptr);
                         } else if (func->params[p].type == 10) {
-                            appendL_copy(&envStack[envTop].LV, func->params[p].name, (struct lV*)argVals[p].ptr);
+                            appendL_ref(&envStack[envTop].LV, func->params[p].name, (struct lV*)argVals[p].ptr);
                         } else if (func->params[p].type == 11) {
                             appendM_copy(&envStack[envTop].MV, func->params[p].name, (struct mV*)argVals[p].ptr);
                         }
@@ -237,7 +238,17 @@ void resolve_complex_types(char *expr) {
                 } else if (type == 7) { 
                     res = getFA(envStack[envTop].FA, tokens[i], (int)val(argExpr).f);
                 } else if (type == 10) { 
-                    res = getL(envStack[envTop].LV, tokens[i], (int)val(argExpr).f);
+                    struct Value listValue = getL(envStack[envTop].LV, tokens[i], (int)val(argExpr).f);
+                    if (listValue.type == VAL_STRING) {
+                        snprintf(tokens[i], sizeof(tokens[i]), "\"%s\"", listValue.s);
+                        int shift = j - (i + 1);
+                        for (int k = i + 1; k < tokenCount - shift; k++) {
+                            strcpy(tokens[k], tokens[k + shift]);
+                        }
+                        tokenCount -= shift;
+                        continue;
+                    }
+                    if (listValue.type == VAL_FLOAT) res = listValue.f;
                 } else if (type == 8) { 
                     res = (float)getCA(envStack[envTop].CA, tokens[i], (int)val(argExpr).f);
                 } else if (type == 9) { 
@@ -245,8 +256,11 @@ void resolve_complex_types(char *expr) {
                 } else if (type == 11) { 
                     char key[100] = "";
                     struct Value kV = val(argExpr);
-                    if (kV.type == 1) {  
+                    if (kV.type == VAL_STRING) {  
                         strcpy(key, kV.s);
+                    } else if (kV.type == VAL_FLOAT) {
+                        if (kV.f == (float)(int)kV.f) sprintf(key, "%d", (int)kV.f);
+                        else sprintf(key, "%f", kV.f);
                     } else {
                         sscanf(argExpr, "%s", key);
                         if (key[0] == '"') {
@@ -254,7 +268,18 @@ void resolve_complex_types(char *expr) {
                             memmove(key, key+1, strlen(key));
                         }
                     }
-                    res = getM_F(envStack[envTop].MV, tokens[i], key);
+                    struct Value mapValue = getM_Val(envStack[envTop].MV, tokens[i], key);
+                    if (mapValue.type == VAL_STRING) {
+                        snprintf(tokens[i], sizeof(tokens[i]), "\"%s\"", mapValue.s);
+                        int shift = j - (i + 1);
+                        for (int k = i + 1; k < tokenCount - shift; k++) {
+                            strcpy(tokens[k], tokens[k + shift]);
+                        }
+                        tokenCount -= shift;
+                        continue;
+                    }
+                    if (mapValue.type == VAL_FLOAT) res = mapValue.f;
+                    else res = 0.0;
                 }
                 char resStr[100];
                 sprintf(resStr, "%f", res);
@@ -314,6 +339,8 @@ struct Value val(char *buff)
             buff++;
         }
         else if (*buff == '=' && *(buff+1) == '=' && !in_quotes) { *buff = '#'; strcpy(buff+1, buff+2); continue; }
+        else if (*buff == '&' && *(buff+1) == '&' && !in_quotes) { *buff = '&'; strcpy(buff+1, buff+2); continue; }
+        else if (*buff == '|' && *(buff+1) == '|' && !in_quotes) { *buff = '|'; strcpy(buff+1, buff+2); continue; }
         else if( (*buff == ' ' || *buff == '\t' || *buff == '\r' || *buff == '=') && !in_quotes)
         {
             strcpy(buff, buff+1);
@@ -506,7 +533,7 @@ int priority(char Op)
         return 5;
     }
     else if (Op == '>' || Op == '<' || Op == '?' || Op == '^')
-        return 5;
+        return 4;
     else if (Op == '~' || Op == '!' || Op == '#' || Op == '@')
         return 4;
     else if (Op == '&')

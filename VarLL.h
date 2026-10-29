@@ -3,25 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-struct iV { char name[100]; int data; struct iV *next; };
-struct fV { char name[100]; float data; struct fV *next; };
-struct cV { char name[100]; char data; struct cV *next; };
-struct bV { char name[100]; int data; struct bV *next; };
-struct sV { char name[100]; char data[1000]; struct sV *next; };
-
-struct iA { char name[100]; int size; int *data; struct iA *next; };
-struct fA { char name[100]; int size; float *data; struct fA *next; };
-struct cA { char name[100]; int size; char *data; struct cA *next; };
-struct bA { char name[100]; int size; int *data; struct bA *next; };
-
-struct lV { char name[100]; int size; int capacity; float *data; struct lV *next; };
-struct mV { char name[100]; char keys[100][100]; float values[100]; int count; struct mV *next; };
-
-struct funcParam { int type; char name[100]; };
-struct funcDef { char name[100]; int paramCount; struct funcParam params[10]; long bodyPos; char filepath[1000]; struct funcDef *next; };
-
-struct savedVar { char name[100]; int type; int intVal; float floatVal; char charVal; char strVal[1000]; };
-
 enum ValueType {
     VAL_FLOAT,
     VAL_STRING,
@@ -41,6 +22,37 @@ struct Value {
     void *ptr;
 };
 
+struct iV { char name[100]; int data; struct iV *next; };
+struct fV { char name[100]; float data; struct fV *next; };
+struct cV { char name[100]; char data; struct cV *next; };
+struct bV { char name[100]; int data; struct bV *next; };
+struct sV { char name[100]; char data[1000]; struct sV *next; };
+
+struct iA { char name[100]; int size; int *data; struct iA *next; };
+struct fA { char name[100]; int size; float *data; struct fA *next; };
+struct cA { char name[100]; int size; char *data; struct cA *next; };
+struct bA { char name[100]; int size; int *data; struct bA *next; };
+
+struct mapEntry {
+    char key[100];
+    struct Value value;
+};
+
+struct mV {
+    char name[100];
+    int count;
+    int capacity;
+    struct mapEntry *entries;
+    struct mV *next;
+};
+
+struct funcParam { int type; char name[100]; };
+struct funcDef { char name[100]; int paramCount; struct funcParam params[10]; long bodyPos; char filepath[1000]; struct funcDef *next; };
+
+struct savedVar { char name[100]; int type; int intVal; float floatVal; char charVal; char strVal[1000]; };
+
+struct lV { char name[100]; int size; int capacity; struct Value *data; struct lV *ref; struct lV *next; };
+
 struct callFrame {
     struct iV *IV; struct fV *FV; struct cV *CV; struct bV *BV; struct sV *SV;
     struct iA *IA; struct fA *FA; struct cA *CA; struct bA *BA;
@@ -56,12 +68,15 @@ struct callFrame {
     char assignTarget[100];
 };
 
-
 extern struct callFrame callStack[10000];
 extern int callStackTop;
 extern struct callFrame envStack[10000];
 extern int envTop;
 extern struct funcDef *FN;
+
+void initEnvironmentFrame(struct callFrame *frame) {
+    memset(frame, 0, sizeof(*frame));
+}
 
 void cleanupFrame(struct callFrame *frame) {
     struct iV *iv = frame->IV; while(iv) { struct iV *n = iv->next; free(iv); iv = n; } frame->IV = NULL;
@@ -73,8 +88,8 @@ void cleanupFrame(struct callFrame *frame) {
     struct fA *fa = frame->FA; while(fa) { struct fA *n = fa->next; free(fa->data); free(fa); fa = n; } frame->FA = NULL;
     struct cA *ca = frame->CA; while(ca) { struct cA *n = ca->next; free(ca->data); free(ca); ca = n; } frame->CA = NULL;
     struct bA *ba = frame->BA; while(ba) { struct bA *n = ba->next; free(ba->data); free(ba); ba = n; } frame->BA = NULL;
-    struct lV *lv = frame->LV; while(lv) { struct lV *n = lv->next; free(lv->data); free(lv); lv = n; } frame->LV = NULL;
-    struct mV *mv = frame->MV; while(mv) { struct mV *n = mv->next; free(mv); mv = n; } frame->MV = NULL;
+    struct lV *lv = frame->LV; while(lv) { struct lV *n = lv->next; if (!lv->ref) free(lv->data); free(lv); lv = n; } frame->LV = NULL;
+    struct mV *mv = frame->MV; while(mv) { struct mV *n = mv->next; if (mv->entries) free(mv->entries); free(mv); mv = n; } frame->MV = NULL;
 }
 
 void appendI(struct iV **q, char *name, int n) {
@@ -112,14 +127,48 @@ void appendIA(struct iA **q, char *name, int size) {
     strcpy(nnode->name, name); nnode->size = size; nnode->data = (int*)calloc(size, sizeof(int)); nnode->next = *q; *q = nnode;
 }
 
- 
+int setI_scope(char *name, int val) {
+    for (int idx = envTop; idx >= 0; idx--) {
+        struct iV *iv = envStack[idx].IV;
+        while (iv) { if (!strcmp(iv->name, name)) { iv->data = val; return 1; } iv = iv->next; }
+    }
+    return 0;
+}
+int setF_scope(char *name, float val) {
+    for (int idx = envTop; idx >= 0; idx--) {
+        struct fV *fv = envStack[idx].FV;
+        while (fv) { if (!strcmp(fv->name, name)) { fv->data = val; return 1; } fv = fv->next; }
+    }
+    return 0;
+}
+int setC_scope(char *name, char val) {
+    for (int idx = envTop; idx >= 0; idx--) {
+        struct cV *cv = envStack[idx].CV;
+        while (cv) { if (!strcmp(cv->name, name)) { cv->data = val; return 1; } cv = cv->next; }
+    }
+    return 0;
+}
+int setB_scope(char *name, int val) {
+    for (int idx = envTop; idx >= 0; idx--) {
+        struct bV *bv = envStack[idx].BV;
+        while (bv) { if (!strcmp(bv->name, name)) { bv->data = val; return 1; } bv = bv->next; }
+    }
+    return 0;
+}
+int setS_scope(char *name, char *val) {
+    for (int idx = envTop; idx >= 0; idx--) {
+        struct sV *sv = envStack[idx].SV;
+        while (sv) { if (!strcmp(sv->name, name)) { strcpy(sv->data, val); return 1; } sv = sv->next; }
+    }
+    return 0;
+}
+
 int typeFetcher(char *name) {
     for (int idx=envTop; idx>=0; idx--) {
         int i = idx;
         struct iV *iv = envStack[i].IV; while (iv) { if (!strcmp(iv->name, name)) return 1; iv = iv->next; }
         struct fV *fv = envStack[i].FV; 
         while (fv) { 
-             
             if (!strcmp(fv->name, name)) return 2; 
             fv = fv->next; 
         }
@@ -162,32 +211,109 @@ struct Value valFetcherGlobal(char *name) {
 
 
 int getIA(struct iA *IA, char *name, int idx) {
-    while (IA) { if (!strcmp(name, IA->name)) { if (idx >= 0 && idx < IA->size) return IA->data[idx]; return 0; } IA = IA->next; } return 0;
+    for (int scope = envTop; scope >= 0; scope--) {
+        struct iA *ia = envStack[scope].IA;
+        while (ia) {
+            if (!strcmp(name, ia->name)) {
+                if (idx >= 0 && idx < ia->size) return ia->data[idx];
+                return 0;
+            }
+            ia = ia->next;
+        }
+    }
+    return 0;
 }
 float getFA(struct fA *FA, char *name, int idx) {
-    while (FA) { if (!strcmp(name, FA->name)) { if (idx >= 0 && idx < FA->size) return FA->data[idx]; return 0.0; } FA = FA->next; } return 0.0;
+    for (int scope = envTop; scope >= 0; scope--) {
+        struct fA *fa = envStack[scope].FA;
+        while (fa) {
+            if (!strcmp(name, fa->name)) {
+                if (idx >= 0 && idx < fa->size) return fa->data[idx];
+                return 0.0f;
+            }
+            fa = fa->next;
+        }
+    }
+    return 0.0f;
 }
 char getCA(struct cA *CA, char *name, int idx) {
-    while (CA) { if (!strcmp(name, CA->name)) { if (idx >= 0 && idx < CA->size) return CA->data[idx]; return '\0'; } CA = CA->next; } return '\0';
+    for (int scope = envTop; scope >= 0; scope--) {
+        struct cA *ca = envStack[scope].CA;
+        while (ca) {
+            if (!strcmp(name, ca->name)) {
+                if (idx >= 0 && idx < ca->size) return ca->data[idx];
+                return '\0';
+            }
+            ca = ca->next;
+        }
+    }
+    return '\0';
 }
 int getBA(struct bA *BA, char *name, int idx) {
-    while (BA) { if (!strcmp(name, BA->name)) { if (idx >= 0 && idx < BA->size) return BA->data[idx]; return 0; } BA = BA->next; } return 0;
+    for (int scope = envTop; scope >= 0; scope--) {
+        struct bA *ba = envStack[scope].BA;
+        while (ba) {
+            if (!strcmp(name, ba->name)) {
+                if (idx >= 0 && idx < ba->size) return ba->data[idx];
+                return 0;
+            }
+            ba = ba->next;
+        }
+    }
+    return 0;
 }
-float getL(struct lV *LV, char *name, int idx) {
-    while (LV) { if (!strcmp(name, LV->name)) { if (idx >= 0 && idx < LV->size) return LV->data[idx]; } LV = LV->next; } return 0.0;
+struct Value getL(struct lV *LV, char *name, int idx) {
+    struct Value result; memset(&result, 0, sizeof(result)); result.type = VAL_ERROR;
+    while (LV) { if (!strcmp(name, LV->name)) { struct lV *target = LV; while (target->ref) target = target->ref; if (idx >= 0 && idx < target->size) return target->data[idx]; } LV = LV->next; } return result;
 }
 
 void setIA(struct iA *IA, char *name, int idx, int val) {
-    while (IA) { if (!strcmp(name, IA->name)) { if (idx >= 0 && idx < IA->size) IA->data[idx] = val; return; } IA = IA->next; }
+    for (int scope = envTop; scope >= 0; scope--) {
+        struct iA *ia = envStack[scope].IA;
+        while (ia) {
+            if (!strcmp(name, ia->name)) {
+                if (idx >= 0 && idx < ia->size) ia->data[idx] = val;
+                return;
+            }
+            ia = ia->next;
+        }
+    }
 }
 void setFA(struct fA *FA, char *name, int idx, float val) {
-    while (FA) { if (!strcmp(name, FA->name)) { if (idx >= 0 && idx < FA->size) FA->data[idx] = val; return; } FA = FA->next; }
+    for (int scope = envTop; scope >= 0; scope--) {
+        struct fA *fa = envStack[scope].FA;
+        while (fa) {
+            if (!strcmp(name, fa->name)) {
+                if (idx >= 0 && idx < fa->size) fa->data[idx] = val;
+                return;
+            }
+            fa = fa->next;
+        }
+    }
 }
 void setCA(struct cA *CA, char *name, int idx, char val) {
-    while (CA) { if (!strcmp(name, CA->name)) { if (idx >= 0 && idx < CA->size) CA->data[idx] = val; return; } CA = CA->next; }
+    for (int scope = envTop; scope >= 0; scope--) {
+        struct cA *ca = envStack[scope].CA;
+        while (ca) {
+            if (!strcmp(name, ca->name)) {
+                if (idx >= 0 && idx < ca->size) ca->data[idx] = val;
+                return;
+            }
+            ca = ca->next;
+        }
+    }
 }
 void setBA(struct bA *BA, char *name, int idx, int val) {
-    while (BA) { if (!strcmp(name, BA->name)) { if (idx >= 0 && idx < BA->size) BA->data[idx] = val; return; } BA = BA->next; }
+    for (int scope = envTop; scope >= 0; scope--) {
+        struct bA *ba = envStack[scope].BA;
+        while (ba) {
+            if (!strcmp(name, ba->name)) {
+                if (idx >= 0 && idx < ba->size) ba->data[idx] = val;
+                return;
+            }
+            ba = ba->next;
+        }
+    }
 }
 
 void appendFA(struct fA **q, char *name, int size) {
@@ -231,69 +357,127 @@ void appendBA_copy(struct bA **q, char *name, struct bA *ref) {
 void appendL(struct lV **q, char *name, int capacity) {
     struct lV *nnode = (struct lV *)malloc(sizeof(struct lV));
     strcpy(nnode->name, name); nnode->size = 0; nnode->capacity = capacity;
-    nnode->data = (float *)malloc(sizeof(float) * capacity);
+    nnode->data = (struct Value *)malloc(sizeof(struct Value) * capacity); nnode->ref = NULL;
     nnode->next = *q; *q = nnode;
 }
-void appendL_copy(struct lV **q, char *name, struct lV *ref) {
+void appendL_ref(struct lV **q, char *name, struct lV *ref) {
     struct lV *nnode = (struct lV*)malloc(sizeof(struct lV));
-    strcpy(nnode->name, name); nnode->size = ref->size; nnode->capacity = ref->capacity;
-    nnode->data = (float*)malloc(ref->capacity * sizeof(float));
-    memcpy(nnode->data, ref->data, ref->capacity * sizeof(float));
+    while (ref->ref) ref = ref->ref;
+    strcpy(nnode->name, name); nnode->size = 0; nnode->capacity = 0;
+    nnode->data = NULL; nnode->ref = ref;
     nnode->next = *q; *q = nnode;
 }
-
-
 
 void appendM(struct mV **q, char *name) {
     struct mV *nnode = (struct mV *)malloc(sizeof(struct mV));
-    strcpy(nnode->name, name); nnode->count = 0; nnode->next = *q; *q = nnode;
+    strcpy(nnode->name, name);
+    nnode->count = 0;
+    nnode->capacity = 4;
+    nnode->entries = (struct mapEntry*)malloc(sizeof(struct mapEntry) * nnode->capacity);
+    nnode->next = *q;
+    *q = nnode;
 }
+
 void appendM_copy(struct mV **q, char *name, struct mV *ref) {
     struct mV *nnode = (struct mV*)malloc(sizeof(struct mV));
-    memcpy(nnode, ref, sizeof(struct mV));
     strcpy(nnode->name, name);
-    nnode->next = *q; *q = nnode;
+    nnode->count = ref ? ref->count : 0;
+    nnode->capacity = (ref && ref->capacity > 0) ? ref->capacity : 4;
+    if (nnode->capacity < nnode->count) nnode->capacity = nnode->count;
+    nnode->entries = (struct mapEntry*)malloc(sizeof(struct mapEntry) * nnode->capacity);
+    if (ref && ref->entries) {
+        for (int i = 0; i < ref->count; i++) {
+            strcpy(nnode->entries[i].key, ref->entries[i].key);
+            nnode->entries[i].value = ref->entries[i].value;
+        }
+    }
+    nnode->next = *q;
+    *q = nnode;
 }
-void setM_F(struct mV *MV, char *name, char *key, float val) {
-    int scopes[] = {envTop, 0};
-    int num = (envTop == 0) ? 1 : 2;
-    for (int idx=0; idx<num; idx++) {
-        struct mV *mv = envStack[scopes[idx]].MV;
+
+void setM_Val(struct mV *MV, char *name, char *key, struct Value val) {
+    for (int idx = envTop; idx >= 0; idx--) {
+        struct mV *mv = envStack[idx].MV;
         while (mv) {
             if (!strcmp(mv->name, name)) {
-                for(int i=0; i<mv->count; i++) {
-                    if(!strcmp(mv->keys[i], key)) { mv->values[i] = val; return; }
+                for (int i = 0; i < mv->count; i++) {
+                    if (!strcmp(mv->entries[i].key, key)) {
+                        mv->entries[i].value = val;
+                        return;
+                    }
                 }
-                if(mv->count < 100) { strcpy(mv->keys[mv->count], key); mv->values[mv->count] = val; mv->count++; }
+                if (mv->count >= mv->capacity) {
+                    int newCap = (mv->capacity == 0) ? 4 : mv->capacity * 2;
+                    mv->entries = (struct mapEntry*)realloc(mv->entries, sizeof(struct mapEntry) * newCap);
+                    mv->capacity = newCap;
+                }
+                strcpy(mv->entries[mv->count].key, key);
+                mv->entries[mv->count].value = val;
+                mv->count++;
                 return;
             }
             mv = mv->next;
         }
     }
 }
-float getM_F(struct mV *MV, char *name, char *key) {
-    int scopes[] = {envTop, 0};
-    int num = (envTop == 0) ? 1 : 2;
-    for (int idx=0; idx<num; idx++) {
-        struct mV *mv = envStack[scopes[idx]].MV;
+
+void setM_F(struct mV *MV, char *name, char *key, float val) {
+    struct Value v;
+    memset(&v, 0, sizeof(v));
+    v.type = VAL_FLOAT;
+    v.f = val;
+    setM_Val(MV, name, key, v);
+}
+
+struct Value getM_Val(struct mV *MV, char *name, char *key) {
+    struct Value v;
+    memset(&v, 0, sizeof(v));
+    v.type = VAL_FLOAT;
+    v.f = 0.0;
+    for (int idx = envTop; idx >= 0; idx--) {
+        struct mV *mv = envStack[idx].MV;
         while (mv) {
-            if(!strcmp(mv->name, name)) {
-                for(int i=0; i<mv->count; i++) {
-                    if(!strcmp(mv->keys[i], key)) return mv->values[i];
+            if (!strcmp(mv->name, name)) {
+                for (int i = 0; i < mv->count; i++) {
+                    if (!strcmp(mv->entries[i].key, key)) {
+                        return mv->entries[i].value;
+                    }
                 }
-                return 0.0;
+                return v;
             }
             mv = mv->next;
         }
     }
-    return 0.0;
+    return v;
 }
+
+float getM_F(struct mV *MV, char *name, char *key) {
+    struct Value v = getM_Val(MV, name, key);
+    if (v.type == VAL_STRING) {
+        return (float)atof(v.s);
+    }
+    return v.f;
+}
+
 char* getM_S(struct mV *MV, char *name, char *key) {
-     
+    for (int idx = envTop; idx >= 0; idx--) {
+        struct mV *mv = envStack[idx].MV;
+        while (mv) {
+            if (!strcmp(mv->name, name)) {
+                for (int i = 0; i < mv->count; i++) {
+                    if (!strcmp(mv->entries[i].key, key)) {
+                        if (mv->entries[i].value.type == VAL_STRING) return mv->entries[i].value.s;
+                        return "";
+                    }
+                }
+                return "";
+            }
+            mv = mv->next;
+        }
+    }
     return "";
 }
 
- 
 int appendFunc(struct funcDef **head, char *name, int paramCount, struct funcParam params[], long bodyPos, char *filepath) {
     struct funcDef *temp = *head;
     while (temp) { if (!strcmp(temp->name, name)) { return 1; } temp = temp->next; }
@@ -328,56 +512,57 @@ char* scopeGetSV(char *name) {
     return NULL;
 }
 
-
- 
-void setL(struct lV *LV, char *name, int idx, float val) {
-    while (LV) {
-        if (!strcmp(LV->name, name)) {
-            if (idx >= 0 && idx < LV->size) LV->data[idx] = val;
-            return;
+void setL(struct lV *LV, char *name, int idx, struct Value val) {
+    for (int scope = envTop; scope >= 0; scope--) {
+        LV = envStack[scope].LV;
+        while (LV) {
+            if (!strcmp(LV->name, name)) {
+                struct lV *target = LV;
+                while (target->ref) target = target->ref;
+                if (idx >= 0 && idx < target->size) target->data[idx] = val;
+                return;
+            }
+            LV = LV->next;
         }
-        LV = LV->next;
     }
 }
-void scopePushL(char *name, float val) {
-    int scopes[] = {envTop, 0};
-    int num = (envTop == 0) ? 1 : 2;
-    for (int idx=0; idx<num; idx++) {
-        struct lV *lv = envStack[scopes[idx]].LV;
+void scopePushL(char *name, struct Value val) {
+    for (int idx = envTop; idx >= 0; idx--) {
+        struct lV *lv = envStack[idx].LV;
         while (lv) {
             if (!strcmp(lv->name, name)) {
-                if (lv->size >= lv->capacity) {
-                    lv->capacity = (lv->capacity == 0) ? 4 : lv->capacity * 2;
-                    lv->data = (float*)realloc(lv->data, lv->capacity * sizeof(float));
+                struct lV *target = lv;
+                while (target->ref) target = target->ref;
+                if (target->size >= target->capacity) {
+                    target->capacity = (target->capacity == 0) ? 4 : target->capacity * 2;
+                    target->data = (struct Value*)realloc(target->data, target->capacity * sizeof(struct Value));
                 }
-                lv->data[lv->size++] = val;
+                target->data[target->size++] = val;
                 return;
             }
             lv = lv->next;
         }
     }
 }
-float scopePopL(char *name) {
-    int scopes[] = {envTop, 0};
-    int num = (envTop == 0) ? 1 : 2;
-    for (int idx=0; idx<num; idx++) {
-        struct lV *lv = envStack[scopes[idx]].LV;
+struct Value scopePopL(char *name) {
+    struct Value result; memset(&result, 0, sizeof(result)); result.type = VAL_ERROR;
+    for (int idx = envTop; idx >= 0; idx--) {
+        struct lV *lv = envStack[idx].LV;
         while (lv) {
             if (!strcmp(lv->name, name)) {
-                if (lv->size > 0) return lv->data[--lv->size];
-                return 0.0;
+                struct lV *target = lv;
+                while (target->ref) target = target->ref;
+                if (target->size > 0) return target->data[--target->size];
+                return result;
             }
             lv = lv->next;
         }
     }
-    return 0.0;
+    return result;
 }
 float scopeGetLen(char *name) {
-    int scopes[] = {envTop, 0};
-    int num = (envTop == 0) ? 1 : 2;
-    for (int idx=0; idx<num; idx++) {
-        int i = scopes[idx];
-        struct lV *lv = envStack[i].LV; while (lv) { if (!strcmp(lv->name, name)) return (float)lv->size; lv = lv->next; }
+    for (int i = envTop; i >= 0; i--) {
+        struct lV *lv = envStack[i].LV; while (lv) { if (!strcmp(lv->name, name)) { struct lV *target = lv; while (target->ref) target = target->ref; return (float)target->size; } lv = lv->next; }
         struct mV *mv = envStack[i].MV; while (mv) { if (!strcmp(mv->name, name)) return (float)mv->count; mv = mv->next; }
         struct sV *sv = envStack[i].SV; while (sv) { if (!strcmp(sv->name, name)) return (float)strlen(sv->data); sv = sv->next; }
         struct iA *ia = envStack[i].IA; while (ia) { if (!strcmp(ia->name, name)) return (float)ia->size; ia = ia->next; }
@@ -388,14 +573,12 @@ float scopeGetLen(char *name) {
     return 0.0;
 }
 float scopeMapExists(char *name, char *key) {
-    int scopes[] = {envTop, 0};
-    int num = (envTop == 0) ? 1 : 2;
-    for (int idx=0; idx<num; idx++) {
-        struct mV *mv = envStack[scopes[idx]].MV;
+    for (int idx = envTop; idx >= 0; idx--) {
+        struct mV *mv = envStack[idx].MV;
         while (mv) {
             if (!strcmp(mv->name, name)) {
                 for (int i=0; i<mv->count; i++) {
-                    if (!strcmp(mv->keys[i], key)) return 1.0;
+                    if (!strcmp(mv->entries[i].key, key)) return 1.0;
                 }
                 return 0.0;
             }
@@ -405,17 +588,14 @@ float scopeMapExists(char *name, char *key) {
     return 0.0;
 }
 void scopeMapDelete(char *name, char *key) {
-    int scopes[] = {envTop, 0};
-    int num = (envTop == 0) ? 1 : 2;
-    for (int idx=0; idx<num; idx++) {
-        struct mV *mv = envStack[scopes[idx]].MV;
+    for (int idx = envTop; idx >= 0; idx--) {
+        struct mV *mv = envStack[idx].MV;
         while (mv) {
             if (!strcmp(mv->name, name)) {
                 for (int i=0; i<mv->count; i++) {
-                    if (!strcmp(mv->keys[i], key)) {
+                    if (!strcmp(mv->entries[i].key, key)) {
                         for (int j=i; j<mv->count-1; j++) {
-                            strcpy(mv->keys[j], mv->keys[j+1]);
-                            mv->values[j] = mv->values[j+1];
+                            mv->entries[j] = mv->entries[j+1];
                         }
                         mv->count--;
                         return;
@@ -425,5 +605,25 @@ void scopeMapDelete(char *name, char *key) {
             }
             mv = mv->next;
         }
+    }
+}
+
+int scopeValueExists(char *name) {
+    return typeFetcher(name) != 0;
+}
+
+void scopeDeleteValue(char *name) {
+    for (int scope = envTop; scope >= 0; scope--) {
+        struct iV **iv = &envStack[scope].IV; while (*iv) { if (!strcmp((*iv)->name, name)) { struct iV *node = *iv; *iv = node->next; free(node); return; } iv = &(*iv)->next; }
+        struct fV **fv = &envStack[scope].FV; while (*fv) { if (!strcmp((*fv)->name, name)) { struct fV *node = *fv; *fv = node->next; free(node); return; } fv = &(*fv)->next; }
+        struct cV **cv = &envStack[scope].CV; while (*cv) { if (!strcmp((*cv)->name, name)) { struct cV *node = *cv; *cv = node->next; free(node); return; } cv = &(*cv)->next; }
+        struct bV **bv = &envStack[scope].BV; while (*bv) { if (!strcmp((*bv)->name, name)) { struct bV *node = *bv; *bv = node->next; free(node); return; } bv = &(*bv)->next; }
+        struct sV **sv = &envStack[scope].SV; while (*sv) { if (!strcmp((*sv)->name, name)) { struct sV *node = *sv; *sv = node->next; free(node); return; } sv = &(*sv)->next; }
+        struct iA **ia = &envStack[scope].IA; while (*ia) { if (!strcmp((*ia)->name, name)) { struct iA *node = *ia; *ia = node->next; free(node->data); free(node); return; } ia = &(*ia)->next; }
+        struct fA **fa = &envStack[scope].FA; while (*fa) { if (!strcmp((*fa)->name, name)) { struct fA *node = *fa; *fa = node->next; free(node->data); free(node); return; } fa = &(*fa)->next; }
+        struct cA **ca = &envStack[scope].CA; while (*ca) { if (!strcmp((*ca)->name, name)) { struct cA *node = *ca; *ca = node->next; free(node->data); free(node); return; } ca = &(*ca)->next; }
+        struct bA **ba = &envStack[scope].BA; while (*ba) { if (!strcmp((*ba)->name, name)) { struct bA *node = *ba; *ba = node->next; free(node->data); free(node); return; } ba = &(*ba)->next; }
+        struct lV **lv = &envStack[scope].LV; while (*lv) { if (!strcmp((*lv)->name, name)) { struct lV *node = *lv; *lv = node->next; if (!node->ref) free(node->data); free(node); return; } lv = &(*lv)->next; }
+        struct mV **mv = &envStack[scope].MV; while (*mv) { if (!strcmp((*mv)->name, name)) { struct mV *node = *mv; *mv = node->next; if (node->entries) free(node->entries); free(node); return; } mv = &(*mv)->next; }
     }
 }

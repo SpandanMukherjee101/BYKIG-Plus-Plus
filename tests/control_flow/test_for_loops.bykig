@@ -1,0 +1,67 @@
+int sum = 0 ;
+for ( int i = 0 ; i < 5 ; i = i + 1 ) {
+    sum = sum + i ;
+}
+out "sum=" + sum + "%n" ;
+
+int j = 0 ;
+for ( j = 10 ; j < 13 ; j = j + 1 ) {
+    out "j=" + j + "%n" ;
+}
+out "final_j=" + j + "%n" ;
+
+int count = 0 ;
+for ( int k = 10 ; k > 0 ; k = k - 2 ) {
+    count = count + 1 ;
+}
+out "count=" + count + "%n" ;
+
+int b_val = 0 ;
+for ( int b = 0 ; b < 10 ; b = b + 1 ) {
+    if ( b == 4 ) {
+        b_val = b ;
+        break ;
+    }
+}
+out "b_val=" + b_val + "%n" ;
+
+int odds = 0 ;
+for ( int c = 0 ; c < 6 ; c = c + 1 ) {
+    if ( c == 1 || c == 3 || c == 5 ) {
+        odds = odds + c ;
+        continue ;
+    }
+}
+out "odds=" + odds + "%n" ;
+
+int nested_sum = 0 ;
+for ( int x = 0 ; x < 3 ; x = x + 1 ) {
+    for ( int y = 0 ; y < 2 ; y = y + 1 ) {
+        nested_sum = nested_sum + 1 ;
+    }
+}
+out "nested_sum=" + nested_sum + "%n" ;
+
+int ran = 0 ;
+for ( int z = 100 ; z < 10 ; z = z + 1 ) {
+    ran = 1 ;
+}
+out "ran=" + ran + "%n" ;
+
+int inf_count = 0 ;
+for ( ; ; ) {
+    inf_count = inf_count + 1 ;
+    if ( inf_count == 3 ) {
+        break ;
+    }
+}
+out "inf_count=" + inf_count + "%n" ;
+
+int no_paren_sum = 0 ;
+for int n = 0 ; n < 4 ; n = n + 1 {
+    no_paren_sum = no_paren_sum + n ;
+}
+out "no_paren_sum=" + no_paren_sum + "%n" ;
+
+.
+

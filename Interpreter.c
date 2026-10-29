@@ -24,10 +24,254 @@ FILE *current_fp = NULL;
 struct Value global_return_val;
 FILE *global_fp = NULL;
 
+static inline void auto_trim(char *s) {
+    if (!s) return;
+    int len = strlen(s);
+    while (len > 0 && (s[len-1] == ' ' || s[len-1] == '\t' || s[len-1] == '\r' || s[len-1] == '\n')) {
+        s[--len] = '\0';
+    }
+    int start = 0;
+    while (s[start] == ' ' || s[start] == '\t' || s[start] == '\r' || s[start] == '\n') start++;
+    if (start > 0) memmove(s, s + start, len - start + 1);
+}
+
+void execute_for_stmt(char *raw_stmt) {
+    if (!raw_stmt) return;
+    char stmt[1024];
+    strncpy(stmt, raw_stmt, sizeof(stmt) - 1);
+    stmt[sizeof(stmt) - 1] = '\0';
+    
+    char *s = stmt;
+    while (*s == ' ' || *s == '\t' || *s == '\r' || *s == '\n') s++;
+    int len = strlen(s);
+    while (len > 0 && (s[len-1] == ' ' || s[len-1] == '\t' || s[len-1] == '\r' || s[len-1] == '\n' || s[len-1] == ';')) {
+        s[--len] = '\0';
+    }
+    if (len == 0) return;
+    
+    int decl_type = 0;
+    int kw_len = 0;
+    if (strncmp(s, "int ", 4) == 0) { decl_type = 1; kw_len = 4; }
+    else if (strncmp(s, "float ", 6) == 0) { decl_type = 2; kw_len = 6; }
+    else if (strncmp(s, "char ", 5) == 0) { decl_type = 3; kw_len = 5; }
+    else if (strncmp(s, "bool ", 5) == 0) { decl_type = 4; kw_len = 5; }
+    else if (strncmp(s, "string ", 7) == 0) { decl_type = 5; kw_len = 7; }
+    
+    if (decl_type > 0) {
+        char *p = s + kw_len;
+        char part[512] = "";
+        int part_len = 0;
+        int pdepth = 0;
+        int in_q = 0;
+        for (int i = 0; ; i++) {
+            char ch = p[i];
+            if (ch == '"') in_q = !in_q;
+            if (!in_q) {
+                if (ch == '(') pdepth++;
+                else if (ch == ')') pdepth--;
+            }
+            if ((ch == ',' && pdepth == 0 && !in_q) || ch == '\0') {
+                part[part_len] = '\0';
+                auto_trim(part);
+                if (strlen(part) > 0) {
+                    char *eq = strchr(part, '=');
+                    char vname[100] = "";
+                    if (eq) {
+                        int vlen = eq - part;
+                        while (vlen > 0 && (part[vlen-1] == ' ' || part[vlen-1] == '\t')) vlen--;
+                        int vstart = 0;
+                        while (vstart < vlen && (part[vstart] == ' ' || part[vstart] == '\t')) vstart++;
+                        int nlen = vlen - vstart;
+                        if (nlen >= 100) nlen = 99;
+                        strncpy(vname, part + vstart, nlen);
+                        vname[nlen] = '\0';
+                        
+                        char *expr = eq + 1;
+                        while (*expr == ' ' || *expr == '\t') expr++;
+                        char exprBuf[1024];
+                        snprintf(exprBuf, sizeof(exprBuf), "%s ;", expr);
+                        struct Value v = val(exprBuf);
+                        
+                        if (decl_type == 1) appendI(&envStack[envTop].IV, vname, (int)v.f);
+                        else if (decl_type == 2) appendF(&envStack[envTop].FV, vname, v.f);
+                        else if (decl_type == 3) appendC(&envStack[envTop].CV, vname, (char)v.f);
+                        else if (decl_type == 4) appendB(&envStack[envTop].BV, vname, (int)v.f);
+                        else if (decl_type == 5) {
+                            if (v.type == VAL_STRING) appendS(&envStack[envTop].SV, vname, v.s);
+                            else {
+                                char *start = strchr(expr, '"');
+                                if (start) {
+                                    char *end = strrchr(start + 1, '"');
+                                    if (end) *end = '\0';
+                                    appendS(&envStack[envTop].SV, vname, start + 1);
+                                } else {
+                                    char *sval = scopeGetSV(expr);
+                                    appendS(&envStack[envTop].SV, vname, sval ? sval : "");
+                                }
+                            }
+                        }
+                    } else {
+                        sscanf(part, "%s", vname);
+                        if (decl_type == 1) appendI(&envStack[envTop].IV, vname, 0);
+                        else if (decl_type == 2) appendF(&envStack[envTop].FV, vname, 0.0f);
+                        else if (decl_type == 3) appendC(&envStack[envTop].CV, vname, '\0');
+                        else if (decl_type == 4) appendB(&envStack[envTop].BV, vname, 0);
+                        else if (decl_type == 5) appendS(&envStack[envTop].SV, vname, "");
+                    }
+                }
+                part_len = 0;
+                if (ch == '\0') break;
+            } else {
+                if (part_len < sizeof(part) - 1) part[part_len++] = ch;
+            }
+        }
+        return;
+    }
+    
+    char part[512] = "";
+    int part_len = 0;
+    int pdepth = 0;
+    int in_q = 0;
+    for (int i = 0; ; i++) {
+        char ch = s[i];
+        if (ch == '"') in_q = !in_q;
+        if (!in_q) {
+            if (ch == '(') pdepth++;
+            else if (ch == ')') pdepth--;
+        }
+        if ((ch == ',' && pdepth == 0 && !in_q) || ch == '\0') {
+            part[part_len] = '\0';
+            auto_trim(part);
+            if (strlen(part) > 0) {
+                char *eq = NULL;
+                int pd = 0;
+                int q = 0;
+                for (int j = 0; part[j]; j++) {
+                    if (part[j] == '"') q = !q;
+                    if (!q) {
+                        if (part[j] == '(') pd++;
+                        else if (part[j] == ')') pd--;
+                        else if (pd == 0 && part[j] == '=' && part[j+1] != '=' &&
+                                 (j == 0 || (part[j-1] != '=' && part[j-1] != '!' && part[j-1] != '<' && part[j-1] != '>'))) {
+                            eq = &part[j];
+                            break;
+                        }
+                    }
+                }
+                if (eq) {
+                    char lhs[256] = "";
+                    int l_len = eq - part;
+                    while (l_len > 0 && (part[l_len-1] == ' ' || part[l_len-1] == '\t')) l_len--;
+                    int l_start = 0;
+                    while (l_start < l_len && (part[l_start] == ' ' || part[l_start] == '\t')) l_start++;
+                    int real_l = l_len - l_start;
+                    if (real_l >= 256) real_l = 255;
+                    strncpy(lhs, part + l_start, real_l);
+                    lhs[real_l] = '\0';
+                    
+                    char *rhs = eq + 1;
+                    while (*rhs == ' ' || *rhs == '\t') rhs++;
+                    char rhsBuf[1024];
+                    snprintf(rhsBuf, sizeof(rhsBuf), "%s ;", rhs);
+                    struct Value rVal = val(rhsBuf);
+                    
+                    char *bracket = strchr(lhs, '[');
+                    if (bracket) {
+                        char name[100] = "";
+                        int nlen = bracket - lhs;
+                        while (nlen > 0 && (lhs[nlen-1] == ' ' || lhs[nlen-1] == '\t')) nlen--;
+                        if (nlen >= 100) nlen = 99;
+                        strncpy(name, lhs, nlen);
+                        name[nlen] = '\0';
+                        
+                        char *close_b = strrchr(bracket + 1, ']');
+                        char idx_str[256] = "";
+                        if (close_b) {
+                            int ilen = close_b - (bracket + 1);
+                            while (ilen > 0 && (bracket[1 + ilen - 1] == ' ' || bracket[1 + ilen - 1] == '\t')) ilen--;
+                            char *istart = bracket + 1;
+                            while (*istart == ' ' || *istart == '\t') { istart++; ilen--; }
+                            if (ilen >= 256) ilen = 255;
+                            strncpy(idx_str, istart, ilen);
+                            idx_str[ilen] = '\0';
+                        }
+                        int t = typeFetcher(name);
+                        char idxBuf[512];
+                        snprintf(idxBuf, sizeof(idxBuf), "%s ;", idx_str);
+                        if (t == 6) setIA(envStack[envTop].IA, name, (int)val(idxBuf).f, (int)rVal.f);
+                        else if (t == 7) setFA(envStack[envTop].FA, name, (int)val(idxBuf).f, rVal.f);
+                        else if (t == 8) setCA(envStack[envTop].CA, name, (int)val(idxBuf).f, (char)rVal.f);
+                        else if (t == 9) setBA(envStack[envTop].BA, name, (int)val(idxBuf).f, (int)rVal.f);
+                        else if (t == 10) setL(envStack[envTop].LV, name, (int)val(idxBuf).f, rVal);
+                        else if (t == 11) {
+                            char keyStr[100] = "";
+                            struct Value kV = val(idxBuf);
+                            if (kV.type == VAL_STRING) strcpy(keyStr, kV.s);
+                            else if (kV.type == VAL_FLOAT) {
+                                if (kV.f == (float)(int)kV.f) sprintf(keyStr, "%d", (int)kV.f);
+                                else sprintf(keyStr, "%f", kV.f);
+                            } else {
+                                strcpy(keyStr, idx_str);
+                                if (keyStr[0] == '"') {
+                                    keyStr[strlen(keyStr)-1] = '\0';
+                                    memmove(keyStr, keyStr+1, strlen(keyStr));
+                                }
+                            }
+                            setM_Val(envStack[envTop].MV, name, keyStr, rVal);
+                        }
+                    } else {
+                        int t = typeFetcher(lhs);
+                        if (t == 1) {
+                            if (!setI_scope(lhs, (int)rVal.f)) appendI(&envStack[envTop].IV, lhs, (int)rVal.f);
+                        } else if (t == 2) {
+                            if (!setF_scope(lhs, rVal.f)) appendF(&envStack[envTop].FV, lhs, rVal.f);
+                        } else if (t == 3) {
+                            if (!setC_scope(lhs, (char)rVal.f)) appendC(&envStack[envTop].CV, lhs, (char)rVal.f);
+                        } else if (t == 4) {
+                            if (!setB_scope(lhs, (int)rVal.f)) appendB(&envStack[envTop].BV, lhs, (int)rVal.f);
+                        } else if (t == 5) {
+                            if (rVal.type == VAL_STRING) {
+                                if (!setS_scope(lhs, rVal.s)) appendS(&envStack[envTop].SV, lhs, rVal.s);
+                            } else {
+                                char *v = scopeGetSV(rhs);
+                                if (v) {
+                                    if (!setS_scope(lhs, v)) appendS(&envStack[envTop].SV, lhs, v);
+                                } else {
+                                    if (!setS_scope(lhs, rhs)) appendS(&envStack[envTop].SV, lhs, rhs);
+                                }
+                            }
+                        } else if (t == 0) {
+                            appendI(&envStack[envTop].IV, lhs, (int)rVal.f);
+                        }
+                    }
+                } else {
+                    char callBuf[1024];
+                    snprintf(callBuf, sizeof(callBuf), "%s ;", part);
+                    val(callBuf);
+                }
+            }
+            part_len = 0;
+            if (ch == '\0') break;
+        } else {
+            if (part_len < sizeof(part) - 1) part[part_len++] = ch;
+        }
+    }
+}
+
 struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
 
     char buffer[1000], tempS[1000], name[100], tD[100], dataC, ch;
-    int mode, dataI, i, j, type, c[1000] = {0}, k, p= -1, b1, b2, w[1000] = {0}, l= 0;
+    int mode, dataI, i, j, type, c[1000] = {0}, k, p= -1, b1, b2, l= 0;
+    long w[1000] = {0};
+    int blockEnv[1000] = {0};
+    struct forLoopState {
+        char cond[256];
+        char iter[256];
+        long body_pos;
+        int has_env;
+    };
+    struct forLoopState forLoops[64];
+    memset(forLoops, 0, sizeof(forLoops));
     float dataF;
 
     int break_loop = 0;
@@ -201,12 +445,15 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
             dataF = val(buffer).f;
             if (dataF)
             {
-                fgets(buffer, 1000, fp);
+                if (!strchr(buffer, '{')) fgets(buffer, 1000, fp);
                 c[p]= 1;
+                envTop++;
+                initEnvironmentFrame(&envStack[envTop]);
+                blockEnv[p] = 1;
             }
             else
             {
-                fgets(buffer, 1000, fp);
+                if (!strchr(buffer, '{')) fgets(buffer, 1000, fp);
                 while (k!=p)
                 {
                     fgets(buffer, 1000, fp);
@@ -260,8 +507,11 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
             dataF = val(buffer).f;
             if (dataF && c[p]!=1)
             {
-                fgets(buffer, 1000, fp);
+                if (!strchr(buffer, '{')) fgets(buffer, 1000, fp);
                 c[p]= 1;
+                envTop++;
+                initEnvironmentFrame(&envStack[envTop]);
+                blockEnv[p] = 1;
             }
             else
             {
@@ -319,8 +569,11 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
             
             if (c[p]!= 1)
             {
-                fgets(buffer, 1000, fp);
+                if (!strchr(buffer, '{')) fgets(buffer, 1000, fp);
                 c[p]= 1;
+                envTop++;
+                initEnvironmentFrame(&envStack[envTop]);
+                blockEnv[p] = 1;
             }
             else
             {
@@ -374,9 +627,45 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                 break_loop = 1;
                 break;
             }
+
+            if (c[p] == 3) {
+                char after_buf[1000];
+                int has_after = (fscanf(fp, "%s", after_buf) > 0);
+                if (has_after) {
+                    fseek(fp, -strlen(after_buf), SEEK_CUR);
+                }
+
+                if (strlen(forLoops[p].iter) > 0) {
+                    execute_for_stmt(forLoops[p].iter);
+                }
+                int condVal = 1;
+                if (strlen(forLoops[p].cond) > 0) {
+                    char condBuf[512];
+                    snprintf(condBuf, sizeof(condBuf), "%s ;", forLoops[p].cond);
+                    condVal = (int)val(condBuf).f;
+                }
+                if (condVal) {
+                    fseek(fp, forLoops[p].body_pos, SEEK_SET);
+                    k = p - 1;
+                } else {
+                    if (forLoops[p].has_env) {
+                        cleanupFrame(&envStack[envTop]);
+                        envTop--;
+                        forLoops[p].has_env = 0;
+                    }
+                    c[p] = 0;
+                    k = --p;
+                }
+                break;
+            }
         
             safe_fscanf(fp, "%s", buffer); if(strcmp(buffer, "elif") && strcmp(buffer, "else") && c[p]!= 2)
             {
+                if (p >= 0 && blockEnv[p]) {
+                    cleanupFrame(&envStack[envTop]);
+                    envTop--;
+                    blockEnv[p] = 0;
+                }
                 c[p]=0;
                 k= --p;
                 fseek( fp, -strlen(buffer), SEEK_CUR);
@@ -392,6 +681,11 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                 }
                 else
                 {
+                    if (p >= 0 && blockEnv[p]) {
+                        cleanupFrame(&envStack[envTop]);
+                        envTop--;
+                        blockEnv[p] = 0;
+                    }
                     k= --p;
                     fseek( fp, -strlen(buffer), SEEK_CUR);
                 }
@@ -407,7 +701,7 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
 
             fgets(buffer, 1000, fp);
             dataF = val(buffer).f;
-            fgets(buffer, 1000, fp);
+            if (!strchr(buffer, '{')) fgets(buffer, 1000, fp);
             
             if (dataF)
             {
@@ -576,23 +870,23 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
             if (type == 1)
             {
                 scanf("%d",&dataI);
-                appendI( &envStack[envTop].IV, buffer, dataI);
+                if (!setI_scope(buffer, dataI)) appendI( &envStack[envTop].IV, buffer, dataI);
             }
             else if (type == 2)
             {
                 scanf("%f",&dataF);
-                appendF( &envStack[envTop].FV, buffer, dataF);
+                if (!setF_scope(buffer, dataF)) appendF( &envStack[envTop].FV, buffer, dataF);
             }
             else if (type == 3)
             {
                 scanf("%c",&dataC);
-                appendC( &envStack[envTop].CV, buffer, dataC);
+                if (!setC_scope(buffer, dataC)) appendC( &envStack[envTop].CV, buffer, dataC);
             }
             else if (type == 5)
             {
                 char tempS[1000];
                 if (scanf("%s", tempS) <= 0) exit(1);
-                appendS(&envStack[envTop].SV, buffer, tempS);
+                if (!setS_scope(buffer, tempS)) appendS(&envStack[envTop].SV, buffer, tempS);
             }
             else if (type >= 6 && type <= 11)
             {
@@ -605,8 +899,11 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                 
                 if (type == 11) {
                     struct Value kV = val(buffer);
-                    if (kV.type == 1) {  
+                    if (kV.type == VAL_STRING) {  
                         strcpy(keyStr, kV.s);
+                    } else if (kV.type == VAL_FLOAT) {
+                        if (kV.f == (float)(int)kV.f) sprintf(keyStr, "%d", (int)kV.f);
+                        else sprintf(keyStr, "%f", kV.f);
                     } else {
                         strcpy(keyStr, buffer);
                         if (keyStr[0] == '"') {
@@ -634,7 +931,8 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                     setBA(envStack[envTop].BA, nameBuf, idx, valI);
                 } else if (type == 10) {
                     float valF; if (scanf("%f", &valF) <= 0) exit(1);
-                    setL(envStack[envTop].LV, nameBuf, idx, valF);
+                    struct Value vF; memset(&vF, 0, sizeof(vF)); vF.type = VAL_FLOAT; vF.f = valF;
+                    setL(envStack[envTop].LV, nameBuf, idx, vF);
                 } else if (type == 11) {
                     float valF; if (scanf("%f", &valF) <= 0) exit(1);
                     setM_F(envStack[envTop].MV, nameBuf, keyStr, valF);
@@ -711,40 +1009,53 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                 else if (type == 7) setFA(envStack[envTop].FA, name, idx, val(exprBuf).f);
                 else if (type == 8) setCA(envStack[envTop].CA, name, idx, (char)val(exprBuf).f);
                 else if (type == 9) setBA(envStack[envTop].BA, name, idx, (int)val(exprBuf).f);
-                else if (type == 10) setL(envStack[envTop].LV, name, idx, val(exprBuf).f);
-                else if (type == 11) setM_F(envStack[envTop].MV, name, keyStr, val(exprBuf).f);
+                else if (type == 10) setL(envStack[envTop].LV, name, idx, val(exprBuf));
+                else if (type == 11) setM_Val(envStack[envTop].MV, name, keyStr, val(exprBuf));
             } else {
                 fgets(buffer, 1000, fp);
 
                 if (type == 1)
                 {
                     dataI= (int)val(buffer).f;
-                    appendI( &envStack[envTop].IV, name, dataI);
+                    if (!setI_scope(name, dataI)) appendI( &envStack[envTop].IV, name, dataI);
                 }
                 else if (type == 2)
                 {
                     dataF = val(buffer).f;
-                    appendF( &envStack[envTop].FV, name, dataF);
+                    if (!setF_scope(name, dataF)) appendF( &envStack[envTop].FV, name, dataF);
                 }
-                else if (type == 3) { appendC(&envStack[envTop].CV, name, (char)val(buffer).f); }
-                else if (type == 4) { appendB(&envStack[envTop].BV, name, (int)val(buffer).f); }
+                else if (type == 3) {
+                    char cVal = (char)val(buffer).f;
+                    if (!setC_scope(name, cVal)) appendC(&envStack[envTop].CV, name, cVal);
+                }
+                else if (type == 4) {
+                    int bVal = (int)val(buffer).f;
+                    if (!setB_scope(name, bVal)) appendB(&envStack[envTop].BV, name, bVal);
+                }
                 else if (type == 5) {
                     char *eq = strchr(buffer, '=');
                     if (eq) {
                         strcpy(builtin_string_return, "");
                         val(eq + 1);
                         if (strlen(builtin_string_return) > 0) {
-                            appendS(&envStack[envTop].SV, name, builtin_string_return);
+                            if (!setS_scope(name, builtin_string_return)) appendS(&envStack[envTop].SV, name, builtin_string_return);
                         } else {
                             char *start = strchr(eq + 1, '"');
                             if (start) {
                                 char *end = strrchr(start + 1, '"');
                                 if (end) *end = '\0';
-                                appendS(&envStack[envTop].SV, name, start + 1);
+                                if (!setS_scope(name, start + 1)) appendS(&envStack[envTop].SV, name, start + 1);
                             } else {
-                                char *src = strtok(eq + 1, " \t\r\n;");
-                                char *v = scopeGetSV(src);
-                                if (v) appendS(&envStack[envTop].SV, name, v);
+                                struct Value sRes = val(eq + 1);
+                                if (sRes.type == VAL_STRING) {
+                                    if (!setS_scope(name, sRes.s)) appendS(&envStack[envTop].SV, name, sRes.s);
+                                } else {
+                                    char *src = strtok(eq + 1, " \t\r\n;");
+                                    char *v = scopeGetSV(src);
+                                    if (v) {
+                                        if (!setS_scope(name, v)) appendS(&envStack[envTop].SV, name, v);
+                                    }
+                                }
                             }
                         }
                     }
@@ -954,18 +1265,29 @@ case 15:
         case 19:  
             safe_fscanf(fp, "%s", name);
             fgets(buffer, 1000, fp);
-            char *start = strchr(buffer, '"');
-            if (start) {
-                char *end = strrchr(start + 1, '"');
-                if (end) *end = '\0';
-                scopeSetSV(name, start + 1);
-            } else {
+            {
                 char *eq = strchr(buffer, '=');
                 if (eq) {
-                    char *src = strtok(eq + 1, " \t\r\n;");
-                    if (src) {
-                        char *v = scopeGetSV(src);
-                        if (v) scopeSetSV(name, v);
+                    char *rhs = eq + 1;
+                    while (*rhs == ' ' || *rhs == '\t') rhs++;
+                    if (*rhs == '"') {
+                        char *end = strrchr(rhs + 1, '"');
+                        if (end) *end = '\0';
+                        scopeSetSV(name, rhs + 1);
+                    } else {
+                        strcpy(builtin_string_return, "");
+                        struct Value sRes = val(rhs);
+                        if (strlen(builtin_string_return) > 0) {
+                            scopeSetSV(name, builtin_string_return);
+                        } else if (sRes.type == VAL_STRING) {
+                            scopeSetSV(name, sRes.s);
+                        } else {
+                            char *src = strtok(rhs, " \t\r\n;");
+                            if (src) {
+                                char *v = scopeGetSV(src);
+                                if (v) scopeSetSV(name, v);
+                            }
+                        }
                     }
                 } else {
                     scopeSetSV(name, "");
@@ -1073,8 +1395,7 @@ case 15:
                 safe_fscanf(fp, "%s", buffer); if (!(strcmp(buffer, "="))) {
                     safe_fscanf(fp, "%s", buffer); while (strcmp(buffer, "}")) {
                         safe_fscanf(fp, "%s", buffer); if (!strcmp(buffer, "}")) break;
-                        float d = val(buffer).f;
-                        scopePushL(name, d);
+                        scopePushL(name, val(buffer));
                         safe_fscanf(fp, "%s", buffer); if (!strcmp(buffer, "}")) break;
                     }
                     safe_fscanf(fp, "%s", buffer); }
@@ -1086,26 +1407,42 @@ case 15:
         case 25:  
             {
                 int target_p = p;
-                while (target_p >= 0 && c[target_p] != 2) {
+                while (target_p >= 0 && c[target_p] != 2 && c[target_p] != 3) {
                     target_p--;
                 }
                 if (target_p < 0) {
                     printf("Error: break outside of loop\n");
                     break;
                 }
+                for (int d = p; d >= target_p; d--) {
+                    if (d >= 0 && d < 1000 && blockEnv[d]) {
+                        cleanupFrame(&envStack[envTop]);
+                        envTop--;
+                        blockEnv[d] = 0;
+                    }
+                    if (d >= 0 && d < 64 && forLoops[d].has_env) {
+                        cleanupFrame(&envStack[envTop]);
+                        envTop--;
+                        forLoops[d].has_env = 0;
+                    }
+                }
                 
                 int k = target_p - 1;
                 while (k != p) {
-                    fgets(buffer, 1000, fp);
-                    b1 = 0; b2 = 0;
-                    for(int i= 0; i<strlen(buffer); i++) {
-                        if(buffer[i]=='{') { b1= 1; break; }
+                    if (!fgets(buffer, 1000, fp)) break;
+                    for (int i = 0; buffer[i]; i++) {
+                        if (buffer[i] == '"') {
+                            i++;
+                            while (buffer[i] && buffer[i] != '"') i++;
+                            if (!buffer[i]) break;
+                        } else if (buffer[i] == '/' && buffer[i+1] == '/') {
+                            break;
+                        } else if (buffer[i] == '{') {
+                            p++;
+                        } else if (buffer[i] == '}') {
+                            p--;
+                        }
                     }
-                    for(int i= 0; i<strlen(buffer); i++) {
-                        if(buffer[i]=='}') { b2= 1; break; }
-                    }
-                    if (b1) p++;
-                    else if (b2) p--;
                 }
                 c[++p] = 0;
                 --p;
@@ -1115,18 +1452,74 @@ case 15:
         case 26:  
             {
                 int target_p = p;
-                while (target_p >= 0 && c[target_p] != 2) {
+                while (target_p >= 0 && c[target_p] != 2 && c[target_p] != 3) {
                     target_p--;
                 }
                 if (target_p < 0) {
                     printf("Error: continue outside of loop\n");
                     break;
                 }
-                
-                fseek(fp, w[target_p], SEEK_SET);
-                w[target_p] = 0;
-                p = target_p - 1;
-                k = p;
+                for (int d = p; d > target_p; d--) {
+                    if (d >= 0 && d < 1000 && blockEnv[d]) {
+                        cleanupFrame(&envStack[envTop]);
+                        envTop--;
+                        blockEnv[d] = 0;
+                    }
+                    if (d >= 0 && d < 64 && forLoops[d].has_env) {
+                        cleanupFrame(&envStack[envTop]);
+                        envTop--;
+                        forLoops[d].has_env = 0;
+                    }
+                }
+                if (c[target_p] == 2) {
+                    fseek(fp, w[target_p], SEEK_SET);
+                    w[target_p] = 0;
+                    p = target_p - 1;
+                    k = p;
+                } else if (c[target_p] == 3) {
+                    if (strlen(forLoops[target_p].iter) > 0) {
+                        execute_for_stmt(forLoops[target_p].iter);
+                    }
+                    int condVal = 1;
+                    if (strlen(forLoops[target_p].cond) > 0) {
+                        char condBuf[512];
+                        snprintf(condBuf, sizeof(condBuf), "%s ;", forLoops[target_p].cond);
+                        condVal = (int)val(condBuf).f;
+                    }
+                    if (condVal) {
+                        p = target_p;
+                        k = p - 1;
+                        fseek(fp, forLoops[target_p].body_pos, SEEK_SET);
+                    } else {
+                        fseek(fp, forLoops[target_p].body_pos, SEEK_SET);
+                        int skip_depth = target_p;
+                        int k_loop = target_p - 1;
+                        while (k_loop != skip_depth) {
+                            if (!fgets(buffer, 1000, fp)) break;
+                            for (int i = 0; buffer[i]; i++) {
+                                if (buffer[i] == '"') {
+                                    i++;
+                                    while (buffer[i] && buffer[i] != '"') i++;
+                                    if (!buffer[i]) break;
+                                } else if (buffer[i] == '/' && buffer[i+1] == '/') {
+                                    break;
+                                } else if (buffer[i] == '{') {
+                                    skip_depth++;
+                                } else if (buffer[i] == '}') {
+                                    skip_depth--;
+                                }
+                            }
+                        }
+                        if (forLoops[target_p].has_env) {
+                            cleanupFrame(&envStack[envTop]);
+                            envTop--;
+                            forLoops[target_p].has_env = 0;
+                        }
+                        c[target_p] = 0;
+                        p = target_p - 1;
+                        k = p;
+                    }
+                }
             }
             break;
 
@@ -1181,11 +1574,160 @@ case 15:
                             key[strlen(key)-1] = '\0';
                             memmove(key, key+1, strlen(key));
                         }
-                        safe_fscanf(fp, "%s", buffer); safe_fscanf(fp, "%s", buffer); float d = val(buffer).f;
-                        setM_F(envStack[envTop].MV, name, key, d);
+                        safe_fscanf(fp, "%s", buffer); safe_fscanf(fp, "%s", buffer);
+                        struct Value d = val(buffer);
+                        setM_Val(envStack[envTop].MV, name, key, d);
                         safe_fscanf(fp, "%s", buffer); if (!strcmp(buffer, "}")) break;
                     }
                     safe_fscanf(fp, "%s", buffer); }
+            }
+            break;
+
+        case 27:
+            {
+                char header[1024] = "";
+                int hlen = 0;
+                int ch;
+                while ((ch = fgetc(fp)) != EOF) {
+                    if (ch == '{') break;
+                    if (ch == '/') {
+                        int next_ch = fgetc(fp);
+                        if (next_ch == '/') {
+                            while ((ch = fgetc(fp)) != EOF && ch != '\n');
+                            continue;
+                        } else {
+                            ungetc(next_ch, fp);
+                        }
+                    }
+                    if (hlen < sizeof(header) - 1) {
+                        header[hlen++] = (char)ch;
+                    }
+                }
+                header[hlen] = '\0';
+                if (ch == EOF) {
+                    printf("Error: Expected '{' after for loop header\n");
+                    break;
+                }
+                long body_pos = ftell(fp);
+                
+                char *h = header;
+                while (*h == ' ' || *h == '\t' || *h == '\r' || *h == '\n') h++;
+                int h_end = strlen(h) - 1;
+                while (h_end >= 0 && (h[h_end] == ' ' || h[h_end] == '\t' || h[h_end] == '\r' || h[h_end] == '\n')) {
+                    h[h_end--] = '\0';
+                }
+                if (h[0] == '(') {
+                    int pdepth = 0;
+                    int match_idx = -1;
+                    for (int i = 0; h[i] != '\0'; i++) {
+                        if (h[i] == '(') pdepth++;
+                        else if (h[i] == ')') {
+                            pdepth--;
+                            if (pdepth == 0) {
+                                match_idx = i;
+                                break;
+                            }
+                        }
+                    }
+                    if (match_idx == (int)strlen(h) - 1) {
+                        h[match_idx] = '\0';
+                        h++;
+                    }
+                }
+                
+                char init_str[256] = "";
+                char cond_str[256] = "";
+                char iter_str[256] = "";
+                
+                int semi1 = -1, semi2 = -1;
+                int pdepth = 0;
+                int in_q = 0;
+                for (int i = 0; h[i] != '\0'; i++) {
+                    if (h[i] == '"') in_q = !in_q;
+                    if (!in_q) {
+                        if (h[i] == '(') pdepth++;
+                        else if (h[i] == ')') pdepth--;
+                        else if (h[i] == ';' && pdepth == 0) {
+                            if (semi1 == -1) semi1 = i;
+                            else if (semi2 == -1) { semi2 = i; break; }
+                        }
+                    }
+                }
+                
+                if (semi1 != -1) {
+                    int len1 = semi1;
+                    if (len1 >= 256) len1 = 255;
+                    strncpy(init_str, h, len1);
+                    init_str[len1] = '\0';
+                    if (semi2 != -1) {
+                        int len2 = semi2 - (semi1 + 1);
+                        if (len2 >= 256) len2 = 255;
+                        strncpy(cond_str, h + semi1 + 1, len2);
+                        cond_str[len2] = '\0';
+                        
+                        strncpy(iter_str, h + semi2 + 1, sizeof(iter_str) - 1);
+                        iter_str[sizeof(iter_str) - 1] = '\0';
+                    } else {
+                        strncpy(cond_str, h + semi1 + 1, sizeof(cond_str) - 1);
+                        cond_str[sizeof(cond_str) - 1] = '\0';
+                    }
+                }
+                
+                auto_trim(init_str);
+                auto_trim(cond_str);
+                auto_trim(iter_str);
+                
+                p++;
+                k = p - 1;
+                envTop++;
+                initEnvironmentFrame(&envStack[envTop]);
+                forLoops[p].has_env = 1;
+                strncpy(forLoops[p].cond, cond_str, sizeof(forLoops[p].cond) - 1);
+                forLoops[p].cond[sizeof(forLoops[p].cond) - 1] = '\0';
+                strncpy(forLoops[p].iter, iter_str, sizeof(forLoops[p].iter) - 1);
+                forLoops[p].iter[sizeof(forLoops[p].iter) - 1] = '\0';
+                forLoops[p].body_pos = body_pos;
+                
+                if (strlen(init_str) > 0) {
+                    execute_for_stmt(init_str);
+                }
+                
+                int condVal = 1;
+                if (strlen(cond_str) > 0) {
+                    char condBuf[512];
+                    snprintf(condBuf, sizeof(condBuf), "%s ;", cond_str);
+                    condVal = (int)val(condBuf).f;
+                }
+                
+                if (condVal) {
+                    c[p] = 3;
+                } else {
+                    int k_loop = p - 1;
+                    while (k_loop != p) {
+                        if (!fgets(buffer, sizeof(buffer), fp)) break;
+                        for (int i = 0; buffer[i]; i++) {
+                            if (buffer[i] == '"') {
+                                i++;
+                                while (buffer[i] && buffer[i] != '"') i++;
+                                if (!buffer[i]) break;
+                            } else if (buffer[i] == '/' && buffer[i+1] == '/') {
+                                break;
+                            } else if (buffer[i] == '{') {
+                                p++;
+                            } else if (buffer[i] == '}') {
+                                p--;
+                            }
+                        }
+                    }
+                    if (forLoops[p + 1].has_env) {
+                        cleanupFrame(&envStack[envTop]);
+                        envTop--;
+                        forLoops[p + 1].has_env = 0;
+                    }
+                    c[++p] = 0;
+                    --p;
+                    k = p;
+                }
             }
             break;
 

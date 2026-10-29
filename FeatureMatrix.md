@@ -1,7 +1,5 @@
 # BYKIG++ Feature Matrix
 
-> Status reflects the current BYKIG++ source tree in `BYKIG++(2).zip`.
-
 ## Core language features
 
 | Feature | Status | Notes |
@@ -13,9 +11,11 @@
 | `string` | ✅ | Fixed-size character buffer per variable. |
 | Variable declaration | ✅ | Supported in the active environment. |
 | Variable assignment | ✅ | RHS is evaluated through the expression engine. |
-| Expression evaluation | ✅ | Arithmetic, comparison, logical operators, parentheses, and complex resolution. |
+| Conditional block scope | ✅ | Variables declared in executed `if` / `elif` / `else` blocks are released at the closing brace. |
+| Expression evaluation | ✅ | Arithmetic, comparison (`~`, `!`, `<`, `>`, `<=`, `>=`), logical operators, parentheses, and complex resolution. |
 | `if` / `elif` / `else` | ✅ | Source-position/block based control flow. |
 | `while` | ✅ | Loop position is retained so the body can be re-entered. |
+| `for` | ✅ | Loop initialization, condition, and iteration statements; loop-scoped variable support; works with nested loops, `break`, and `continue`. |
 | `break` | ✅ | Breaks the active loop. |
 | `continue` | ✅ | Skips the current iteration and resumes loop control. |
 | `func` | ✅ | Functions are registered by name, parameter metadata, source position, and file path. |
@@ -23,7 +23,7 @@
 | Recursion | ✅ | Implemented through the call stack and per-call environments. |
 | Module import with `use` | ✅ | Executes another `.bykig` file in the current runtime environment. |
 | Comments | ✅ | `//` single-line comments. |
-| Program terminator | ✅ | A final `.` is required. |
+| Program terminator | ✅ | `.` stops execution early; reaching EOF also ends a program successfully. |
 
 ## Runtime data structures
 
@@ -36,7 +36,7 @@
 | Typed primitive storage | ✅ | Separate linked lists for `int`, `float`, `char`, `bool`, `string`. |
 | Typed arrays | ✅ | Separate structures for int/float/char/bool arrays. |
 | Dynamic lists | ✅ | Size/capacity based numeric list. |
-| Maps | ✅ | Up to 100 string-key/float-value entries per map. |
+| Maps | ✅ | Generic `Value`-based map with dynamic capacity (`realloc`), supporting strings, floats, ints, and other runtime values. |
 | Environment cleanup | ✅ | `cleanupFrame()` frees variables, arrays, list buffers, and maps in the frame. |
 
 ## Collections
@@ -47,23 +47,25 @@
 | `floatarr` | ✅ | Fixed-size float array. |
 | `chararr` | ✅ | Fixed-size character array. |
 | `boolarr` | ✅ | Fixed-size boolean/integer array. |
-| `list` | ✅ | Dynamic numeric collection backed by `float *data`. |
-| `map` | ✅ | String keys and float values; linear lookup. |
+| `list` | ✅ | Dynamic collection backed by `Value *data`; elements can hold any current runtime `Value`. |
+| `map` | ✅ | Generic dynamic collection with string/numeric keys and arbitrary `Value` elements; dynamic capacity growth. |
 | `arr[index]` | ✅ | Typed array access. |
 | `list[index]` | ✅ | Numeric indexed access. |
 | `map[key]` | ✅ | Key-based lookup/update. |
-| `push()` | ✅ | Adds to a list/map through the built-in layer. |
-| `pop()` | ✅ | Removes from a list/map through the built-in layer. |
+| Collection literals | ✅ | Lists, maps, and typed arrays accept `{ ... }` initializers. |
+| Function collection arguments | ✅ | Lists are passed by reference; maps and arrays are copied into function-local parameters. |
+| `push()` | ✅ | `push(list, value)` appends to a list; `push(map, key, value)` inserts or updates a map entry. |
+| `pop()` | ✅ | `pop(list)` removes the final list value; `pop(map, key)` removes and returns a map value. |
 
 ## Built-ins
 
 | Built-in | Status | Purpose |
 |---|:---:|---|
 | `len()` | ✅ | Length of supported strings/arrays/lists/maps. |
-| `push()` | ✅ | Collection mutation. |
-| `pop()` | ✅ | Collection mutation and value production. |
-| `exists()` | ✅ | Scope/map existence check. |
-| `delete()` | ✅ | Removes supported runtime data. |
+| `push()` | ✅ | Appends a list value or inserts/updates a map key. |
+| `pop()` | ✅ | Removes a list value or a map key and returns its numeric value. |
+| `exists()` | ✅ | `exists(name)` tests whether a runtime value exists; `exists(map, key)` tests a map key. |
+| `delete()` | ✅ | `delete(name)` removes a runtime value; `delete(map, key)` removes a map key. |
 | `parse_float()` | ✅ | Converts a string/numeric value to a float result. |
 | `file_exists()` | ✅ | Tests whether a file can be opened for reading. |
 | `file_write()` | ✅ | Overwrites a file. |
@@ -94,8 +96,8 @@
 |---|---|
 | Expression representation | No AST; expressions are resolved and evaluated directly. |
 | Parser/lexer | No traditional compiler-style parser or lexer. |
-| Lists | Numeric (`float`) storage rather than arbitrary `Value` elements. |
-| Maps | String keys + float values; fixed table of 100 entries; linear search. |
+| Lists | Store `Value` elements; complex values are retained as non-owning runtime references. |
+| Maps | Generic `Value`-backed entries with dynamic array storage (`mapEntry *entries`); linear lookup. |
 | Complex function results in arithmetic | Current call-result rewriting is primarily numeric (`retVal.f`). |
 | Modules | Execute into the current environment rather than a separate namespace. |
 | Module cache/cycle system | No dedicated import cache or namespace graph. |

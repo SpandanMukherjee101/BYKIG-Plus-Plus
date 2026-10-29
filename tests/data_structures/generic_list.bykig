@@ -1,0 +1,15 @@
+list values ;
+push ( values , "hello" ) ;
+push ( values , 42 ) ;
+
+out values [ 0 ] + "%n" ;
+out values [ 1 ] + "%n" ;
+
+list nested ;
+push ( nested , values ) ;
+out len ( nested ) + "%n" ;
+
+list words ;
+push ( words , "popped" ) ;
+out pop ( words ) + "%n" ;
+.
