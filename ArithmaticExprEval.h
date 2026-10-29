@@ -17,6 +17,23 @@ struct node2 *PFEval;
 struct Value val(char *);
 int priority( char);
 
+static inline void format_string_token(char *dest, size_t dest_sz, const char *src) {
+    size_t idx = 0;
+    if (idx < dest_sz - 1) dest[idx++] = '"';
+    for (int i = 0; src[i] && idx < dest_sz - 3; i++) {
+        if (src[i] == '"') {
+            dest[idx++] = '\\';
+            dest[idx++] = '"';
+        } else if (src[i] == '\\') {
+            dest[idx++] = '\\';
+            dest[idx++] = '\\';
+        } else {
+            dest[idx++] = src[i];
+        }
+    }
+    if (idx < dest_sz - 1) dest[idx++] = '"';
+    dest[idx] = '\0';
+}
 
 void resolve_complex_types(char *expr) {
     char temp[1000];
@@ -25,10 +42,40 @@ void resolve_complex_types(char *expr) {
     char tokens[100][100];
     int tokenCount = 0;
     
-    char *token = strtok(temp, " \t\n");
-    while (token != NULL) {
-        strcpy(tokens[tokenCount++], token);
-        token = strtok(NULL, " \t\n");
+    char *p = temp;
+    while (*p) {
+        while (*p && (*p == ' ' || *p == '\t' || *p == '\n')) p++;
+        if (!*p) break;
+        if (*p == '"') {
+            char tok[100];
+            int idx = 0;
+            tok[idx++] = *p++;
+            while (*p && idx < 95) {
+                if (*p == '\\' && *(p+1) == '"') {
+                    tok[idx++] = *p++;
+                    tok[idx++] = *p++;
+                    continue;
+                }
+                if (*p == '"') {
+                    tok[idx++] = *p++;
+                    break;
+                }
+                tok[idx++] = *p++;
+            }
+            tok[idx] = '\0';
+            strcpy(tokens[tokenCount++], tok);
+        } else if (*p == '[' || *p == ']') {
+            char tok[2];
+            tok[0] = *p++;
+            tok[1] = '\0';
+            strcpy(tokens[tokenCount++], tok);
+        } else {
+            char tok[100];
+            int idx = 0;
+            while (*p && *p != ' ' && *p != '\t' && *p != '\n' && *p != '"' && *p != '[' && *p != ']' && idx < 95) tok[idx++] = *p++;
+            tok[idx] = '\0';
+            strcpy(tokens[tokenCount++], tok);
+        }
     }
     
      
@@ -56,27 +103,40 @@ void resolve_complex_types(char *expr) {
                 if (bfunc != NULL) {
                     char rawArgs[10][1000];
                     int rArgCount = 0;
-                    char *ptr = argExpr;
-                    char t[100];
                     char single[1000] = "";
                     int pDepth2 = 0;
-                    while (sscanf(ptr, "%s", t) == 1) {
-                        ptr = strstr(ptr, t) + strlen(t);
-                        if (!strcmp(t, "(")) pDepth2++;
-                        else if (!strcmp(t, ")")) pDepth2--;
-                        if (pDepth2 == 0 && !strcmp(t, ",")) {
+                    int in_q2 = 0;
+                    for (int k = 0; argExpr[k]; k++) {
+                        char ch = argExpr[k];
+                        if (ch == '"') in_q2 = !in_q2;
+                        if (!in_q2) {
+                            if (ch == '(') pDepth2++;
+                            else if (ch == ')') pDepth2--;
+                        }
+                        if (ch == ',' && pDepth2 == 0 && !in_q2) {
+                            trim_spaces(single);
                             strcpy(rawArgs[rArgCount++], single);
                             single[0] = '\0';
                         } else {
-                            strcat(single, t);
-                            strcat(single, " ");
+                            int sl = strlen(single);
+                            if (sl < 995) {
+                                single[sl] = ch;
+                                single[sl+1] = '\0';
+                            }
                         }
                     }
+                    trim_spaces(single);
                     if (strlen(single) > 0) strcpy(rawArgs[rArgCount++], single);
                     
+                    strcpy(builtin_string_return, "");
                     struct Value res = bfunc->handler(rawArgs, rArgCount);
-                    if (res.type == VAL_STRING) snprintf(tokens[i], sizeof(tokens[i]), "\"%s\"", res.s);
-                    else sprintf(tokens[i], "%f", res.f);
+                    if (res.type == VAL_STRING) {
+                        format_string_token(tokens[i], sizeof(tokens[i]), res.s);
+                    } else if (strlen(builtin_string_return) > 0) {
+                        format_string_token(tokens[i], sizeof(tokens[i]), builtin_string_return);
+                    } else {
+                        sprintf(tokens[i], "%f", res.f);
+                    }
                     int shift = j - (i + 1);
                     for (int k = i + 1; k < tokenCount - shift; k++) {
                         strcpy(tokens[k], tokens[k + shift]);
@@ -90,24 +150,28 @@ void resolve_complex_types(char *expr) {
                     if (strlen(argExpr) > 0) {
                         char singleArg[1000] = "";
                         int pDepth = 0;
-                        
-                        char *ptr = argExpr;
-                        char t[100];
-                        while (sscanf(ptr, "%s", t) == 1) {
-                            ptr = strstr(ptr, t) + strlen(t);
-                            
-                            if (!strcmp(t, "(")) pDepth++;
-                            else if (!strcmp(t, ")")) pDepth--;
-                            
-                            if (pDepth == 0 && !strcmp(t, ",")) {
+                        int in_q3 = 0;
+                        for (int k = 0; argExpr[k]; k++) {
+                            char ch = argExpr[k];
+                            if (ch == '"') in_q3 = !in_q3;
+                            if (!in_q3) {
+                                if (ch == '(') pDepth++;
+                                else if (ch == ')') pDepth--;
+                            }
+                            if (ch == ',' && pDepth == 0 && !in_q3) {
+                                trim_spaces(singleArg);
                                 strcat(singleArg, ";");
                                 argVals[argCount++] = val(singleArg);
                                 singleArg[0] = '\0';
                             } else {
-                                strcat(singleArg, t);
-                                strcat(singleArg, " ");
+                                int sl = strlen(singleArg);
+                                if (sl < 995) {
+                                    singleArg[sl] = ch;
+                                    singleArg[sl+1] = '\0';
+                                }
                             }
                         }
+                        trim_spaces(singleArg);
                         if (strlen(singleArg) > 0) {
                             strcat(singleArg, ";");
                             argVals[argCount++] = val(singleArg);
@@ -199,8 +263,12 @@ void resolve_complex_types(char *expr) {
                     callStackTop--;
                     
                      
-                    char resStr[100];
-                    sprintf(resStr, "%f", retVal.f);
+                    char resStr[1000];
+                    if (retVal.type == VAL_STRING) {
+                        format_string_token(resStr, sizeof(resStr), retVal.s);
+                    } else {
+                        sprintf(resStr, "%f", retVal.f);
+                    }
                     strcpy(tokens[i], resStr);
                     
                      
@@ -219,72 +287,101 @@ void resolve_complex_types(char *expr) {
         if (i < tokenCount - 3 && strcmp(tokens[i+1], "[") == 0) {
             int type = typeFetcher(tokens[i]);
             if (type >= 6 && type <= 11) {
-                int brackets = 1;
-                int j = i + 2;
-                char argExpr[1000] = "";
-                while (j < tokenCount && brackets > 0) {
-                    if (strcmp(tokens[j], "[") == 0) brackets++;
-                    if (strcmp(tokens[j], "]") == 0) brackets--;
-                    if (brackets > 0) {
-                        strcat(argExpr, tokens[j]);
-                        strcat(argExpr, " ");
-                    }
-                    j++;
-                }
-                strcat(argExpr, ";");
-                float res = 0.0;
-                if (type == 6) { 
-                    res = (float)getIA(envStack[envTop].IA, tokens[i], (int)val(argExpr).f);
-                } else if (type == 7) { 
-                    res = getFA(envStack[envTop].FA, tokens[i], (int)val(argExpr).f);
-                } else if (type == 10) { 
-                    struct Value listValue = getL(envStack[envTop].LV, tokens[i], (int)val(argExpr).f);
-                    if (listValue.type == VAL_STRING) {
-                        snprintf(tokens[i], sizeof(tokens[i]), "\"%s\"", listValue.s);
-                        int shift = j - (i + 1);
-                        for (int k = i + 1; k < tokenCount - shift; k++) {
-                            strcpy(tokens[k], tokens[k + shift]);
+                struct Value curVal = valFetcherGlobal(tokens[i]);
+                int nextIdx = i + 1;
+                while (nextIdx < tokenCount && strcmp(tokens[nextIdx], "[") == 0) {
+                    int bDepth = 1;
+                    int j = nextIdx + 1;
+                    char argExpr[1000] = "";
+                    while (j < tokenCount && bDepth > 0) {
+                        if (strcmp(tokens[j], "[") == 0) bDepth++;
+                        else if (strcmp(tokens[j], "]") == 0) bDepth--;
+                        if (bDepth > 0) {
+                            strcat(argExpr, tokens[j]);
+                            strcat(argExpr, " ");
                         }
-                        tokenCount -= shift;
-                        continue;
+                        j++;
                     }
-                    if (listValue.type == VAL_FLOAT) res = listValue.f;
-                } else if (type == 8) { 
-                    res = (float)getCA(envStack[envTop].CA, tokens[i], (int)val(argExpr).f);
-                } else if (type == 9) { 
-                    res = (float)getBA(envStack[envTop].BA, tokens[i], (int)val(argExpr).f);
-                } else if (type == 11) { 
-                    char key[100] = "";
-                    struct Value kV = val(argExpr);
-                    if (kV.type == VAL_STRING) {  
-                        strcpy(key, kV.s);
-                    } else if (kV.type == VAL_FLOAT) {
-                        if (kV.f == (float)(int)kV.f) sprintf(key, "%d", (int)kV.f);
-                        else sprintf(key, "%f", kV.f);
+                    strcat(argExpr, ";");
+                    struct Value idxVal = val(argExpr);
+                    
+                    if (curVal.type == VAL_LIST) {
+                        struct lV *lv = (struct lV*)curVal.ptr;
+                        while (lv && lv->ref) lv = lv->ref;
+                        int idx = (int)idxVal.f;
+                        if (lv && idx >= 0 && idx < lv->size) {
+                            curVal = lv->data[idx];
+                        } else {
+                            curVal.type = VAL_ERROR;
+                            curVal.f = 0.0;
+                        }
+                    } else if (curVal.type == VAL_MAP) {
+                        struct mV *mv = (struct mV*)curVal.ptr;
+                        char key[100] = "";
+                        if (idxVal.type == VAL_STRING) {
+                            strcpy(key, idxVal.s);
+                        } else if (idxVal.type == VAL_FLOAT) {
+                            if (idxVal.f == (float)(int)idxVal.f) sprintf(key, "%d", (int)idxVal.f);
+                            else sprintf(key, "%f", idxVal.f);
+                        } else {
+                            sscanf(argExpr, "%s", key);
+                            if (key[0] == '"') {
+                                key[strlen(key)-1] = '\0';
+                                memmove(key, key+1, strlen(key));
+                            }
+                        }
+                        int found = 0;
+                        if (mv) {
+                            for (int k = 0; k < mv->count; k++) {
+                                if (!strcmp(mv->entries[k].key, key)) {
+                                    curVal = mv->entries[k].value;
+                                    found = 1;
+                                    break;
+                                }
+                            }
+                        }
+                        if (!found) {
+                            curVal.type = VAL_ERROR;
+                            curVal.f = 0.0;
+                        }
+                    } else if (curVal.type == VAL_INT_ARRAY) {
+                        struct iA *ia = (struct iA*)curVal.ptr;
+                        int idx = (int)idxVal.f;
+                        curVal.type = VAL_FLOAT;
+                        curVal.f = (ia && idx >= 0 && idx < ia->size) ? (float)ia->data[idx] : 0.0f;
+                    } else if (curVal.type == VAL_FLOAT_ARRAY) {
+                        struct fA *fa = (struct fA*)curVal.ptr;
+                        int idx = (int)idxVal.f;
+                        curVal.type = VAL_FLOAT;
+                        curVal.f = (fa && idx >= 0 && idx < fa->size) ? fa->data[idx] : 0.0f;
+                    } else if (curVal.type == VAL_CHAR_ARRAY) {
+                        struct cA *ca = (struct cA*)curVal.ptr;
+                        int idx = (int)idxVal.f;
+                        curVal.type = VAL_FLOAT;
+                        curVal.f = (ca && idx >= 0 && idx < ca->size) ? (float)ca->data[idx] : 0.0f;
+                    } else if (curVal.type == VAL_BOOL_ARRAY) {
+                        struct bA *ba = (struct bA*)curVal.ptr;
+                        int idx = (int)idxVal.f;
+                        curVal.type = VAL_FLOAT;
+                        curVal.f = (ba && idx >= 0 && idx < ba->size) ? (float)ba->data[idx] : 0.0f;
                     } else {
-                        sscanf(argExpr, "%s", key);
-                        if (key[0] == '"') {
-                            key[strlen(key)-1] = '\0';
-                            memmove(key, key+1, strlen(key));
-                        }
+                        curVal.type = VAL_ERROR;
+                        curVal.f = 0.0;
                     }
-                    struct Value mapValue = getM_Val(envStack[envTop].MV, tokens[i], key);
-                    if (mapValue.type == VAL_STRING) {
-                        snprintf(tokens[i], sizeof(tokens[i]), "\"%s\"", mapValue.s);
-                        int shift = j - (i + 1);
-                        for (int k = i + 1; k < tokenCount - shift; k++) {
-                            strcpy(tokens[k], tokens[k + shift]);
-                        }
-                        tokenCount -= shift;
-                        continue;
-                    }
-                    if (mapValue.type == VAL_FLOAT) res = mapValue.f;
-                    else res = 0.0;
+                    
+                    nextIdx = j;
                 }
-                char resStr[100];
-                sprintf(resStr, "%f", res);
-                strcpy(tokens[i], resStr);
-                int shift = j - (i + 1);
+                
+                if (curVal.type == VAL_STRING) {
+                    format_string_token(tokens[i], sizeof(tokens[i]), curVal.s);
+                } else if (curVal.type == VAL_FLOAT) {
+                    sprintf(tokens[i], "%f", curVal.f);
+                } else {
+                    char strVal[1000] = "";
+                    value_to_string(curVal, strVal, sizeof(strVal));
+                    format_string_token(tokens[i], sizeof(tokens[i]), strVal);
+                }
+                int shift = nextIdx - (i + 1);
                 for (int k = i + 1; k < tokenCount - shift; k++) {
                     strcpy(tokens[k], tokens[k + shift]);
                 }
@@ -307,6 +404,12 @@ void resolve_complex_types(char *expr) {
 
 struct Value val(char *buff)
 {
+    if (buff == NULL) { struct Value ev; ev.type=VAL_FLOAT; ev.f=0.0; ev.s[0]='\0'; return ev; }
+    char *chk = buff;
+    while (*chk == ' ' || *chk == '\t' || *chk == '\r' || *chk == '\n') chk++;
+    if (*chk == ';' || *chk == '\0') {
+        struct Value ev; ev.type=VAL_FLOAT; ev.f=0.0; ev.s[0]='\0'; return ev;
+    }
     Stack = NULL;
     PFEval = NULL;
     struct Value tot;
@@ -329,14 +432,26 @@ struct Value val(char *buff)
      
 
     int in_quotes = 0;
+    int prev_was_op = 1;
     while( (*buff != ';' || in_quotes) && *buff != '\n' && *buff != '\0')
     {
-        if (*buff == '"') { in_quotes = !in_quotes; }
+        if (*buff == '\\' && *(buff+1) == '"') {
+            if (in_quotes) {
+                *pf = *buff; pf++; buff++;
+                *pf = *buff; pf++; buff++;
+                continue;
+            }
+        }
+        if (*buff == '"') {
+            in_quotes = !in_quotes;
+            prev_was_op = 0;
+        }
         
         if(*buff == '(' && !in_quotes)
         {
             push( &Stack, *buff);
             buff++;
+            prev_was_op = 1;
         }
         else if (*buff == '=' && *(buff+1) == '=' && !in_quotes) { *buff = '#'; strcpy(buff+1, buff+2); continue; }
         else if (*buff == '&' && *(buff+1) == '&' && !in_quotes) { *buff = '&'; strcpy(buff+1, buff+2); continue; }
@@ -349,7 +464,7 @@ struct Value val(char *buff)
         else if (*buff == '!' && *(buff+1) == '=' && !in_quotes) { *buff = '@'; strcpy(buff+1, buff+2); continue; }
         else if (*buff == '<' && *(buff+1) == '=' && !in_quotes) { *buff = '^'; strcpy(buff+1, buff+2); continue; }
         else if (*buff == '>' && *(buff+1) == '=' && !in_quotes) { *buff = '?'; strcpy(buff+1, buff+2); continue; }
-        else if( (*buff == '$' || *buff == '*' || *buff == '/' || *buff == '%' || *buff == '+' || *buff == '-' || *buff == '<' || *buff == '>' || *buff == '&' || *buff == '|' || *buff == '~' || *buff == '!' || *buff == '#' || *buff == '@' || *buff == '^' || *buff == '?') && !in_quotes)
+        else if( (*buff == '$' || *buff == '*' || *buff == '/' || *buff == '%' || *buff == '+' || (*buff == '-' && !(prev_was_op && (isdigit(*(buff+1)) || *(buff+1) == '.'))) || *buff == '<' || *buff == '>' || *buff == '&' || *buff == '|' || *buff == '~' || *buff == '!' || *buff == '#' || *buff == '@' || *buff == '^' || *buff == '?') && !in_quotes)
         {
             *f='\0';
             f= &func[0];
@@ -391,6 +506,7 @@ struct Value val(char *buff)
 			buff++ ;
             if( *buff == ' ' || *buff == '\t' || *buff == '\r')
                 buff++;
+            prev_was_op = 1;
         }
         else if( *buff == ')' && !in_quotes)
         {
@@ -404,6 +520,7 @@ struct Value val(char *buff)
 				opr =  pop ( &Stack) ;
 			}
 			buff++;
+            prev_was_op = 0;
         }
         else
         {
@@ -414,6 +531,7 @@ struct Value val(char *buff)
             *f++;
 
             buff++;
+            prev_was_op = 0;
         }
     }
 
@@ -422,8 +540,10 @@ struct Value val(char *buff)
         *pf= ' ';
         pf++ ;
 		opr= pop( &Stack);
-		*pf= opr;
-        pf++;
+        if (opr != ' ') {
+            *pf= opr;
+            pf++;
+        }
 	}
 
     *pf = ' '; pf++; *pf = '\0';
@@ -432,7 +552,16 @@ struct Value val(char *buff)
     int eval_in_quotes = 0;
     while(*pf != '\0')
     {
-        if (*pf == '"') { eval_in_quotes = !eval_in_quotes; }
+        if (*pf == '\\' && *(pf+1) == '"') {
+            if (eval_in_quotes) {
+                *t = *pf; t++; pf++;
+                *t = *pf; t++; pf++;
+                continue;
+            }
+        }
+        if (*pf == '"') {
+            eval_in_quotes = !eval_in_quotes;
+        }
         if(*pf == ' ' && !eval_in_quotes)
         {
             *t= '\0';
@@ -443,10 +572,25 @@ struct Value val(char *buff)
                 else {
                     c= typeFetcher(temp);
                     if (c >= 1 && c <= 11) { pushV(valFetcherGlobal(temp), &PFEval); }
-                    else if (temp[0] == '"') {
+                    else if (temp[0] == '"' || (temp[0] == '\\' && temp[1] == '"')) {
                         struct Value v; v.type = VAL_STRING;
-                        strcpy(v.s, temp + 1);
-                        if (strlen(v.s) > 0 && v.s[strlen(v.s)-1] == '"') v.s[strlen(v.s)-1] = '\0';
+                        char *start = (temp[0] == '\\' && temp[1] == '"') ? temp + 2 : temp + 1;
+                        int vl = strlen(start);
+                        if (vl >= 2 && start[vl-2] == '\\' && start[vl-1] == '"') start[vl-2] = '\0';
+                        else if (vl >= 1 && start[vl-1] == '"') start[vl-1] = '\0';
+                        int d = 0;
+                        for (int s = 0; start[s] && d < 995; s++) {
+                            if (start[s] == '\\' && start[s+1] == '"') {
+                                v.s[d++] = '"';
+                                s++;
+                            } else if (start[s] == '\\' && start[s+1] == '\\') {
+                                v.s[d++] = '\\';
+                                s++;
+                            } else {
+                                v.s[d++] = start[s];
+                            }
+                        }
+                        v.s[d] = '\0';
                         pushV(v, &PFEval);
                     }
                     else if(isdigit(temp[0]) || (temp[0] == '-' && isdigit(temp[1]))) { x= atof(temp);  { struct Value v; v.type=VAL_FLOAT; v.f=x; pushV(v, &PFEval); } }
@@ -455,7 +599,7 @@ struct Value val(char *buff)
             t= &temp[0];
             *t = '\0';
         }
-        else if (priority(*pf) && !eval_in_quotes)
+        else if (priority(*pf) && !(*pf == '-' && (isdigit(*(pf+1)) || *(pf+1) == '.')) && !eval_in_quotes)
         {
             n1= popV(&PFEval);
             n2= popV(&PFEval);
@@ -463,12 +607,40 @@ struct Value val(char *buff)
             tot.f = 0.0;
              
             if (n1.type >= VAL_INT_ARRAY || n2.type >= VAL_INT_ARRAY) {
-                printf("Error: Syntax error on complex type arithmetic (n1.type=%d, n2.type=%d, op=%c)\n", n1.type, n2.type, *pf);
-                tot.type = VAL_ERROR;
-                tot.f = 0.0;
-                pushV(tot, &PFEval);
-                pf++;
-                continue;
+                if (*pf == '+') {
+                    tot.type = VAL_STRING;
+                    char s1[1000] = "", s2[1000] = "";
+                    value_to_string(n2, s2, sizeof(s2));
+                    value_to_string(n1, s1, sizeof(s1));
+                    snprintf(tot.s, sizeof(tot.s), "%s%s", s2, s1);
+                    pushV(tot, &PFEval);
+                    pf++;
+                    continue;
+                } else if (*pf == '~' || *pf == '#') {
+                    char s1[1000] = "", s2[1000] = "";
+                    value_to_string(n2, s2, sizeof(s2));
+                    value_to_string(n1, s1, sizeof(s1));
+                    tot.type = VAL_FLOAT;
+                    tot.f = (strcmp(s1, s2) == 0) ? 1.0 : 0.0;
+                    pushV(tot, &PFEval);
+                    pf++;
+                    continue;
+                } else if (*pf == '!' || *pf == '@') {
+                    char s1[1000] = "", s2[1000] = "";
+                    value_to_string(n2, s2, sizeof(s2));
+                    value_to_string(n1, s1, sizeof(s1));
+                    tot.type = VAL_FLOAT;
+                    tot.f = (strcmp(s1, s2) != 0) ? 1.0 : 0.0;
+                    pushV(tot, &PFEval);
+                    pf++;
+                    continue;
+                } else {
+                    tot.type = VAL_ERROR;
+                    tot.f = 0.0;
+                    pushV(tot, &PFEval);
+                    pf++;
+                    continue;
+                }
             }
             switch(*pf)
             {
@@ -476,7 +648,19 @@ struct Value val(char *buff)
                 case '%': tot.f= remainder(n2.f,n1.f); break;
                 case '/': tot.f= n2.f/n1.f; break;
                 case '*': tot.f= n2.f*n1.f; break;
-                case '+': tot.f= n2.f+n1.f; break;
+                case '+':
+                    if (n1.type == VAL_STRING || n2.type == VAL_STRING) {
+                        tot.type = VAL_STRING;
+                        char s2[1000] = "", s1[1000] = "";
+                        if (n2.type == VAL_STRING) strcpy(s2, n2.s);
+                        else if (n2.type == VAL_FLOAT) { if (n2.f == (float)(int)n2.f) sprintf(s2, "%d", (int)n2.f); else sprintf(s2, "%f", n2.f); }
+                        if (n1.type == VAL_STRING) strcpy(s1, n1.s);
+                        else if (n1.type == VAL_FLOAT) { if (n1.f == (float)(int)n1.f) sprintf(s1, "%d", (int)n1.f); else sprintf(s1, "%f", n1.f); }
+                        snprintf(tot.s, sizeof(tot.s), "%s%s", s2, s1);
+                    } else {
+                        tot.f= n2.f+n1.f;
+                    }
+                    break;
                 case '-': tot.f= n2.f-n1.f; break;
                 case '<': tot.f= n2.f<n1.f; break;
                 case '>': tot.f= n2.f>n1.f; break;

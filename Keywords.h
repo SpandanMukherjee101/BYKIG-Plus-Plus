@@ -49,6 +49,7 @@ int whichone(char *c)
     else if (!(strcmp(c, "break"))) return 25;
     else if (!(strcmp(c, "continue"))) return 26;
     else if (!(strcmp(c, "for"))) return 27;
+    else if (!(strcmp(c, "{"))) return 28;
     
     else return 11;
 }

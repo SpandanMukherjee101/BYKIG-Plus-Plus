@@ -1,0 +1,1200 @@
+// evaluator.bykig - Expression, Condition, Builtin, and Function Evaluator for mini-bykig++
+
+use "memory.bykig" ;
+
+string lastArgDelim = "" ;
+string argValStr = "" ;
+float argValNum = 0.0 ;
+float argValType = 0 ;
+
+string evalResStr = "" ;
+float evalResNum = 0.0 ;
+float evalResType = 0 ;
+float evalResIsStr = 0 ;
+
+string builtinResStr = "" ;
+float builtinResNum = 0.0 ;
+float builtinResType = 0 ;
+
+func skip_block ( ) {
+    float depth = 1 ;
+    while depth > 0
+    {
+        string token = file_scan_next ( ) ;
+        if token ~ "EOF"
+        {
+            out "Syntax Error: Unexpected EOF while skipping block%n" ;
+            break ;
+        }
+        if token ~ "{"
+        {
+            depth = depth + 1 ;
+        }
+        if token ~ "}"
+        {
+            depth = depth - 1 ;
+        }
+    }
+}
+
+func resolveToken ( string t ) {
+    if t ~ "true"
+    {
+        return "1" ;
+    }
+    if t ~ "false"
+    {
+        return "0" ;
+    }
+    
+    float isV = hasVar ( t ) ;
+    if isV ~ 1
+    {
+        float vType = getVarType ( t ) ;
+        if vType ~ 1
+        {
+            string sVal = getVarVal ( t ) ;
+            return sVal ;
+        }
+        else
+        {
+            float fVal = getVarVal ( t ) ;
+            return fVal ;
+        }
+    }
+    
+    return t ;
+}
+
+// Builtin functions recognized in mini-bykig++
+func isMiniBuiltin ( string name ) {
+    if name ~ "len"
+    {
+        return 1 ;
+    }
+    if name ~ "push"
+    {
+        return 1 ;
+    }
+    if name ~ "pop"
+    {
+        return 1 ;
+    }
+    if name ~ "exists"
+    {
+        return 1 ;
+    }
+    if name ~ "delete"
+    {
+        return 1 ;
+    }
+    return 0 ;
+}
+
+func execute_builtin_call ( string bName ) {
+    string openP = file_scan_next ( ) ;
+    
+    evalArg ( ) ;
+    string a0_s = argValStr ;
+    float a0_n = argValNum ;
+    float a0_t = argValType ;
+    string d0 = lastArgDelim ;
+    
+    string a1_s = "" ;
+    float a1_n = 0 ;
+    float a1_t = 0 ;
+    string d1 = "" ;
+    if d0 ~ ","
+    {
+        evalArg ( ) ;
+        a1_s = argValStr ;
+        a1_n = argValNum ;
+        a1_t = argValType ;
+        d1 = lastArgDelim ;
+    }
+    
+    string a2_s = "" ;
+    float a2_n = 0 ;
+    float a2_t = 0 ;
+    if d1 ~ ","
+    {
+        evalArg ( ) ;
+        a2_s = argValStr ;
+        a2_n = argValNum ;
+        a2_t = argValType ;
+    }
+    
+    builtinResStr = "" ;
+    builtinResNum = 0 ;
+    builtinResType = 0 ;
+    
+    if bName ~ "len"
+    {
+        if a0_t ~ 2
+        {
+            builtinResNum = listLen ( a0_n ) ;
+            builtinResType = 0 ;
+        }
+        elif a0_t ~ 3
+        {
+            builtinResNum = mapLen ( a0_n ) ;
+            builtinResType = 0 ;
+        }
+        else
+        {
+            builtinResNum = len ( a0_s ) ;
+            builtinResType = 0 ;
+        }
+    }
+    elif bName ~ "push"
+    {
+        if a0_t ~ 2
+        {
+            listPush ( a0_n , a1_s , a1_n , a1_t ) ;
+            builtinResNum = listLen ( a0_n ) ;
+            builtinResType = 0 ;
+        }
+        elif a0_t ~ 3
+        {
+            string keyStr = a1_s ;
+            if a1_t ~ 0
+            {
+                keyStr = "" + a1_n ;
+            }
+            mapSet ( a0_n , keyStr , a2_s , a2_n , a2_t ) ;
+            builtinResNum = mapLen ( a0_n ) ;
+            builtinResType = 0 ;
+        }
+    }
+    elif bName ~ "pop"
+    {
+        if a0_t ~ 2
+        {
+            float popT = listPopType ( a0_n ) ;
+            if popT ~ 1
+            {
+                builtinResStr = listPop ( a0_n ) ;
+                builtinResNum = 0 ;
+                builtinResType = 1 ;
+            }
+            else
+            {
+                builtinResNum = listPop ( a0_n ) ;
+                builtinResStr = "" ;
+                builtinResType = popT ;
+            }
+        }
+        elif a0_t ~ 3
+        {
+            string keyStr = a1_s ;
+            if a1_t ~ 0
+            {
+                keyStr = "" + a1_n ;
+            }
+            float popT = mapGetType ( a0_n , keyStr ) ;
+            if popT ~ 1
+            {
+                builtinResStr = mapGetVal ( a0_n , keyStr ) ;
+                builtinResNum = 0 ;
+                builtinResType = 1 ;
+            }
+            else
+            {
+                builtinResNum = mapGetVal ( a0_n , keyStr ) ;
+                builtinResStr = "" ;
+                builtinResType = popT ;
+            }
+            mapDelete ( a0_n , keyStr ) ;
+        }
+    }
+    elif bName ~ "exists"
+    {
+        if a0_t ~ 3
+        {
+            string keyStr = a1_s ;
+            if a1_t ~ 0
+            {
+                keyStr = "" + a1_n ;
+            }
+            builtinResNum = mapExists ( a0_n , keyStr ) ;
+            builtinResType = 0 ;
+        }
+    }
+    elif bName ~ "delete"
+    {
+        if a0_t ~ 3
+        {
+            string keyStr = a1_s ;
+            if a1_t ~ 0
+            {
+                keyStr = "" + a1_n ;
+            }
+            mapDelete ( a0_n , keyStr ) ;
+            builtinResNum = 1 ;
+            builtinResType = 0 ;
+        }
+    }
+}
+
+// Parses List Literals: [ elem1 , elem2 , ... ]
+func parse_list_literal ( ) {
+    float id = newList ( ) ;
+    while 1 < 2
+    {
+        string tok = file_scan_next ( ) ;
+        float tokIsStr = file_scan_is_str ( ) ;
+        if tok ~ "EOF"
+        {
+            break ;
+        }
+        if tok ~ "]"
+        {
+            break ;
+        }
+        if tok ~ ","
+        {
+            continue ;
+        }
+        
+        if tok ~ "["
+        {
+            float childId = parse_list_literal ( ) ;
+            listPush ( id , "" , childId , 2 ) ;
+        }
+        elif tok ~ "{"
+        {
+            float childMapId = parse_map_literal ( ) ;
+            listPush ( id , "" , childMapId , 3 ) ;
+        }
+        elif tokIsStr ~ 1
+        {
+            listPush ( id , tok , 0 , 1 ) ;
+        }
+        else
+        {
+            float isV = hasVar ( tok ) ;
+            if isV ~ 1
+            {
+                float ppos = file_scan_get_pos ( ) ;
+                string ntok = file_scan_next ( ) ;
+                if ntok ~ "["
+                {
+                    file_scan_set_pos ( ppos ) ;
+                    resolve_indexed_val ( tok ) ;
+                    listPush ( id , evalResStr , evalResNum , evalResType ) ;
+                }
+                else
+                {
+                    file_scan_set_pos ( ppos ) ;
+                    float vType = getVarType ( tok ) ;
+                    if vType ~ 1
+                    {
+                        string s = getVarVal ( tok ) ;
+                        listPush ( id , s , 0 , 1 ) ;
+                    }
+                    else
+                    {
+                        float n = getVarVal ( tok ) ;
+                        listPush ( id , "" , n , vType ) ;
+                    }
+                }
+            }
+            else
+            {
+                if tok ~ "true"
+                {
+                    listPush ( id , "" , 1 , 0 ) ;
+                }
+                elif tok ~ "false"
+                {
+                    listPush ( id , "" , 0 , 0 ) ;
+                }
+                else
+                {
+                    float isN = is_num ( tok ) ;
+                    if isN ~ 1
+                    {
+                        float numVal = parse_float ( tok ) ;
+                        listPush ( id , "" , numVal , 0 ) ;
+                    }
+                    else
+                    {
+                        listPush ( id , tok , 0 , 1 ) ;
+                    }
+                }
+            }
+        }
+    }
+    return id ;
+}
+
+// Parses Map Literals: { "k" : v , "k2" : v2 }
+func parse_map_literal ( ) {
+    float id = newMap ( ) ;
+    while 1 < 2
+    {
+        string keyTok = file_scan_next ( ) ;
+        float keyIsStr = file_scan_is_str ( ) ;
+        if keyTok ~ "EOF"
+        {
+            break ;
+        }
+        if keyTok ~ "}"
+        {
+            break ;
+        }
+        if keyTok ~ ","
+        {
+            continue ;
+        }
+        
+        string key = keyTok ;
+        string sep = file_scan_next ( ) ;
+        
+        string valTok = file_scan_next ( ) ;
+        float valIsStr = file_scan_is_str ( ) ;
+        
+        if valTok ~ "["
+        {
+            float childLId = parse_list_literal ( ) ;
+            mapSet ( id , key , "" , childLId , 2 ) ;
+        }
+        elif valTok ~ "{"
+        {
+            float childMId = parse_map_literal ( ) ;
+            mapSet ( id , key , "" , childMId , 3 ) ;
+        }
+        elif valIsStr ~ 1
+        {
+            mapSet ( id , key , valTok , 0 , 1 ) ;
+        }
+        else
+        {
+            float isV = hasVar ( valTok ) ;
+            if isV ~ 1
+            {
+                float ppos = file_scan_get_pos ( ) ;
+                string ntok = file_scan_next ( ) ;
+                if ntok ~ "["
+                {
+                    file_scan_set_pos ( ppos ) ;
+                    resolve_indexed_val ( valTok ) ;
+                    mapSet ( id , key , evalResStr , evalResNum , evalResType ) ;
+                }
+                else
+                {
+                    file_scan_set_pos ( ppos ) ;
+                    float vType = getVarType ( valTok ) ;
+                    if vType ~ 1
+                    {
+                        string s = getVarVal ( valTok ) ;
+                        mapSet ( id , key , s , 0 , 1 ) ;
+                    }
+                    else
+                    {
+                        float n = getVarVal ( valTok ) ;
+                        mapSet ( id , key , "" , n , vType ) ;
+                    }
+                }
+            }
+            else
+            {
+                if valTok ~ "true"
+                {
+                    mapSet ( id , key , "" , 1 , 0 ) ;
+                }
+                elif valTok ~ "false"
+                {
+                    mapSet ( id , key , "" , 0 , 0 ) ;
+                }
+                else
+                {
+                    float isN = is_num ( valTok ) ;
+                    if isN ~ 1
+                    {
+                        float numVal = parse_float ( valTok ) ;
+                        mapSet ( id , key , "" , numVal , 0 ) ;
+                    }
+                    else
+                    {
+                        mapSet ( id , key , valTok , 0 , 1 ) ;
+                    }
+                }
+            }
+        }
+    }
+    return id ;
+}
+
+// Chained index evaluation on a variable: matrix[0][1], data["users"][0]["name"]
+func resolve_indexed_val ( string varName ) {
+    float curObj = getVarVal ( varName ) ;
+    float curType = getVarType ( varName ) ;
+    
+    while 1 < 2
+    {
+        float ppos = file_scan_get_pos ( ) ;
+        string ntok = file_scan_next ( ) ;
+        if ntok ! "["
+        {
+            file_scan_set_pos ( ppos ) ;
+            break ;
+        }
+        
+        evalExpressionUntil ( "]" ) ;
+        string idxStr = evalResStr ;
+        float idxNum = evalResNum ;
+        float idxType = evalResType ;
+        
+        if curType ~ 2
+        {
+            float elemT = listGetType ( curObj , idxNum ) ;
+            if elemT ~ 1
+            {
+                evalResStr = listGetVal ( curObj , idxNum ) ;
+                evalResNum = 0 ;
+                evalResType = 1 ;
+                curType = 1 ;
+            }
+            else
+            {
+                curObj = listGetVal ( curObj , idxNum ) ;
+                evalResNum = curObj ;
+                evalResStr = "" ;
+                evalResType = elemT ;
+                curType = elemT ;
+            }
+        }
+        elif curType ~ 3
+        {
+            if idxType ~ 0
+            {
+                idxStr = "" + idxNum ;
+            }
+            float elemT = mapGetType ( curObj , idxStr ) ;
+            if elemT ~ 1
+            {
+                evalResStr = mapGetVal ( curObj , idxStr ) ;
+                evalResNum = 0 ;
+                evalResType = 1 ;
+                curType = 1 ;
+            }
+            else
+            {
+                curObj = mapGetVal ( curObj , idxStr ) ;
+                evalResNum = curObj ;
+                evalResStr = "" ;
+                evalResType = elemT ;
+                curType = elemT ;
+            }
+        }
+    }
+}
+
+func evalArg ( ) {
+    string expr = "" ;
+    float pDepth = 0 ;
+    float isSoleTerm = 1 ;
+    float soleType = 0 ;
+    float soleNum = 0 ;
+    string soleStr = "" ;
+    
+    while 1 < 2
+    {
+        string token = file_scan_next ( ) ;
+        float isLitStr = file_scan_is_str ( ) ;
+        if token ~ "EOF"
+        {
+            break ;
+        }
+        
+        if token ~ "("
+        {
+            pDepth = pDepth + 1 ;
+        }
+        if token ~ ")"
+        {
+            if pDepth ~ 0
+            {
+                lastArgDelim = ")" ;
+                break ;
+            }
+            pDepth = pDepth - 1 ;
+        }
+        if token ~ ","
+        {
+            if pDepth ~ 0
+            {
+                lastArgDelim = "," ;
+                break ;
+            }
+        }
+        
+        if token ~ "["
+        {
+            float lid = parse_list_literal ( ) ;
+            soleType = 2 ;
+            soleNum = lid ;
+            expr = "" ;
+            break ;
+        }
+        if token ~ "{"
+        {
+            float mid = parse_map_literal ( ) ;
+            soleType = 3 ;
+            soleNum = mid ;
+            expr = "" ;
+            break ;
+        }
+        
+        if isLitStr ~ 1
+        {
+            float apos = file_scan_get_pos ( ) ;
+            string aft = file_scan_next ( ) ;
+            file_scan_set_pos ( apos ) ;
+            if ( aft ~ ")" || aft ~ "," ) && expr ~ ""
+            {
+                soleType = 1 ;
+                soleStr = token ;
+                soleNum = 0 ;
+            }
+            else
+            {
+                isSoleTerm = 0 ;
+                string qTok = quote ( token ) ;
+                expr = expr + " " + qTok + " " ;
+            }
+        }
+        else
+        {
+            float isB = isMiniBuiltin ( token ) ;
+            if isB ~ 1
+            {
+                execute_builtin_call ( token ) ;
+                float bpos = file_scan_get_pos ( ) ;
+                string aft = file_scan_next ( ) ;
+                file_scan_set_pos ( bpos ) ;
+                if ( aft ~ ")" || aft ~ "," ) && expr ~ ""
+                {
+                    soleType = builtinResType ;
+                    soleNum = builtinResNum ;
+                    soleStr = builtinResStr ;
+                }
+                else
+                {
+                    isSoleTerm = 0 ;
+                    if builtinResType ~ 1
+                    {
+                        string qB = quote ( builtinResStr ) ;
+                        expr = expr + " " + qB + " " ;
+                    }
+                    else
+                    {
+                        expr = expr + " " + builtinResNum + " " ;
+                    }
+                }
+            }
+            else
+            {
+                float isF = hasFunc ( token ) ;
+                if isF ~ 1
+                {
+                    string p = file_scan_next ( ) ;
+                    execute_func_call ( token ) ;
+                    float retT = getReturnType ( ) ;
+                    float fpos = file_scan_get_pos ( ) ;
+                    string aft = file_scan_next ( ) ;
+                    file_scan_set_pos ( fpos ) ;
+                    if ( aft ~ ")" || aft ~ "," ) && expr ~ ""
+                    {
+                        soleType = retT ;
+                        if retT ~ 1
+                        {
+                            soleStr = getReturnVal ( ) ;
+                        }
+                        else
+                        {
+                            soleNum = getReturnVal ( ) ;
+                        }
+                    }
+                    else
+                    {
+                        isSoleTerm = 0 ;
+                        if retT ~ 1
+                        {
+                            string rStr = getReturnVal ( ) ;
+                            string qR = quote ( rStr ) ;
+                            expr = expr + " " + qR + " " ;
+                        }
+                        else
+                        {
+                            float rNum = getReturnVal ( ) ;
+                            expr = expr + " " + rNum + " " ;
+                        }
+                    }
+                }
+                else
+                {
+                    float isV = hasVar ( token ) ;
+                    if isV ~ 1
+                    {
+                        float ppos = file_scan_get_pos ( ) ;
+                        string ntok = file_scan_next ( ) ;
+                        if ntok ~ "["
+                        {
+                            file_scan_set_pos ( ppos ) ;
+                            resolve_indexed_val ( token ) ;
+                            float rpos = file_scan_get_pos ( ) ;
+                            string raft = file_scan_next ( ) ;
+                            file_scan_set_pos ( rpos ) ;
+                            if ( raft ~ ")" || raft ~ "," ) && expr ~ ""
+                            {
+                                soleType = evalResType ;
+                                soleNum = evalResNum ;
+                                soleStr = evalResStr ;
+                            }
+                            else
+                            {
+                                isSoleTerm = 0 ;
+                                if evalResType ~ 1
+                                {
+                                    string qE = quote ( evalResStr ) ;
+                                    expr = expr + " " + qE + " " ;
+                                }
+                                else
+                                {
+                                    expr = expr + " " + evalResNum + " " ;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            file_scan_set_pos ( ppos ) ;
+                            float vType = getVarType ( token ) ;
+                            if vType > 1
+                            {
+                                if ( ntok ~ ")" || ntok ~ "," ) && expr ~ ""
+                                {
+                                    soleType = vType ;
+                                    soleNum = getVarVal ( token ) ;
+                                }
+                                else
+                                {
+                                    isSoleTerm = 0 ;
+                                    expr = expr + " " + getVarVal ( token ) + " " ;
+                                }
+                            }
+                            else
+                            {
+                                if ( ntok ~ ")" || ntok ~ "," ) && expr ~ ""
+                                {
+                                    soleType = vType ;
+                                    if vType ~ 1
+                                    {
+                                        soleStr = getVarVal ( token ) ;
+                                    }
+                                    else
+                                    {
+                                        soleNum = getVarVal ( token ) ;
+                                    }
+                                }
+                                else
+                                {
+                                    isSoleTerm = 0 ;
+                                    if vType ~ 1
+                                    {
+                                        string s = getVarVal ( token ) ;
+                                        string qS = quote ( s ) ;
+                                        expr = expr + " " + qS + " " ;
+                                    }
+                                    else
+                                    {
+                                        float n = getVarVal ( token ) ;
+                                        expr = expr + " " + n + " " ;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        float lpos = file_scan_get_pos ( ) ;
+                        string laft = file_scan_next ( ) ;
+                        file_scan_set_pos ( lpos ) ;
+                        if ( laft ~ ")" || laft ~ "," ) && expr ~ ""
+                        {
+                            if token ~ "true"
+                            {
+                                soleType = 0 ;
+                                soleNum = 1 ;
+                            }
+                            elif token ~ "false"
+                            {
+                                soleType = 0 ;
+                                soleNum = 0 ;
+                            }
+                            else
+                            {
+                                float isN = is_num ( token ) ;
+                                if isN ~ 1
+                                {
+                                    soleType = 0 ;
+                                    soleNum = parse_float ( token ) ;
+                                }
+                                else
+                                {
+                                    isSoleTerm = 0 ;
+                                    string term = resolveToken ( token ) ;
+                                    expr = expr + " " + term + " " ;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            isSoleTerm = 0 ;
+                            string term = resolveToken ( token ) ;
+                            expr = expr + " " + term + " " ;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    if soleType > 1
+    {
+        argValType = soleType ;
+        argValNum = soleNum ;
+        argValStr = "" ;
+    }
+    elif isSoleTerm ~ 1
+    {
+        argValType = soleType ;
+        argValNum = soleNum ;
+        argValStr = soleStr ;
+    }
+    elif expr ~ ""
+    {
+        argValStr = "" ;
+        argValNum = 0 ;
+        argValType = 0 ;
+    }
+    else
+    {
+        string res = eval ( expr ) ;
+        float resIsN = is_num ( res ) ;
+        if resIsN ~ 1
+        {
+            argValNum = parse_float ( res ) ;
+            argValStr = "" ;
+            argValType = 0 ;
+        }
+        else
+        {
+            argValStr = res ;
+            argValNum = 0 ;
+            argValType = 1 ;
+        }
+    }
+}
+
+func execute_func_call ( string funcName ) {
+    float pCount = getFuncParamCount ( funcName ) ;
+    
+    string a0_s = "" ;
+    float a0_n = 0 ;
+    float a0_t = 0 ;
+    string a1_s = "" ;
+    float a1_n = 0 ;
+    float a1_t = 0 ;
+    string a2_s = "" ;
+    float a2_n = 0 ;
+    float a2_t = 0 ;
+    string a3_s = "" ;
+    float a3_n = 0 ;
+    float a3_t = 0 ;
+    
+    if pCount > 0
+    {
+        evalArg ( ) ;
+        a0_s = argValStr ;
+        a0_n = argValNum ;
+        a0_t = argValType ;
+    }
+    if pCount > 1
+    {
+        evalArg ( ) ;
+        a1_s = argValStr ;
+        a1_n = argValNum ;
+        a1_t = argValType ;
+    }
+    if pCount > 2
+    {
+        evalArg ( ) ;
+        a2_s = argValStr ;
+        a2_n = argValNum ;
+        a2_t = argValType ;
+    }
+    if pCount > 3
+    {
+        evalArg ( ) ;
+        a3_s = argValStr ;
+        a3_n = argValNum ;
+        a3_t = argValType ;
+    }
+    if pCount ~ 0
+    {
+        string dummy = file_scan_next ( ) ;
+    }
+    
+    float saved_pos = file_scan_get_pos ( ) ;
+    file_scan_set_pos ( getFuncPos ( funcName ) ) ;
+    
+    pushScope ( ) ;
+    if pCount > 0
+    {
+        string pn0 = getFuncParamName ( funcName , 0 ) ;
+        defVarVal ( pn0 , a0_s , a0_n , a0_t ) ;
+    }
+    if pCount > 1
+    {
+        string pn1 = getFuncParamName ( funcName , 1 ) ;
+        defVarVal ( pn1 , a1_s , a1_n , a1_t ) ;
+    }
+    if pCount > 2
+    {
+        defVarVal ( getFuncParamName ( funcName , 2 ) , a2_s , a2_n , a2_t ) ;
+    }
+    if pCount > 3
+    {
+        defVarVal ( getFuncParamName ( funcName , 3 ) , a3_s , a3_n , a3_t ) ;
+    }
+    
+    execute_block ( 1 ) ;
+    
+    file_scan_set_pos ( saved_pos ) ;
+    popScope ( ) ;
+    hasReturn = 0 ;
+}
+
+func evalExpressionUntil ( string stopToken ) {
+    string expr = "" ;
+    float isSoleTerm = 1 ;
+    float soleType = 0 ;
+    float soleNum = 0 ;
+    string soleStr = "" ;
+    
+    while 1 < 2
+    {
+        string token = file_scan_next ( ) ;
+        float isLitStr = file_scan_is_str ( ) ;
+        if token ~ "EOF"
+        {
+            break ;
+        }
+        if token ~ stopToken
+        {
+            break ;
+        }
+        
+        if token ~ "["
+        {
+            float lid = parse_list_literal ( ) ;
+            soleType = 2 ;
+            soleNum = lid ;
+            expr = "" ;
+            while 1 < 2
+            {
+                string t = file_scan_next ( ) ;
+                if t ~ stopToken
+                {
+                    break ;
+                }
+                if t ~ "EOF"
+                {
+                    break ;
+                }
+            }
+            break ;
+        }
+        if token ~ "{"
+        {
+            float mid = parse_map_literal ( ) ;
+            soleType = 3 ;
+            soleNum = mid ;
+            expr = "" ;
+            while 1 < 2
+            {
+                string t = file_scan_next ( ) ;
+                if t ~ stopToken
+                {
+                    break ;
+                }
+                if t ~ "EOF"
+                {
+                    break ;
+                }
+            }
+            break ;
+        }
+        
+        if isLitStr ~ 1
+        {
+            float apos = file_scan_get_pos ( ) ;
+            string aft = file_scan_next ( ) ;
+            file_scan_set_pos ( apos ) ;
+            if aft ~ stopToken && expr ~ ""
+            {
+                soleType = 1 ;
+                soleStr = token ;
+                soleNum = 0 ;
+            }
+            else
+            {
+                isSoleTerm = 0 ;
+                string qTok = quote ( token ) ;
+                expr = expr + " " + qTok + " " ;
+            }
+        }
+        else
+        {
+            float isB = isMiniBuiltin ( token ) ;
+            if isB ~ 1
+            {
+                execute_builtin_call ( token ) ;
+                float bpos = file_scan_get_pos ( ) ;
+                string aft = file_scan_next ( ) ;
+                file_scan_set_pos ( bpos ) ;
+                if aft ~ stopToken && expr ~ ""
+                {
+                    soleType = builtinResType ;
+                    soleNum = builtinResNum ;
+                    soleStr = builtinResStr ;
+                }
+                else
+                {
+                    isSoleTerm = 0 ;
+                    if builtinResType ~ 1
+                    {
+                        string qB = quote ( builtinResStr ) ;
+                        expr = expr + " " + qB + " " ;
+                    }
+                    else
+                    {
+                        expr = expr + " " + builtinResNum + " " ;
+                    }
+                }
+            }
+            else
+            {
+                float isF = hasFunc ( token ) ;
+                if isF ~ 1
+                {
+                    string p = file_scan_next ( ) ;
+                    execute_func_call ( token ) ;
+                    float retT = getReturnType ( ) ;
+                    float fpos = file_scan_get_pos ( ) ;
+                    string aft = file_scan_next ( ) ;
+                    file_scan_set_pos ( fpos ) ;
+                    if aft ~ stopToken && expr ~ ""
+                    {
+                        soleType = retT ;
+                        if retT ~ 1
+                        {
+                            soleStr = getReturnVal ( ) ;
+                        }
+                        else
+                        {
+                            soleNum = getReturnVal ( ) ;
+                        }
+                    }
+                    else
+                    {
+                        isSoleTerm = 0 ;
+                        if retT ~ 1
+                        {
+                            string rStr = getReturnVal ( ) ;
+                            string qR = quote ( rStr ) ;
+                            expr = expr + " " + qR + " " ;
+                        }
+                        else
+                        {
+                            float rNum = getReturnVal ( ) ;
+                            expr = expr + " " + rNum + " " ;
+                        }
+                    }
+                }
+                else
+                {
+                    float isV = hasVar ( token ) ;
+                    if isV ~ 1
+                    {
+                        float ppos = file_scan_get_pos ( ) ;
+                        string ntok = file_scan_next ( ) ;
+                        if ntok ~ "["
+                        {
+                            file_scan_set_pos ( ppos ) ;
+                            resolve_indexed_val ( token ) ;
+                            float rpos = file_scan_get_pos ( ) ;
+                            string raft = file_scan_next ( ) ;
+                            file_scan_set_pos ( rpos ) ;
+                            if raft ~ stopToken && expr ~ ""
+                            {
+                                soleType = evalResType ;
+                                soleNum = evalResNum ;
+                                soleStr = evalResStr ;
+                            }
+                            else
+                            {
+                                isSoleTerm = 0 ;
+                                if evalResType ~ 1
+                                {
+                                    string qE = quote ( evalResStr ) ;
+                                    expr = expr + " " + qE + " " ;
+                                }
+                                else
+                                {
+                                    expr = expr + " " + evalResNum + " " ;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            file_scan_set_pos ( ppos ) ;
+                            float vType = getVarType ( token ) ;
+                            if vType > 1
+                            {
+                                if ntok ~ stopToken && expr ~ ""
+                                {
+                                    soleType = vType ;
+                                    soleNum = getVarVal ( token ) ;
+                                }
+                                else
+                                {
+                                    isSoleTerm = 0 ;
+                                    expr = expr + " " + getVarVal ( token ) + " " ;
+                                }
+                            }
+                            else
+                            {
+                                if ntok ~ stopToken && expr ~ ""
+                                {
+                                    soleType = vType ;
+                                    if vType ~ 1
+                                    {
+                                        soleStr = getVarVal ( token ) ;
+                                    }
+                                    else
+                                    {
+                                        soleNum = getVarVal ( token ) ;
+                                    }
+                                }
+                                else
+                                {
+                                    isSoleTerm = 0 ;
+                                    if vType ~ 1
+                                    {
+                                        string s = getVarVal ( token ) ;
+                                        string qS = quote ( s ) ;
+                                        expr = expr + " " + qS + " " ;
+                                    }
+                                    else
+                                    {
+                                        float n = getVarVal ( token ) ;
+                                        expr = expr + " " + n + " " ;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        float lpos = file_scan_get_pos ( ) ;
+                        string laft = file_scan_next ( ) ;
+                        file_scan_set_pos ( lpos ) ;
+                        if laft ~ stopToken && expr ~ ""
+                        {
+                            if token ~ "true"
+                            {
+                                soleType = 0 ;
+                                soleNum = 1 ;
+                            }
+                            elif token ~ "false"
+                            {
+                                soleType = 0 ;
+                                soleNum = 0 ;
+                            }
+                            else
+                            {
+                                float isN = is_num ( token ) ;
+                                if isN ~ 1
+                                {
+                                    soleType = 0 ;
+                                    soleNum = parse_float ( token ) ;
+                                }
+                                else
+                                {
+                                    isSoleTerm = 0 ;
+                                    string term = resolveToken ( token ) ;
+                                    expr = expr + " " + term + " " ;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            isSoleTerm = 0 ;
+                            string term = resolveToken ( token ) ;
+                            expr = expr + " " + term + " " ;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    if soleType > 1
+    {
+        evalResType = soleType ;
+        evalResNum = soleNum ;
+        evalResStr = "" ;
+        evalResIsStr = 0 ;
+    }
+    elif isSoleTerm ~ 1
+    {
+        evalResType = soleType ;
+        evalResNum = soleNum ;
+        evalResStr = soleStr ;
+        evalResIsStr = 0 ;
+        if soleType ~ 1
+        {
+            evalResIsStr = 1 ;
+        }
+    }
+    elif expr ~ ""
+    {
+        evalResStr = "" ;
+        evalResNum = 0 ;
+        evalResType = 0 ;
+        evalResIsStr = 0 ;
+    }
+    else
+    {
+        string res = eval ( expr ) ;
+        float resIsN = is_num ( res ) ;
+        if resIsN ~ 1
+        {
+            evalResNum = parse_float ( res ) ;
+            evalResStr = "" ;
+            evalResType = 0 ;
+            evalResIsStr = 0 ;
+        }
+        else
+        {
+            evalResStr = res ;
+            evalResNum = 0 ;
+            evalResType = 1 ;
+            evalResIsStr = 1 ;
+        }
+    }
+}
+.

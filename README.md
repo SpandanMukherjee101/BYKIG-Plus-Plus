@@ -8,17 +8,20 @@ It extends the original BYKIG interpreter with a broader runtime model while ret
 
 - Primitive types: `int`, `float`, `char`, `bool`, `string`
 - Arithmetic, comparison, and logical expressions
-- `if`, `elif`, `else`, `while`, `break`, `continue`
+- Control flow: `if`, `elif`, `else`, `while`, `for`, `break`, `continue`
 - Functions, return values, nested calls, and recursion
-- Function-local environments and scope-aware lookup
-- Primitive arrays
-- Dynamic numeric lists
-- String-key/float-value maps
-- Built-in collection and filesystem APIs
-- Streaming file scanner
+- Function-local environments and scope-aware lookup with variable shadowing
+- Primitive arrays: `intarr`, `floatarr`, `chararr`, `boolarr`
+- Dynamic generic lists with arbitrary `Value` elements and capacity growth
+- Generic dynamic associative maps with `Value` values and dynamic capacity
+- Multi-dimensional and nested indexing (`matrix[0][1] = 99 ;`, `data["users"][0]["name"]`)
+- Built-in collection operations: `len`, `push`, `pop`, `exists`, `delete`
+- Expanded utility built-ins: `quote`, `strip_quotes`, `is_num`, `is_str`, `starts_with`, `parse_float`
+- Streaming file scanner (`file_scan_*`) with punctuation-aware tokenization
 - Multi-file execution through `use`
-- Runtime `Value` abstraction
-- Frame cleanup for function environments
+- Unified runtime `Value` abstraction
+- Frame cleanup for scoped environments and function calls
+- Includes [`mini-bykig++`](mini-bykig++/README.md), a self-hosting-ready companion interpreter written entirely in BYKIG++
 
 ## Architecture at a glance
 
@@ -62,6 +65,7 @@ BYKIG++ does not build a traditional AST. Functions and control flow rely heavil
 | [`FeatureMatrix.md`](FeatureMatrix.md) | Supported features, runtime structures, built-ins, and current implementation boundaries. |
 | [`UserGuide.md`](UserGuide.md) | Syntax, examples, language usage, CLI usage, I/O, collections, functions, and modules. |
 | [`DevGuide.md`](DevGuide.md) | Runtime architecture, source layout, extension points, memory ownership, functions, expressions, and modules. |
+| [`mini-bykig++/README.md`](mini-bykig++/README.md) | Architecture and user guide for `mini-bykig++`, the self-hosted interpreter written in BYKIG++. |
 
 ## Quick example
 
@@ -73,12 +77,20 @@ func add ( int a , int b )
 
 int result = add ( 5 , 10 ) ;
 out "Result: " + result + "%n" ;
+
+list numbers = { 10 , 20 , 30 } ;
+push ( numbers , 40 ) ;
+out "List: " + numbers + "%n" ;
+
+map user = { "name" : "Alice" , "role" : "admin" } ;
+user [ "city" ] = "Paris" ;
+out "User: " + user + "%n" ;
 .
 ```
 
 ## Syntax reminders
 
-BYKIG++ is intentionally strict about spacing. Prefer:
+BYKIG++ uses clean token spacing. Prefer:
 
 ```bykig
 int x = 5 ;
@@ -111,14 +123,21 @@ Windows PowerShell:
 
 Running without a file argument starts the filename-prompt mode.
 
+To run the `mini-bykig++` interpreter on a `.mini` program:
+
+```powershell
+echo mini-bykig++/test_collections.mini | .\Interpreter.exe mini-bykig++/main.bykig
+```
+
 ## Current implementation notes
 
 - Primitive variables and collections are stored in specialized linked-list structures.
 - `Value` provides a common runtime representation for expression results and complex objects.
 - Function calls create a new environment and call frame; frame-owned allocations are cleaned when the call unwinds.
-- Lists currently store numeric `float` elements.
-- Maps currently use fixed arrays of string keys and float values.
-- `use` executes another source file in the current runtime environment rather than creating a module namespace.
+- Dynamic lists store generic `Value` elements (numbers, strings, nested lists, maps).
+- Dynamic maps use generic `Value`-backed dynamic entries with automatic capacity growth (`realloc`).
+- Nested indexing is fully supported for expressions and assignments.
+- `use` executes another source file in the current runtime environment rather than creating an isolated module namespace.
 - The interpreter remains source-position-driven rather than AST-driven.
 
 ## Author

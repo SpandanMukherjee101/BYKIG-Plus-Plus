@@ -1,0 +1,29 @@
+// test_basic.mini - Basic variables, arithmetic, strings, booleans, and comments
+
+// Variables and arithmetic
+var a = 10 ;
+var b = 20 ;
+var c = a + b * 2 ; // 10 + 40 = 50
+out c ;
+
+// Re-assignment
+c = c + 5 ;
+out c ; // 55
+
+// Strings
+var greeting = "Hello" ;
+var target = "World" ;
+var msg = greeting + " " + target + "!" ;
+out msg ;
+
+// Booleans & Comparisons
+var flag1 = true ;
+var flag2 = false ;
+var cmp1 = a < b ;
+var cmp2 = a == 10 ;
+out flag1 ;
+out cmp1 ;
+out cmp2 ;
+
+.
+

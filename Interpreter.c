@@ -174,6 +174,7 @@ void execute_for_stmt(char *raw_stmt) {
                     char rhsBuf[1024];
                     snprintf(rhsBuf, sizeof(rhsBuf), "%s ;", rhs);
                     struct Value rVal = val(rhsBuf);
+                    printf("LINE 176: rhsBuf=[%s], rVal.type=%d, rVal.s=[%s]\n", rhsBuf, rVal.type, rVal.s);
                     
                     char *bracket = strchr(lhs, '[');
                     if (bracket) {
@@ -256,6 +257,15 @@ void execute_for_stmt(char *raw_stmt) {
             if (part_len < sizeof(part) - 1) part[part_len++] = ch;
         }
     }
+}
+
+static inline char* find_brace_outside_quotes(const char *buf) {
+    int in_q = 0;
+    for (int i = 0; buf[i]; i++) {
+        if (buf[i] == '"') in_q = !in_q;
+        else if (buf[i] == '{' && !in_q) return (char*)&buf[i];
+    }
+    return NULL;
 }
 
 struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
@@ -445,7 +455,7 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
             dataF = val(buffer).f;
             if (dataF)
             {
-                if (!strchr(buffer, '{')) fgets(buffer, 1000, fp);
+                if (!find_brace_outside_quotes(buffer)) fgets(buffer, 1000, fp);
                 c[p]= 1;
                 envTop++;
                 initEnvironmentFrame(&envStack[envTop]);
@@ -453,34 +463,25 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
             }
             else
             {
-                if (!strchr(buffer, '{')) fgets(buffer, 1000, fp);
+                c[p] = 0;
+                if (!find_brace_outside_quotes(buffer)) fgets(buffer, 1000, fp);
                 while (k!=p)
                 {
                     fgets(buffer, 1000, fp);
 
-                    b1= 0;
-                    b2= 0;
-                    for(int i= 0; i<strlen(buffer); i++)
-                    {
-                        if(buffer[i]=='{')
-                        {
-                            b1= 1;
+                    for (int i = 0; buffer[i]; i++) {
+                        if (buffer[i] == '"') {
+                            i++;
+                            while (buffer[i] && buffer[i] != '"') i++;
+                            if (!buffer[i]) break;
+                        } else if (buffer[i] == '/' && buffer[i+1] == '/') {
                             break;
+                        } else if (buffer[i] == '{') {
+                            p++;
+                        } else if (buffer[i] == '}') {
+                            p--;
                         }
                     }
-                    for(int i= 0; i<strlen(buffer); i++)
-                    {
-                        if(buffer[i]=='}')
-                        {
-                            b2= 1;
-                            break;
-                        }
-                    }
-
-                    if (b1)
-                        p++;
-                    else if (b2)
-                        p--;
                 }
 
                 safe_fscanf(fp, "%s", buffer); if(strcmp(buffer, "elif") && strcmp(buffer, "else"))
@@ -507,7 +508,7 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
             dataF = val(buffer).f;
             if (dataF && c[p]!=1)
             {
-                if (!strchr(buffer, '{')) fgets(buffer, 1000, fp);
+                if (!find_brace_outside_quotes(buffer)) fgets(buffer, 1000, fp);
                 c[p]= 1;
                 envTop++;
                 initEnvironmentFrame(&envStack[envTop]);
@@ -521,29 +522,19 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                 
                     fgets(buffer, 1000, fp);
 
-                    b1= 0;
-                    b2= 0;
-                    for(int i= 0; i<strlen(buffer); i++)
-                    {
-                        if(buffer[i]=='{')
-                        {
-                            b1= 1;
+                    for (int i = 0; buffer[i]; i++) {
+                        if (buffer[i] == '"') {
+                            i++;
+                            while (buffer[i] && buffer[i] != '"') i++;
+                            if (!buffer[i]) break;
+                        } else if (buffer[i] == '/' && buffer[i+1] == '/') {
                             break;
+                        } else if (buffer[i] == '{') {
+                            p++;
+                        } else if (buffer[i] == '}') {
+                            p--;
                         }
                     }
-                    for(int i= 0; i<strlen(buffer); i++)
-                    {
-                        if(buffer[i]=='}')
-                        {
-                            b2= 1;
-                            break;
-                        }
-                    }
-
-                    if (b1)
-                        p++;
-                    else if (b2)
-                        p--;
                 }
 
                 safe_fscanf(fp, "%s", buffer); if(strcmp(buffer, "elif") && strcmp(buffer, "else"))
@@ -569,7 +560,7 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
             
             if (c[p]!= 1)
             {
-                if (!strchr(buffer, '{')) fgets(buffer, 1000, fp);
+                if (!find_brace_outside_quotes(buffer)) fgets(buffer, 1000, fp);
                 c[p]= 1;
                 envTop++;
                 initEnvironmentFrame(&envStack[envTop]);
@@ -583,29 +574,19 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                 
                     fgets(buffer, 1000, fp);
 
-                    b1= 0;
-                    b2= 0;
-                    for(int i= 0; i<strlen(buffer); i++)
-                    {
-                        if(buffer[i]=='{')
-                        {
-                            b1= 1;
+                    for (int i = 0; buffer[i]; i++) {
+                        if (buffer[i] == '"') {
+                            i++;
+                            while (buffer[i] && buffer[i] != '"') i++;
+                            if (!buffer[i]) break;
+                        } else if (buffer[i] == '/' && buffer[i+1] == '/') {
                             break;
+                        } else if (buffer[i] == '{') {
+                            p++;
+                        } else if (buffer[i] == '}') {
+                            p--;
                         }
                     }
-                    for(int i= 0; i<strlen(buffer); i++)
-                    {
-                        if(buffer[i]=='}')
-                        {
-                            b2= 1;
-                            break;
-                        }
-                    }
-
-                    if (b1)
-                        p++;
-                    else if (b2)
-                        p--;
                 }
 
                 safe_fscanf(fp, "%s", buffer); if(strcmp(buffer, "elif") && strcmp(buffer, "else"))
@@ -674,6 +655,11 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
             {
                 if (c[p]==2)
                 {
+                    if (p >= 0 && blockEnv[p]) {
+                        cleanupFrame(&envStack[envTop]);
+                        envTop--;
+                        blockEnv[p] = 0;
+                    }
                     fseek( fp, w[p], SEEK_SET);
                     w[p]= 0;
                     --p;
@@ -701,11 +687,14 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
 
             fgets(buffer, 1000, fp);
             dataF = val(buffer).f;
-            if (!strchr(buffer, '{')) fgets(buffer, 1000, fp);
+            if (!find_brace_outside_quotes(buffer)) fgets(buffer, 1000, fp);
             
             if (dataF)
             {
                 c[p]= 2;
+                envTop++;
+                initEnvironmentFrame(&envStack[envTop]);
+                blockEnv[p] = 1;
             }
             else
             {
@@ -828,6 +817,12 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                         if (strData) printf("%s", strData);
                         else printf("\nVariable not found!!!\n");
                     }
+                    else if (type >= 6 && type <= 11)
+                    {
+                        char outBuf[4096];
+                        value_to_string(valFetcherGlobal(tempS), outBuf, sizeof(outBuf));
+                        printf("%s", outBuf);
+                    }
                     else
                     {
                          
@@ -840,6 +835,10 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                         struct Value result = val(evalBuf);
                         if (result.type == VAL_STRING) {
                             printf("%s", result.s);
+                        } else if (result.type >= VAL_INT_ARRAY) {
+                            char outBuf[4096];
+                            value_to_string(result, outBuf, sizeof(outBuf));
+                            printf("%s", outBuf);
                         } else {
                             printf("%f", result.f);
                         }
@@ -972,30 +971,36 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
             DO_ASSIGNMENT:
             strcpy(name, buffer);
 
-            if (type >= 6 && type <= 11) {  
-                safe_fscanf(fp, "%s", buffer); safe_fscanf(fp, "%s", buffer); int idx = 0;
-                char keyStr[1000] = "";
-                if (type == 11) {
-                    struct Value kV = val(buffer);
-                    if (kV.type == 1) {  
-                        strcpy(keyStr, kV.s);
-                    } else {
-                        strcpy(keyStr, buffer);
-                        if (keyStr[0] == '"') {
-                            keyStr[strlen(keyStr)-1] = '\0';
-                            memmove(keyStr, keyStr+1, strlen(keyStr));
+            int next_ch;
+            while ((next_ch = fgetc(fp)) != EOF && (next_ch == ' ' || next_ch == '\t' || next_ch == '\r' || next_ch == '\n'));
+            if (next_ch == '[') {
+                ungetc(next_ch, fp);
+                safe_fscanf(fp, "%s", buffer);
+                struct Value indices[16];
+                int numIndices = 0;
+                while (!strcmp(buffer, "[")) {
+                    char idxExpr[1000] = "";
+                    int bDepth = 1;
+                    while (bDepth > 0) {
+                        safe_fscanf(fp, "%s", buffer);
+                        if (!strcmp(buffer, "[")) bDepth++;
+                        else if (!strcmp(buffer, "]")) {
+                            bDepth--;
+                            if (bDepth == 0) break;
                         }
+                        strcat(idxExpr, buffer);
+                        strcat(idxExpr, " ");
                     }
-                } else {
-                    idx = (int)val(buffer).f;  
+                    strcat(idxExpr, ";");
+                    indices[numIndices++] = val(idxExpr);
+                    safe_fscanf(fp, "%s", buffer);
                 }
-                
-                safe_fscanf(fp, "%s", buffer); safe_fscanf(fp, "%s", buffer); char exprBuf[1000] = "";
+                char exprBuf[1000] = "";
                 int pDepth = 0;
                 while (1) {
                     safe_fscanf(fp, "%s", tD);
                     if (!strcmp(tD, ".")) { goto ERROR; }
-                      if (!strcmp(tD, "(")) pDepth++;
+                    if (!strcmp(tD, "(")) pDepth++;
                     else if (!strcmp(tD, ")")) pDepth--;
                     if (pDepth == 0 && (!strcmp(tD, ";"))) {
                         break;
@@ -1004,14 +1009,114 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                     strcat(exprBuf, " ");
                 }
                 strcat(exprBuf, ";");
-                
-                if (type == 6) setIA(envStack[envTop].IA, name, idx, (int)val(exprBuf).f);
-                else if (type == 7) setFA(envStack[envTop].FA, name, idx, val(exprBuf).f);
-                else if (type == 8) setCA(envStack[envTop].CA, name, idx, (char)val(exprBuf).f);
-                else if (type == 9) setBA(envStack[envTop].BA, name, idx, (int)val(exprBuf).f);
-                else if (type == 10) setL(envStack[envTop].LV, name, idx, val(exprBuf));
-                else if (type == 11) setM_Val(envStack[envTop].MV, name, keyStr, val(exprBuf));
+                struct Value rhsVal = val(exprBuf);
+
+                if (numIndices == 1) {
+                    if (type == 6) setIA(envStack[envTop].IA, name, (int)indices[0].f, (int)rhsVal.f);
+                    else if (type == 7) setFA(envStack[envTop].FA, name, (int)indices[0].f, rhsVal.f);
+                    else if (type == 8) setCA(envStack[envTop].CA, name, (int)indices[0].f, (char)rhsVal.f);
+                    else if (type == 9) setBA(envStack[envTop].BA, name, (int)indices[0].f, (int)rhsVal.f);
+                    else if (type == 10) setL(envStack[envTop].LV, name, (int)indices[0].f, rhsVal);
+                    else if (type == 11) {
+                        char keyStr[1000] = "";
+                        if (indices[0].type == VAL_STRING) strcpy(keyStr, indices[0].s);
+                        else if (indices[0].type == VAL_FLOAT) {
+                            if (indices[0].f == (float)(int)indices[0].f) sprintf(keyStr, "%d", (int)indices[0].f);
+                            else sprintf(keyStr, "%f", indices[0].f);
+                        } else {
+                            strcpy(keyStr, indices[0].s);
+                        }
+                        setM_Val(envStack[envTop].MV, name, keyStr, rhsVal);
+                    }
+                } else {
+                    struct Value cur = valFetcherGlobal(name);
+                    for (int k = 0; k < numIndices - 1; k++) {
+                        if (cur.type == VAL_LIST) {
+                            struct lV *lv = (struct lV*)cur.ptr;
+                            while (lv && lv->ref) lv = lv->ref;
+                            int idx = (int)indices[k].f;
+                            if (lv && idx >= 0 && idx < lv->size) {
+                                cur = lv->data[idx];
+                            } else {
+                                break;
+                            }
+                        } else if (cur.type == VAL_MAP) {
+                            struct mV *mv = (struct mV*)cur.ptr;
+                            char key[1000] = "";
+                            if (indices[k].type == VAL_STRING) strcpy(key, indices[k].s);
+                            else if (indices[k].type == VAL_FLOAT) {
+                                if (indices[k].f == (float)(int)indices[k].f) sprintf(key, "%d", (int)indices[k].f);
+                                else sprintf(key, "%f", indices[k].f);
+                            }
+                            int found = 0;
+                            if (mv) {
+                                for (int e = 0; e < mv->count; e++) {
+                                    if (!strcmp(mv->entries[e].key, key)) {
+                                        cur = mv->entries[e].value;
+                                        found = 1;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (!found) break;
+                        }
+                    }
+                    int last = numIndices - 1;
+                    if (cur.type == VAL_LIST) {
+                        struct lV *lv = (struct lV*)cur.ptr;
+                        while (lv && lv->ref) lv = lv->ref;
+                        int idx = (int)indices[last].f;
+                        if (lv && idx >= 0 && idx < lv->size) {
+                            lv->data[idx] = rhsVal;
+                        }
+                    } else if (cur.type == VAL_MAP) {
+                        struct mV *mv = (struct mV*)cur.ptr;
+                        char key[1000] = "";
+                        if (indices[last].type == VAL_STRING) strcpy(key, indices[last].s);
+                        else if (indices[last].type == VAL_FLOAT) {
+                            if (indices[last].f == (float)(int)indices[last].f) sprintf(key, "%d", (int)indices[last].f);
+                            else sprintf(key, "%f", indices[last].f);
+                        }
+                        if (mv) {
+                            int found = 0;
+                            for (int e = 0; e < mv->count; e++) {
+                                if (!strcmp(mv->entries[e].key, key)) {
+                                    mv->entries[e].value = rhsVal;
+                                    found = 1;
+                                    break;
+                                }
+                            }
+                            if (!found) {
+                                if (mv->count >= mv->capacity) {
+                                    int newCap = (mv->capacity == 0) ? 4 : mv->capacity * 2;
+                                    mv->entries = (struct mapEntry*)realloc(mv->entries, sizeof(struct mapEntry) * newCap);
+                                    mv->capacity = newCap;
+                                }
+                                strcpy(mv->entries[mv->count].key, key);
+                                mv->entries[mv->count].value = rhsVal;
+                                mv->count++;
+                            }
+                        }
+                    } else if (cur.type == VAL_INT_ARRAY) {
+                        struct iA *ia = (struct iA*)cur.ptr;
+                        int idx = (int)indices[last].f;
+                        if (ia && idx >= 0 && idx < ia->size) ia->data[idx] = (int)rhsVal.f;
+                    } else if (cur.type == VAL_FLOAT_ARRAY) {
+                        struct fA *fa = (struct fA*)cur.ptr;
+                        int idx = (int)indices[last].f;
+                        if (fa && idx >= 0 && idx < fa->size) fa->data[idx] = rhsVal.f;
+                    } else if (cur.type == VAL_CHAR_ARRAY) {
+                        struct cA *ca = (struct cA*)cur.ptr;
+                        int idx = (int)indices[last].f;
+                        if (ca && idx >= 0 && idx < ca->size) ca->data[idx] = (char)rhsVal.f;
+                    } else if (cur.type == VAL_BOOL_ARRAY) {
+                        struct bA *ba = (struct bA*)cur.ptr;
+                        int idx = (int)indices[last].f;
+                        if (ba && idx >= 0 && idx < ba->size) ba->data[idx] = (int)rhsVal.f;
+                    }
+                }
             } else {
+                if (next_ch != EOF) ungetc(next_ch, fp);
                 fgets(buffer, 1000, fp);
 
                 if (type == 1)
@@ -1036,9 +1141,16 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                     char *eq = strchr(buffer, '=');
                     if (eq) {
                         strcpy(builtin_string_return, "");
-                        val(eq + 1);
-                        if (strlen(builtin_string_return) > 0) {
+                        struct Value sRes = val(eq + 1);
+                                                if (sRes.type == VAL_STRING) {
+                            if (!setS_scope(name, sRes.s)) appendS(&envStack[envTop].SV, name, sRes.s);
+                        } else if (strlen(builtin_string_return) > 0) {
                             if (!setS_scope(name, builtin_string_return)) appendS(&envStack[envTop].SV, name, builtin_string_return);
+                        } else if (sRes.type == VAL_FLOAT) {
+                            char numBuf[100];
+                            if (sRes.f == (float)(int)sRes.f) sprintf(numBuf, "%d", (int)sRes.f);
+                            else sprintf(numBuf, "%f", sRes.f);
+                            if (!setS_scope(name, numBuf)) appendS(&envStack[envTop].SV, name, numBuf);
                         } else {
                             char *start = strchr(eq + 1, '"');
                             if (start) {
@@ -1046,15 +1158,50 @@ struct Value run_interpreter_loop(FILE *fp, const char *current_filepath) {
                                 if (end) *end = '\0';
                                 if (!setS_scope(name, start + 1)) appendS(&envStack[envTop].SV, name, start + 1);
                             } else {
-                                struct Value sRes = val(eq + 1);
-                                if (sRes.type == VAL_STRING) {
-                                    if (!setS_scope(name, sRes.s)) appendS(&envStack[envTop].SV, name, sRes.s);
-                                } else {
-                                    char *src = strtok(eq + 1, " \t\r\n;");
-                                    char *v = scopeGetSV(src);
-                                    if (v) {
-                                        if (!setS_scope(name, v)) appendS(&envStack[envTop].SV, name, v);
-                                    }
+                                char *src = strtok(eq + 1, " \t\r\n;");
+                                char *v = scopeGetSV(src);
+                                if (v) {
+                                    if (!setS_scope(name, v)) appendS(&envStack[envTop].SV, name, v);
+                                }
+                            }
+                        }
+                    }
+                }
+                else if (type == 10) {
+                    char *eq = strchr(buffer, '=');
+                    if (eq) {
+                        struct Value rhsVal = val(eq + 1);
+                        if (rhsVal.type == VAL_LIST && rhsVal.ptr) {
+                            struct Value curV = valFetcherGlobal(name);
+                            if (curV.type == VAL_LIST && curV.ptr) {
+                                struct lV *dest = (struct lV*)curV.ptr;
+                                struct lV *src = (struct lV*)rhsVal.ptr;
+                                while (dest && dest->ref) dest = dest->ref;
+                                while (src && src->ref) src = src->ref;
+                                if (dest && src) {
+                                    dest->data = (struct Value*)realloc(dest->data, sizeof(struct Value) * (src->capacity > 0 ? src->capacity : 4));
+                                    dest->capacity = src->capacity;
+                                    dest->size = src->size;
+                                    for (int i = 0; i < src->size; i++) dest->data[i] = src->data[i];
+                                }
+                            }
+                        }
+                    }
+                }
+                else if (type == 11) {
+                    char *eq = strchr(buffer, '=');
+                    if (eq) {
+                        struct Value rhsVal = val(eq + 1);
+                        if (rhsVal.type == VAL_MAP && rhsVal.ptr) {
+                            struct Value curV = valFetcherGlobal(name);
+                            if (curV.type == VAL_MAP && curV.ptr) {
+                                struct mV *dest = (struct mV*)curV.ptr;
+                                struct mV *src = (struct mV*)rhsVal.ptr;
+                                if (dest && src) {
+                                    dest->entries = (struct mapEntry*)realloc(dest->entries, sizeof(struct mapEntry) * (src->capacity > 0 ? src->capacity : 4));
+                                    dest->capacity = src->capacity;
+                                    dest->count = src->count;
+                                    for (int i = 0; i < src->count; i++) dest->entries[i] = src->entries[i];
                                 }
                             }
                         }
@@ -1265,7 +1412,7 @@ case 15:
         case 19:  
             safe_fscanf(fp, "%s", name);
             fgets(buffer, 1000, fp);
-            {
+                        {
                 char *eq = strchr(buffer, '=');
                 if (eq) {
                     char *rhs = eq + 1;
@@ -1277,15 +1424,23 @@ case 15:
                     } else {
                         strcpy(builtin_string_return, "");
                         struct Value sRes = val(rhs);
-                        if (strlen(builtin_string_return) > 0) {
-                            scopeSetSV(name, builtin_string_return);
-                        } else if (sRes.type == VAL_STRING) {
+                                                if (sRes.type == VAL_STRING) {
                             scopeSetSV(name, sRes.s);
+                        } else if (strlen(builtin_string_return) > 0) {
+                            scopeSetSV(name, builtin_string_return);
+                        } else if (sRes.type == VAL_FLOAT) {
+                            char numBuf[100];
+                            if (sRes.f == (float)(int)sRes.f) sprintf(numBuf, "%d", (int)sRes.f);
+                            else sprintf(numBuf, "%f", sRes.f);
+                            scopeSetSV(name, numBuf);
                         } else {
                             char *src = strtok(rhs, " \t\r\n;");
                             if (src) {
                                 char *v = scopeGetSV(src);
                                 if (v) scopeSetSV(name, v);
+                                else scopeSetSV(name, "");
+                            } else {
+                                scopeSetSV(name, "");
                             }
                         }
                     }
@@ -1415,10 +1570,13 @@ case 15:
                     break;
                 }
                 for (int d = p; d >= target_p; d--) {
-                    if (d >= 0 && d < 1000 && blockEnv[d]) {
-                        cleanupFrame(&envStack[envTop]);
-                        envTop--;
-                        blockEnv[d] = 0;
+                    if (d >= 0 && d < 1000) {
+                        c[d] = 0;
+                        if (blockEnv[d]) {
+                            cleanupFrame(&envStack[envTop]);
+                            envTop--;
+                            blockEnv[d] = 0;
+                        }
                     }
                     if (d >= 0 && d < 64 && forLoops[d].has_env) {
                         cleanupFrame(&envStack[envTop]);
@@ -1460,10 +1618,13 @@ case 15:
                     break;
                 }
                 for (int d = p; d > target_p; d--) {
-                    if (d >= 0 && d < 1000 && blockEnv[d]) {
-                        cleanupFrame(&envStack[envTop]);
-                        envTop--;
-                        blockEnv[d] = 0;
+                    if (d >= 0 && d < 1000) {
+                        c[d] = 0;
+                        if (blockEnv[d]) {
+                            cleanupFrame(&envStack[envTop]);
+                            envTop--;
+                            blockEnv[d] = 0;
+                        }
                     }
                     if (d >= 0 && d < 64 && forLoops[d].has_env) {
                         cleanupFrame(&envStack[envTop]);
@@ -1472,6 +1633,11 @@ case 15:
                     }
                 }
                 if (c[target_p] == 2) {
+                    if (target_p >= 0 && target_p < 1000 && blockEnv[target_p]) {
+                        cleanupFrame(&envStack[envTop]);
+                        envTop--;
+                        blockEnv[target_p] = 0;
+                    }
                     fseek(fp, w[target_p], SEEK_SET);
                     w[target_p] = 0;
                     p = target_p - 1;
@@ -1729,6 +1895,15 @@ case 15:
                     k = p;
                 }
             }
+            break;
+
+        case 28:
+            p++;
+            k = p - 1;
+            c[p] = 1;
+            envTop++;
+            initEnvironmentFrame(&envStack[envTop]);
+            blockEnv[p] = 1;
             break;
 
         default:

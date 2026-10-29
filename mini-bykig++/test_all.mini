@@ -1,0 +1,97 @@
+// test_all.mini - Comprehensive test suite for mini-bykig++
+
+out "=== Test 1: Arithmetic & Operator Precedence ===" ;
+var a = 10 + 20 * 2 ; // 50
+out a ;
+var b = ( 10 + 20 ) * 2 ; // 60
+out b ;
+var rem = 17 % 5 ; // 2
+out rem ;
+
+out "=== Test 2: Strings and Concatenation ===" ;
+var first = "mini" ;
+var sep = "-" ;
+var second = "bykig++" ;
+var full = first + sep + second ;
+out full ; // mini-bykig++
+
+out "=== Test 3: Comparisons & Boolean Logic ===" ;
+var c1 = 10 > 5 ; // 1
+var c2 = 10 == 20 ; // 0
+var c3 = ( 10 > 5 ) && ( 20 > 10 ) ; // 1
+var c4 = ( 10 < 5 ) || ( 20 > 10 ) ; // 1
+out c1 ;
+out c2 ;
+out c3 ;
+out c4 ;
+
+out "=== Test 4: If / Elif / Else ===" ;
+var score = 75 ;
+if score >= 90
+{
+    out "Grade: A" ;
+}
+elif score >= 70
+{
+    out "Grade: B" ; // Expected: Grade: B
+}
+else
+{
+    out "Grade: C" ;
+}
+
+out "=== Test 5: While Loop with Break & Continue ===" ;
+var count = 0 ;
+var acc = 0 ;
+while count < 8
+{
+    count = count + 1 ;
+    if count == 2
+    {
+        continue ;
+    }
+    if count == 6
+    {
+        break ;
+    }
+    acc = acc + count ; // Adds 1, 3, 4, 5 = 13
+}
+out acc ; // Expected: 13
+
+out "=== Test 6: For Loop ===" ;
+var fsum = 0 ;
+for var i = 1 ; i <= 4 ; i = i + 1
+{
+    fsum = fsum + i * i ; // 1 + 4 + 9 + 16 = 30
+}
+out fsum ; // Expected: 30
+
+out "=== Test 7: Lexical Scoping & Shadowing ===" ;
+var val = 500 ;
+if val == 500
+{
+    var val = 999 ;
+    out val ; // Expected: 999
+}
+out val ; // Expected: 500
+
+out "=== Test 8: Functions & Recursion ===" ;
+func fib ( n )
+{
+    if n <= 0
+    {
+        return 0 ;
+    }
+    if n == 1
+    {
+        return 1 ;
+    }
+    return fib ( n - 1 ) + fib ( n - 2 ) ;
+}
+
+var fib7 = fib ( 7 ) ;
+out fib7 ; // Expected: 13 (0, 1, 1, 2, 3, 5, 8, 13)
+
+out "=== All mini-bykig++ Tests Completed Successfully ===" ;
+.
+

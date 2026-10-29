@@ -1,0 +1,499 @@
+// memory.bykig - Scoped Environment, Heap Objects, and Function Registry for mini-bykig++
+
+// Scope Stack
+float scopeId = 0 ;
+float scopeStackTop = 0 ;
+map scopeStack = { "0" = 0 } ;
+
+func pushScope ( ) {
+    scopeId = scopeId + 1 ;
+    scopeStackTop = scopeStackTop + 1 ;
+    scopeStack [ scopeStackTop ] = scopeId ;
+}
+
+func popScope ( ) {
+    if scopeStackTop > 0
+    {
+        scopeStackTop = scopeStackTop - 1 ;
+    }
+}
+
+func currentScopeId ( ) {
+    float sid = scopeStack [ scopeStackTop ] ;
+    return sid ;
+}
+
+// Variables storage
+// envType: 0 = Number, 1 = String, 2 = List (ObjId), 3 = Map (ObjId)
+map envVal = { "null" = 0 } ;
+map envType = { "null" = 0 } ;
+
+func getVarScopeKey ( string name ) {
+    float idx = scopeStackTop ;
+    while idx >= 0
+    {
+        float sid = scopeStack [ idx ] ;
+        string k = sid + "_" + name ;
+        float ex = exists ( envVal , k ) ;
+        if ex ~ 1
+        {
+            return k ;
+        }
+        idx = idx - 1 ;
+    }
+    return "" ;
+}
+
+func getVarScope ( string name ) {
+    float idx = scopeStackTop ;
+    while idx >= 0
+    {
+        float sid = scopeStack [ idx ] ;
+        string k = sid + "_" + name ;
+        float ex = exists ( envVal , k ) ;
+        if ex ~ 1
+        {
+            return sid ;
+        }
+        idx = idx - 1 ;
+    }
+    return 0 - 1 ;
+}
+
+func hasVar ( string name ) {
+    float sid = getVarScope ( name ) ;
+    if sid >= 0
+    {
+        return 1 ;
+    }
+    return 0 ;
+}
+
+func defVarVal ( string name , string valStr , float valNum , float valType ) {
+    float sid = currentScopeId ( ) ;
+    string k = sid + "_" + name ;
+    envType [ k ] = valType ;
+    if valType ~ 1
+    {
+        envVal [ k ] = valStr ;
+    }
+    else
+    {
+        envVal [ k ] = valNum ;
+    }
+}
+
+func setVarVal ( string name , string valStr , float valNum , float valType ) {
+    string k = getVarScopeKey ( name ) ;
+    if k ~ ""
+    {
+        float sid = currentScopeId ( ) ;
+        k = sid + "_" + name ;
+    }
+    envType [ k ] = valType ;
+    if valType ~ 1
+    {
+        envVal [ k ] = valStr ;
+    }
+    else
+    {
+        envVal [ k ] = valNum ;
+    }
+}
+
+// Backward-compatible helpers
+func defVar ( string name , string valStr , float valNum , float isStr ) {
+    if isStr ~ 1
+    {
+        defVarVal ( name , valStr , 0 , 1 ) ;
+    }
+    else
+    {
+        defVarVal ( name , "" , valNum , 0 ) ;
+    }
+}
+
+func setVar ( string name , string valStr , float valNum , float isStr ) {
+    if isStr ~ 1
+    {
+        setVarVal ( name , valStr , 0 , 1 ) ;
+    }
+    else
+    {
+        setVarVal ( name , "" , valNum , 0 ) ;
+    }
+}
+
+func getVarVal ( string name ) {
+    string k = getVarScopeKey ( name ) ;
+    return envVal [ k ] ;
+}
+
+func getVarType ( string name ) {
+    string k = getVarScopeKey ( name ) ;
+    float t = envType [ k ] ;
+    return t ;
+}
+
+func getVarIsStr ( string name ) {
+    float t = getVarType ( name ) ;
+    if t ~ 1
+    {
+        return 1 ;
+    }
+    return 0 ;
+}
+
+// Heap Objects Storage (Dynamic Lists and Generic Maps)
+float nextObjId = 1 ;
+
+func allocObjId ( ) {
+    float id = nextObjId ;
+    nextObjId = nextObjId + 1 ;
+    return id ;
+}
+
+// Lists storage
+map listSize = { "null" = 0 } ;
+map listData = { "null" = 0 } ;
+map listElemType = { "null" = 0 } ;
+
+func newList ( ) {
+    float id = allocObjId ( ) ;
+    listSize [ id ] = 0 ;
+    return id ;
+}
+
+func listPush ( float listId , string valStr , float valNum , float valType ) {
+    float sz = listSize [ listId ] ;
+    string k = listId + "_" + sz ;
+    listElemType [ k ] = valType ;
+    if valType ~ 1
+    {
+        listData [ k ] = valStr ;
+    }
+    else
+    {
+        listData [ k ] = valNum ;
+    }
+    listSize [ listId ] = sz + 1 ;
+}
+
+func listGetVal ( float listId , float idx ) {
+    string k = listId + "_" + idx ;
+    return listData [ k ] ;
+}
+
+func listGetType ( float listId , float idx ) {
+    string k = listId + "_" + idx ;
+    float t = listElemType [ k ] ;
+    return t ;
+}
+
+func listSet ( float listId , float idx , string valStr , float valNum , float valType ) {
+    string k = listId + "_" + idx ;
+    listElemType [ k ] = valType ;
+    if valType ~ 1
+    {
+        listData [ k ] = valStr ;
+    }
+    else
+    {
+        listData [ k ] = valNum ;
+    }
+    float sz = listSize [ listId ] ;
+    if idx >= sz
+    {
+        listSize [ listId ] = idx + 1 ;
+    }
+}
+
+func listPop ( float listId ) {
+    float sz = listSize [ listId ] ;
+    if sz <= 0
+    {
+        return 0 ;
+    }
+    sz = sz - 1 ;
+    listSize [ listId ] = sz ;
+    string k = listId + "_" + sz ;
+    return listData [ k ] ;
+}
+
+func listPopType ( float listId ) {
+    float sz = listSize [ listId ] ;
+    string k = listId + "_" + sz ;
+    float t = listElemType [ k ] ;
+    return t ;
+}
+
+func listLen ( float listId ) {
+    float sz = listSize [ listId ] ;
+    return sz ;
+}
+
+// Maps storage
+map mapCount = { "null" = 0 } ;
+map mapHasKey = { "null" = 0 } ;
+map mapVals = { "null" = 0 } ;
+map mapValTypes = { "null" = 0 } ;
+map mapKeys = { "null" = "" } ;
+
+func newMap ( ) {
+    float id = allocObjId ( ) ;
+    mapCount [ id ] = 0 ;
+    return id ;
+}
+
+func mapSet ( float mapId , string key , string valStr , float valNum , float valType ) {
+    string hk = mapId + "_" + key ;
+    float ex = mapHasKey [ hk ] ;
+    if ex ! 1
+    {
+        float cnt = mapCount [ mapId ] ;
+        string idxK = mapId + "_" + cnt ;
+        mapKeys [ idxK ] = key ;
+        mapCount [ mapId ] = cnt + 1 ;
+        mapHasKey [ hk ] = 1 ;
+    }
+    mapValTypes [ hk ] = valType ;
+    if valType ~ 1
+    {
+        mapVals [ hk ] = valStr ;
+    }
+    else
+    {
+        mapVals [ hk ] = valNum ;
+    }
+}
+
+func mapGetVal ( float mapId , string key ) {
+    string hk = mapId + "_" + key ;
+    return mapVals [ hk ] ;
+}
+
+func mapGetType ( float mapId , string key ) {
+    string hk = mapId + "_" + key ;
+    float t = mapValTypes [ hk ] ;
+    return t ;
+}
+
+func mapExists ( float mapId , string key ) {
+    string hk = mapId + "_" + key ;
+    float ex = mapHasKey [ hk ] ;
+    if ex ~ 1
+    {
+        return 1 ;
+    }
+    return 0 ;
+}
+
+func mapDelete ( float mapId , string key ) {
+    string hk = mapId + "_" + key ;
+    float ex = mapHasKey [ hk ] ;
+    if ex ~ 1
+    {
+        mapHasKey [ hk ] = 0 ;
+        float cnt = mapCount [ mapId ] ;
+        if cnt > 0
+        {
+            mapCount [ mapId ] = cnt - 1 ;
+        }
+    }
+}
+
+func mapLen ( float mapId ) {
+    float cnt = mapCount [ mapId ] ;
+    return cnt ;
+}
+
+// Value Formatter for Output and String Conversion
+func formatValue ( string valStr , float valNum , float valType ) {
+    if valType ~ 0
+    {
+        return "" + valNum ;
+    }
+    if valType ~ 1
+    {
+        return valStr ;
+    }
+    if valType ~ 2
+    {
+        float listId = valNum ;
+        float sz = listSize [ listId ] ;
+        string s = "[" ;
+        float i = 0 ;
+        while i < sz
+        {
+            if i > 0
+            {
+                s = s + ", " ;
+            }
+            string k = listId + "_" + i ;
+            float elemT = listElemType [ k ] ;
+            if elemT ~ 1
+            {
+                string itemS = listData [ k ] ;
+                s = s + itemS ;
+            }
+            else
+            {
+                float itemN = listData [ k ] ;
+                string itemStr = formatValue ( "" , itemN , elemT ) ;
+                s = s + itemStr ;
+            }
+            i = i + 1 ;
+        }
+        s = s + "]" ;
+        return s ;
+    }
+    if valType ~ 3
+    {
+        float mapId = valNum ;
+        float cnt = mapCount [ mapId ] ;
+        string s = "{" ;
+        float i = 0 ;
+        float printed = 0 ;
+        while i < cnt
+        {
+            string idxK = mapId + "_" + i ;
+            string k = mapKeys [ idxK ] ;
+            string hk = mapId + "_" + k ;
+            float ex = mapHasKey [ hk ] ;
+            if ex ~ 1
+            {
+                if printed > 0
+                {
+                    s = s + ", " ;
+                }
+                float elemT = mapValTypes [ hk ] ;
+                if elemT ~ 1
+                {
+                    string itemS = mapVals [ hk ] ;
+                    s = s + quote ( k ) + ": " + itemS ;
+                }
+                else
+                {
+                    float itemN = mapVals [ hk ] ;
+                    string itemStr = formatValue ( "" , itemN , elemT ) ;
+                    s = s + quote ( k ) + ": " + itemStr ;
+                }
+                printed = printed + 1 ;
+            }
+            i = i + 1 ;
+        }
+        s = s + "}" ;
+        return s ;
+    }
+    return "" ;
+}
+
+// Function registry
+map funcPos = { "null" = 0 } ;
+map funcParamCount = { "null" = 0 } ;
+map funcParams = { "null" = "" } ;
+
+func registerFunc ( string name , float pos , float pCount , string p0 , string p1 , string p2 , string p3 ) {
+    funcPos [ name ] = pos ;
+    funcParamCount [ name ] = pCount ;
+    if pCount > 0
+    {
+        string k0 = name + "_0" ;
+        funcParams [ k0 ] = p0 ;
+    }
+    if pCount > 1
+    {
+        string k1 = name + "_1" ;
+        funcParams [ k1 ] = p1 ;
+    }
+    if pCount > 2
+    {
+        string k2 = name + "_2" ;
+        funcParams [ k2 ] = p2 ;
+    }
+    if pCount > 3
+    {
+        string k3 = name + "_3" ;
+        funcParams [ k3 ] = p3 ;
+    }
+}
+
+func hasFunc ( string name ) {
+    float ex = exists ( funcPos , name ) ;
+    return ex ;
+}
+
+func getFuncPos ( string name ) {
+    float pos = funcPos [ name ] ;
+    return pos ;
+}
+
+func getFuncParamCount ( string name ) {
+    float count = funcParamCount [ name ] ;
+    return count ;
+}
+
+func getFuncParamName ( string name , float idx ) {
+    if idx ~ 0
+    {
+        string k0 = name + "_0" ;
+        string p0 = funcParams [ k0 ] ;
+        return p0 ;
+    }
+    if idx ~ 1
+    {
+        string k1 = name + "_1" ;
+        string p1 = funcParams [ k1 ] ;
+        return p1 ;
+    }
+    if idx ~ 2
+    {
+        string k2 = name + "_2" ;
+        string p2 = funcParams [ k2 ] ;
+        return p2 ;
+    }
+    if idx ~ 3
+    {
+        string k3 = name + "_3" ;
+        string p3 = funcParams [ k3 ] ;
+        return p3 ;
+    }
+    return "" ;
+}
+
+// Control flow & Return values
+float hasReturn = 0 ;
+float loopBreak = 0 ;
+float loopContinue = 0 ;
+
+string retValStr = "" ;
+float retValNum = 0 ;
+float retValType = 0 ;
+
+func setReturnValue ( string valStr , float valNum , float valType ) {
+    hasReturn = 1 ;
+    retValStr = valStr ;
+    retValNum = valNum ;
+    retValType = valType ;
+}
+
+func getReturnVal ( ) {
+    if retValType ~ 1
+    {
+        return retValStr ;
+    }
+    return retValNum ;
+}
+
+func getReturnType ( ) {
+    return retValType ;
+}
+
+func getReturnIsStr ( ) {
+    if retValType ~ 1
+    {
+        return 1 ;
+    }
+    return 0 ;
+}
+.

@@ -1,0 +1,9 @@
+int x = 10 ;
+int i = 0 ;
+while i < 1
+{
+    int x = 50 ;
+    i = i + 1 ;
+}
+out x + "%n" ;
+.

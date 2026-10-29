@@ -1,0 +1,61 @@
+// test_collections.mini - Dynamic Lists, Generic Maps, and Nested Indexing
+
+out "=== 1. Dynamic Lists ===" ;
+var lst = [ 10 , 20 , 30 ] ;
+out lst ;
+out len ( lst ) ;
+push ( lst , 40 ) ;
+out len ( lst ) ;
+out lst[0] ;
+out lst[3] ;
+lst[1] = 99 ;
+out lst[1] ;
+var popped = pop ( lst ) ;
+out popped ;
+out len ( lst ) ;
+out lst ;
+
+out "=== 2. Generic Maps ===" ;
+var person = { "name" : "Alice" , "age" : 30 } ;
+out person ;
+out person["name"] ;
+out person["age"] ;
+person["city"] = "Paris" ;
+out person["city"] ;
+out len ( person ) ;
+out exists ( person , "city" ) ;
+out exists ( person , "unknown" ) ;
+delete ( person , "age" ) ;
+out exists ( person , "age" ) ;
+out len ( person ) ;
+
+out "=== 3. Nested Lists (2D Array) ===" ;
+var matrix = [ [ 1 , 2 ] , [ 3 , 4 ] ] ;
+out matrix ;
+out matrix[0][0] ;
+out matrix[1][1] ;
+matrix[1][0] = 77 ;
+out matrix[1][0] ;
+out matrix ;
+
+out "=== 4. Deeply Nested Maps and Lists ===" ;
+var data = { "users" : [ { "name" : "Bob" , "score" : 50 } , { "name" : "Charlie" , "score" : 80 } ] } ;
+out data["users"][0]["name"] ;
+out data["users"][1]["score"] ;
+data["users"][0]["score"] = 95 ;
+out data["users"][0]["score"] ;
+data["users"][1]["name"] = "Chuck" ;
+out data["users"][1]["name"] ;
+
+out "=== 5. Collection passing in Functions ===" ;
+func getFirst ( list )
+{
+    return list[0] ;
+}
+
+var firstVal = getFirst ( lst ) ;
+out firstVal ;
+
+out "=== Collections Tests Completed Successfully ===" ;
+.
+

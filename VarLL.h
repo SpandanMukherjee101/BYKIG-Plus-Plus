@@ -53,6 +53,91 @@ struct savedVar { char name[100]; int type; int intVal; float floatVal; char cha
 
 struct lV { char name[100]; int size; int capacity; struct Value *data; struct lV *ref; struct lV *next; };
 
+static inline void value_to_string(struct Value v, char *out, size_t max_len) {
+    if (max_len == 0 || !out) return;
+    out[0] = '\0';
+    if (v.type == VAL_FLOAT) {
+        if (v.f == (float)(int)v.f) snprintf(out, max_len, "%d", (int)v.f);
+        else snprintf(out, max_len, "%f", v.f);
+    } else if (v.type == VAL_STRING) {
+        snprintf(out, max_len, "%s", v.s);
+    } else if (v.type == VAL_LIST) {
+        struct lV *lv = (struct lV*)v.ptr;
+        while (lv && lv->ref) lv = lv->ref;
+        if (!lv) { snprintf(out, max_len, "[]"); return; }
+        snprintf(out, max_len, "[");
+        for (int i = 0; i < lv->size; i++) {
+            char item[512] = "";
+            value_to_string(lv->data[i], item, sizeof(item));
+            if (i > 0) strncat(out, ", ", max_len - strlen(out) - 1);
+            strncat(out, item, max_len - strlen(out) - 1);
+        }
+        strncat(out, "]", max_len - strlen(out) - 1);
+    } else if (v.type == VAL_MAP) {
+        struct mV *mv = (struct mV*)v.ptr;
+        if (!mv) { snprintf(out, max_len, "{}"); return; }
+        snprintf(out, max_len, "{");
+        for (int i = 0; i < mv->count; i++) {
+            char item[512] = "";
+            value_to_string(mv->entries[i].value, item, sizeof(item));
+            if (i > 0) strncat(out, ", ", max_len - strlen(out) - 1);
+            char entryBuf[600];
+            snprintf(entryBuf, sizeof(entryBuf), "\"%s\": %s", mv->entries[i].key, item);
+            strncat(out, entryBuf, max_len - strlen(out) - 1);
+        }
+        strncat(out, "}", max_len - strlen(out) - 1);
+    } else if (v.type == VAL_INT_ARRAY) {
+        struct iA *ia = (struct iA*)v.ptr;
+        snprintf(out, max_len, "[");
+        if (ia) {
+            for (int i = 0; i < ia->size; i++) {
+                char item[32];
+                snprintf(item, sizeof(item), "%d", ia->data[i]);
+                if (i > 0) strncat(out, ", ", max_len - strlen(out) - 1);
+                strncat(out, item, max_len - strlen(out) - 1);
+            }
+        }
+        strncat(out, "]", max_len - strlen(out) - 1);
+    } else if (v.type == VAL_FLOAT_ARRAY) {
+        struct fA *fa = (struct fA*)v.ptr;
+        snprintf(out, max_len, "[");
+        if (fa) {
+            for (int i = 0; i < fa->size; i++) {
+                char item[32];
+                if (fa->data[i] == (float)(int)fa->data[i]) snprintf(item, sizeof(item), "%d", (int)fa->data[i]);
+                else snprintf(item, sizeof(item), "%f", fa->data[i]);
+                if (i > 0) strncat(out, ", ", max_len - strlen(out) - 1);
+                strncat(out, item, max_len - strlen(out) - 1);
+            }
+        }
+        strncat(out, "]", max_len - strlen(out) - 1);
+    } else if (v.type == VAL_CHAR_ARRAY) {
+        struct cA *ca = (struct cA*)v.ptr;
+        snprintf(out, max_len, "[");
+        if (ca) {
+            for (int i = 0; i < ca->size; i++) {
+                char item[8];
+                snprintf(item, sizeof(item), "'%c'", ca->data[i]);
+                if (i > 0) strncat(out, ", ", max_len - strlen(out) - 1);
+                strncat(out, item, max_len - strlen(out) - 1);
+            }
+        }
+        strncat(out, "]", max_len - strlen(out) - 1);
+    } else if (v.type == VAL_BOOL_ARRAY) {
+        struct bA *ba = (struct bA*)v.ptr;
+        snprintf(out, max_len, "[");
+        if (ba) {
+            for (int i = 0; i < ba->size; i++) {
+                if (i > 0) strncat(out, ", ", max_len - strlen(out) - 1);
+                strncat(out, ba->data[i] ? "true" : "false", max_len - strlen(out) - 1);
+            }
+        }
+        strncat(out, "]", max_len - strlen(out) - 1);
+    } else {
+        snprintf(out, max_len, "null");
+    }
+}
+
 struct callFrame {
     struct iV *IV; struct fV *FV; struct cV *CV; struct bV *BV; struct sV *SV;
     struct iA *IA; struct fA *FA; struct cA *CA; struct bA *BA;

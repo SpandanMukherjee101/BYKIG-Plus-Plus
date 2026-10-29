@@ -4,7 +4,7 @@ BYKIG++ is a lightweight interpreter written in C. It executes `.bykig` source d
 
 ## 1. Syntax rules
 
-BYKIG++ uses strict token spacing.
+BYKIG++ uses clean token spacing.
 
 Correct:
 
@@ -72,7 +72,7 @@ int x = 10 ;
 int y = x + 5 * 2 ;
 ```
 
-It can also contain complex expressions such as function calls, built-ins, and collection indexing where supported:
+It can also contain complex expressions such as function calls, built-ins, and collection indexing:
 
 ```bykig
 int result = add ( 5 , 10 ) ;
@@ -91,16 +91,16 @@ Arithmetic:
 Comparison/equality:
 
 ```text
-<  >  <=  >=  ~  !
+<  >  <=  >=  ~  !  ==  !=
 ```
 
 Logical:
 
 ```text
-&  |
+&  |  &&  ||
 ```
 
-`~` means equality and `!` means not-equal in BYKIG++ expression syntax; do not use C-style `==` or `!=` as the language operators.
+`~` and `==` represent equality; `!` and `!=` represent inequality.
 
 Parentheses are supported:
 
@@ -131,7 +131,7 @@ Conditions are evaluated through the expression engine. Truth is represented num
 
 ## 6. Loops
 
-BYKIG++ supports both `while` loops and `for` loops.
+BYKIG++ supports both `while` loops and `for` loops with full `break` and `continue` control.
 
 ### `while` loops
 
@@ -155,7 +155,7 @@ for ( int i = 0 ; i < 5 ; i = i + 1 ) {
 `for` loops support:
 - Initialization expressions, including variable declarations scoped to the loop (e.g. `int i = 0`) or assignments to existing variables (e.g. `i = 0`).
 - Condition expressions (e.g. `i < 5`), or omitted conditions (defaults to true).
-- Iteration expressions (e.g. `i = i + 1` or `i = i - 2`), executed at the end of each iteration or upon `continue`.
+- Iteration expressions (e.g. `i = i + 1`), executed at the end of each iteration or upon `continue`.
 - Parenthesized or non-parenthesized headers.
 - Nested loops and full integration with `break` and `continue`.
 
@@ -171,8 +171,6 @@ while i < 10
     i = i + 1 ;
 }
 ```
-
-There is no `for` loop in the current language.
 
 ## 7. Functions
 
@@ -240,7 +238,7 @@ Arrays can participate in complex expression resolution through indexed access.
 
 ## 9. Lists
 
-Lists are dynamic numeric collections:
+Lists are dynamic collections backed by `Value *data` with automatic capacity doubling. Elements can hold any runtime `Value` (numbers, strings, nested lists, maps):
 
 ```bykig
 list values = { 10 , 20 , 30 } ;
@@ -251,15 +249,16 @@ float x = values [ 1 ] ;
 Use built-ins for mutation:
 
 ```bykig
-push ( "values" , 200 ) ;
-float last = pop ( "values" ) ;
+push ( values , 200 ) ;
+float last = pop ( values ) ;
+float count = len ( values ) ;
 ```
 
-The current implementation stores list elements as `float` values.
+Lists are passed to functions by reference, allowing in-place modification.
 
 ## 10. Maps
 
-Maps are dynamic key-value collections with generic `Value` storage, supporting strings, floats, ints, and other runtime types:
+Maps are generic dynamic key-value collections with `Value` storage, supporting string or numeric keys and arbitrary runtime types as values:
 
 ```bykig
 map user = { "name" : "Alice" , "age" : 30 , "score" : 95.5 } ;
@@ -279,11 +278,27 @@ delete ( user , "city" ) ;
 float total = len ( user ) ;
 ```
 
-Maps use dynamic capacity allocation (`realloc`) that automatically grows as items are inserted, removing any fixed-size limits.
+Maps automatically grow their capacity via dynamic reallocation (`realloc`), removing fixed-size limits.
 
-## 11. Built-ins
+## 11. Nested indexing
 
-Common collection built-ins:
+BYKIG++ supports multi-dimensional and nested indexing across lists and maps for both reading in expressions and writing in index assignments:
+
+```bykig
+// Multi-dimensional lists (nested lists)
+list matrix = { { 1 , 2 } , { 3 , 4 } } ;
+float val = matrix [ 0 ] [ 1 ] ; // 2
+matrix [ 1 ] [ 0 ] = 99 ;
+
+// Deeply nested maps and lists
+map database = { "users" : { { "name" : "Bob" , "score" : 50 } } } ;
+string name = database [ "users" ] [ 0 ] [ "name" ] ;
+database [ "users" ] [ 0 ] [ "score" ] = 100 ;
+```
+
+## 12. Built-ins
+
+Collection built-ins:
 
 ```text
 len ( var )
@@ -295,7 +310,17 @@ exists ( name )
 exists ( map , key )
 delete ( name )
 delete ( map , key )
-parse_float ( value )
+```
+
+String and value utilities:
+
+```text
+quote ( str )               // Encloses string in double quotes
+strip_quotes ( str )         // Removes outer double quotes
+is_num ( val )              // Returns 1 if numeric, 0 otherwise
+is_str ( val )              // Returns 1 if string, 0 otherwise
+starts_with ( str , prefix ) // Returns 1 if str begins with prefix
+parse_float ( value )       // Converts string to float
 ```
 
 Filesystem built-ins:
@@ -312,12 +337,13 @@ Scanner built-ins:
 ```text
 file_scan_open ( path )
 file_scan_next ( )
+file_scan_is_str ( )
 file_scan_close ( )
 file_scan_get_pos ( )
 file_scan_set_pos ( position )
 ```
 
-## 12. Console I/O
+## 13. Console I/O
 
 Output:
 
@@ -341,7 +367,7 @@ int number ;
 in number ;
 ```
 
-## 13. File I/O
+## 14. File I/O & Streaming Scanner
 
 Write and append:
 
@@ -350,7 +376,7 @@ file_write ( "test.txt" , "Hello" ) ;
 file_append ( "test.txt" , " World!" ) ;
 ```
 
-Read:
+Read entire file:
 
 ```bykig
 string data = file_read ( "test.txt" ) ;
@@ -370,14 +396,18 @@ float opened = file_scan_open ( "test.txt" ) ;
 if opened ~ 1
 {
     string token = file_scan_next ( ) ;
+    float isString = file_scan_is_str ( ) ;
     out token + "%n" ;
     file_scan_close ( ) ;
 }
 ```
 
-`file_scan_next()` exposes the next whitespace-delimited token through the built-in string-return path and returns a success/failure numeric result.
+`file_scan_next()` automatically handles:
+- Whitespace-delimited words.
+- Quoted strings (preserving inner spaces).
+- Self-delimiting punctuation tokens: `[`, `]`, `{`, `}`, `(`, `)`, `,`, `;` without requiring whitespace padding.
 
-## 14. Modules
+## 15. Modules
 
 Import another file with `use`:
 
@@ -393,7 +423,7 @@ use "../common/utils.bykig" ;
 
 The imported file is executed by the same interpreter. Its declarations and function definitions become part of the current runtime context rather than a separate module namespace.
 
-## 15. Running BYKIG++
+## 16. Running BYKIG++
 
 Windows PowerShell:
 
@@ -403,7 +433,15 @@ Windows PowerShell:
 
 Without a file argument, the interpreter prompts for a file name.
 
-## 16. Example program
+### Running mini-bykig++ programs
+
+To execute `.mini` scripts using the self-hosted `mini-bykig++` interpreter:
+
+```powershell
+echo mini-bykig++/test_collections.mini | .\Interpreter.exe mini-bykig++/main.bykig
+```
+
+## 17. Example program
 
 ```bykig
 int max ;

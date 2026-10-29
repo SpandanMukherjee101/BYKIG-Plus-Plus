@@ -1,0 +1,459 @@
+// main.bykig - Main Execution Loop and CLI for mini-bykig++
+
+use "evaluator.bykig" ;
+
+func execute_for_iter ( float hasParen ) {
+    string varName = file_scan_next ( ) ;
+    string eq = file_scan_next ( ) ;
+    if hasParen ~ 1
+    {
+        evalExpressionUntil ( ")" ) ;
+    }
+    else
+    {
+        evalExpressionUntil ( "{" ) ;
+    }
+    setVarVal ( varName , evalResStr , evalResNum , evalResType ) ;
+}
+
+func execute_index_assignment ( string varName ) {
+    float curObj = getVarVal ( varName ) ;
+    float curType = getVarType ( varName ) ;
+    
+    while 1 < 2
+    {
+        evalExpressionUntil ( "]" ) ;
+        string idxStr = evalResStr ;
+        float idxNum = evalResNum ;
+        float idxType = evalResType ;
+        
+        float ppos = file_scan_get_pos ( ) ;
+        string nextTok = file_scan_next ( ) ;
+        
+        if nextTok ~ "["
+        {
+            if curType ~ 2
+            {
+                float nextType = listGetType ( curObj , idxNum ) ;
+                curObj = listGetVal ( curObj , idxNum ) ;
+                curType = nextType ;
+            }
+            elif curType ~ 3
+            {
+                if idxType ~ 0
+                {
+                    idxStr = "" + idxNum ;
+                }
+                float nextType = mapGetType ( curObj , idxStr ) ;
+                curObj = mapGetVal ( curObj , idxStr ) ;
+                curType = nextType ;
+            }
+        }
+        elif nextTok ~ "="
+        {
+            evalExpressionUntil ( ";" ) ;
+            if curType ~ 2
+            {
+                listSet ( curObj , idxNum , evalResStr , evalResNum , evalResType ) ;
+            }
+            elif curType ~ 3
+            {
+                if idxType ~ 0
+                {
+                    idxStr = "" + idxNum ;
+                }
+                mapSet ( curObj , idxStr , evalResStr , evalResNum , evalResType ) ;
+            }
+            break ;
+        }
+        else
+        {
+            out "Syntax Error: Expected [ or = in index assignment%n" ;
+            break ;
+        }
+    }
+}
+
+func execute_block ( float stopAtBrace ) {
+    while 1 < 2
+    {
+        if hasReturn ~ 1
+        {
+            break ;
+        }
+        if loopBreak ~ 1
+        {
+            break ;
+        }
+        if loopContinue ~ 1
+        {
+            break ;
+        }
+        
+        string token = file_scan_next ( ) ;
+        
+        if token ~ "EOF"
+        {
+            break ;
+        }
+        
+        if token ~ "."
+        {
+            break ;
+        }
+        
+        if token ~ "}"
+        {
+            if stopAtBrace ~ 1
+            {
+                break ;
+            }
+        }
+        
+        if token ~ "var" || token ~ "list" || token ~ "map"
+        {
+            string varName = file_scan_next ( ) ;
+            string eq = file_scan_next ( ) ;
+            evalExpressionUntil ( ";" ) ;
+            defVarVal ( varName , evalResStr , evalResNum , evalResType ) ;
+        }
+        
+        if token ~ "out"
+        {
+            evalExpressionUntil ( ";" ) ;
+            string s = formatValue ( evalResStr , evalResNum , evalResType ) ;
+            out s + "%n" ;
+        }
+        
+        if token ~ "in"
+        {
+            string varName = file_scan_next ( ) ;
+            string semi = file_scan_next ( ) ;
+            string inputVal ;
+            in inputVal ;
+            float isN = is_num ( inputVal ) ;
+            if isN ~ 1
+            {
+                float n = parse_float ( inputVal ) ;
+                setVarVal ( varName , "" , n , 0 ) ;
+            }
+            else
+            {
+                setVarVal ( varName , inputVal , 0 , 1 ) ;
+            }
+        }
+        
+        if token ~ "return"
+        {
+            evalExpressionUntil ( ";" ) ;
+            setReturnValue ( evalResStr , evalResNum , evalResType ) ;
+            break ;
+        }
+        
+        if token ~ "break"
+        {
+            loopBreak = 1 ;
+            string semi = file_scan_next ( ) ;
+            break ;
+        }
+        
+        if token ~ "continue"
+        {
+            loopContinue = 1 ;
+            string semi = file_scan_next ( ) ;
+            break ;
+        }
+        
+        if token ~ "if"
+        {
+            evalExpressionUntil ( "{" ) ;
+            float cond = evalResNum ;
+            float executed = 0 ;
+            if cond ! 0
+            {
+                pushScope ( ) ;
+                execute_block ( 1 ) ;
+                popScope ( ) ;
+                executed = 1 ;
+            }
+            else
+            {
+                skip_block ( ) ;
+            }
+            
+            while 1 < 2
+            {
+                float next_pos = file_scan_get_pos ( ) ;
+                string next_tok = file_scan_next ( ) ;
+                if next_tok ~ "elif"
+                {
+                    if executed ~ 1
+                    {
+                        evalExpressionUntil ( "{" ) ;
+                        skip_block ( ) ;
+                    }
+                    else
+                    {
+                        evalExpressionUntil ( "{" ) ;
+                        float elifCond = evalResNum ;
+                        if elifCond ! 0
+                        {
+                            pushScope ( ) ;
+                            execute_block ( 1 ) ;
+                            popScope ( ) ;
+                            executed = 1 ;
+                        }
+                        else
+                        {
+                            skip_block ( ) ;
+                        }
+                    }
+                }
+                else
+                {
+                    if next_tok ~ "else"
+                    {
+                        string brace = file_scan_next ( ) ;
+                        if executed ~ 1
+                        {
+                            skip_block ( ) ;
+                        }
+                        else
+                        {
+                            pushScope ( ) ;
+                            execute_block ( 1 ) ;
+                            popScope ( ) ;
+                            executed = 1 ;
+                        }
+                        break ;
+                    }
+                    else
+                    {
+                        file_scan_set_pos ( next_pos ) ;
+                        break ;
+                    }
+                }
+            }
+        }
+        
+        if token ~ "while"
+        {
+            float cond_pos = file_scan_get_pos ( ) ;
+            evalExpressionUntil ( "{" ) ;
+            float cond = evalResNum ;
+            float body_pos = file_scan_get_pos ( ) ;
+            
+            while cond ! 0
+            {
+                file_scan_set_pos ( body_pos ) ;
+                pushScope ( ) ;
+                execute_block ( 1 ) ;
+                popScope ( ) ;
+                
+                if hasReturn ~ 1
+                {
+                    break ;
+                }
+                if loopBreak ~ 1
+                {
+                    loopBreak = 0 ;
+                    break ;
+                }
+                if loopContinue ~ 1
+                {
+                    loopContinue = 0 ;
+                }
+                
+                file_scan_set_pos ( cond_pos ) ;
+                evalExpressionUntil ( "{" ) ;
+                cond = evalResNum ;
+            }
+            file_scan_set_pos ( body_pos ) ;
+            skip_block ( ) ;
+        }
+        
+        if token ~ "for"
+        {
+            string firstTok = file_scan_next ( ) ;
+            float hasParen = 0 ;
+            if firstTok ~ "("
+            {
+                hasParen = 1 ;
+                firstTok = file_scan_next ( ) ;
+            }
+            
+            pushScope ( ) ;
+            if firstTok ~ "var" || firstTok ~ "list" || firstTok ~ "map"
+            {
+                string iName = file_scan_next ( ) ;
+                string eq = file_scan_next ( ) ;
+                evalExpressionUntil ( ";" ) ;
+                defVarVal ( iName , evalResStr , evalResNum , evalResType ) ;
+            }
+            else
+            {
+                string eq = file_scan_next ( ) ;
+                evalExpressionUntil ( ";" ) ;
+                setVarVal ( firstTok , evalResStr , evalResNum , evalResType ) ;
+            }
+            
+            float cond_pos = file_scan_get_pos ( ) ;
+            while 1 < 2
+            {
+                string t = file_scan_next ( ) ;
+                if t ~ ";"
+                {
+                    break ;
+                }
+            }
+            
+            float iter_pos = file_scan_get_pos ( ) ;
+            while 1 < 2
+            {
+                string t = file_scan_next ( ) ;
+                if t ~ "{"
+                {
+                    break ;
+                }
+            }
+            
+            float body_pos = file_scan_get_pos ( ) ;
+            
+            while 1 < 2
+            {
+                file_scan_set_pos ( cond_pos ) ;
+                evalExpressionUntil ( ";" ) ;
+                float cond = evalResNum ;
+                if cond ~ 0
+                {
+                    file_scan_set_pos ( body_pos ) ;
+                    skip_block ( ) ;
+                    break ;
+                }
+                
+                file_scan_set_pos ( body_pos ) ;
+                pushScope ( ) ;
+                execute_block ( 1 ) ;
+                popScope ( ) ;
+                
+                if hasReturn ~ 1
+                {
+                    break ;
+                }
+                if loopBreak ~ 1
+                {
+                    loopBreak = 0 ;
+                    file_scan_set_pos ( body_pos ) ;
+                    skip_block ( ) ;
+                    break ;
+                }
+                if loopContinue ~ 1
+                {
+                    loopContinue = 0 ;
+                }
+                
+                file_scan_set_pos ( iter_pos ) ;
+                execute_for_iter ( hasParen ) ;
+            }
+            popScope ( ) ;
+        }
+        
+        if token ~ "func"
+        {
+            string funcName = file_scan_next ( ) ;
+            string openP = file_scan_next ( ) ;
+            float pCount = 0 ;
+            string p0 = "" ;
+            string p1 = "" ;
+            string p2 = "" ;
+            string p3 = "" ;
+            while 1 < 2
+            {
+                string pTok = file_scan_next ( ) ;
+                if pTok ~ ")"
+                {
+                    break ;
+                }
+                if pTok ! ","
+                {
+                    if pCount ~ 0
+                    {
+                        p0 = pTok ;
+                    }
+                    if pCount ~ 1
+                    {
+                        p1 = pTok ;
+                    }
+                    if pCount ~ 2
+                    {
+                        p2 = pTok ;
+                    }
+                    if pCount ~ 3
+                    {
+                        p3 = pTok ;
+                    }
+                    pCount = pCount + 1 ;
+                }
+            }
+            string brace = file_scan_next ( ) ;
+            float bodyPos = file_scan_get_pos ( ) ;
+            registerFunc ( funcName , bodyPos , pCount , p0 , p1 , p2 , p3 ) ;
+            skip_block ( ) ;
+        }
+        
+        float isB = isMiniBuiltin ( token ) ;
+        if isB ~ 1
+        {
+            execute_builtin_call ( token ) ;
+            string semi = file_scan_next ( ) ;
+        }
+        
+        float isFuncCall = hasFunc ( token ) ;
+        if isFuncCall ~ 1
+        {
+            string openP = file_scan_next ( ) ;
+            execute_func_call ( token ) ;
+            string semi = file_scan_next ( ) ;
+        }
+        
+        float isExistingVar = hasVar ( token ) ;
+        if isExistingVar ~ 1
+        {
+            string varName = token ;
+            float ppos = file_scan_get_pos ( ) ;
+            string nextTok = file_scan_next ( ) ;
+            if nextTok ~ "["
+            {
+                execute_index_assignment ( varName ) ;
+            }
+            elif nextTok ~ "="
+            {
+                evalExpressionUntil ( ";" ) ;
+                setVarVal ( varName , evalResStr , evalResNum , evalResType ) ;
+            }
+            else
+            {
+                file_scan_set_pos ( ppos ) ;
+            }
+        }
+    }
+}
+
+// Entry Point
+out "Enter filename to scan: " ;
+string filename ;
+in filename ;
+
+float ok = file_scan_open ( filename ) ;
+if ok ~ 0
+{
+    out "Failed to open file: " + filename + "%n" ;
+}
+else
+{
+    out "mini-bykig++ running " + filename + "%n" ;
+    execute_block ( 0 ) ;
+    file_scan_close ( ) ;
+    out "mini-bykig++ execution finished.%n" ;
+}
+.

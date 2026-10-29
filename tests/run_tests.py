@@ -41,6 +41,8 @@ for idx, tf in enumerate(test_files, start=1):
             [interpreter_path, tf],
             capture_output=True,
             text=True,
+            encoding='utf-8',
+            errors='replace',
             timeout=TIMEOUT_SECONDS,
             cwd=project_dir
         )
@@ -62,8 +64,8 @@ for idx, tf in enumerate(test_files, start=1):
         duration = time.time() - start_time
         status = "TIMEOUT"
         hung.append(rel_path)
-        stdout = e.stdout if e.stdout else ""
-        stderr = e.stderr if e.stderr else ""
+        stdout = e.stdout or ""
+        stderr = e.stderr or ""
         print(f"[{idx:02d}/{len(test_files):02d}] HUNG: {rel_path} (timeout {TIMEOUT_SECONDS}s)")
 
     results.append({
@@ -146,7 +148,10 @@ for res in results:
     lines.append(f"  ({meta})")
     lines.append(sub_sep)
 
-    stdout = res['stdout'].strip()
+    stdout = res['stdout']
+    if isinstance(stdout, bytes):
+        stdout = stdout.decode('utf-8', errors='replace')
+    stdout = (stdout or "").strip()
     if stdout:
         lines.append("STDOUT:")
         for line in stdout.splitlines():
@@ -154,7 +159,10 @@ for res in results:
     else:
         lines.append("STDOUT: (none)")
 
-    stderr = res['stderr'].strip()
+    stderr = res['stderr']
+    if isinstance(stderr, bytes):
+        stderr = stderr.decode('utf-8', errors='replace')
+    stderr = (stderr or "").strip()
     if stderr:
         lines.append("STDERR:")
         for line in stderr.splitlines():

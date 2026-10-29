@@ -1,0 +1,99 @@
+out "=== Test 1: Standalone block scoping ===" + "%n" ;
+int a = 100 ;
+{
+    int a = 200 ;
+    out "Inner a: " + a + "%n" ;
+}
+out "Outer a: " + a + "%n" ;
+
+out "=== Test 2: Full Value Output ===" + "%n" ;
+list l1 ;
+push ( l1 , 10 ) ;
+push ( l1 , 20 ) ;
+push ( l1 , "hello" ) ;
+out "l1: " ;
+out l1 ;
+out "%n" ;
+out "Concat with l1: " + l1 + "%n" ;
+
+map m1 ;
+push ( m1 , "name" , "BYKIG" ) ;
+push ( m1 , "ver" , 2 ) ;
+out "m1: " ;
+out m1 ;
+out "%n" ;
+out "Concat with m1: " + m1 + "%n" ;
+
+out "=== Test 3: Value Comparisons ===" + "%n" ;
+list l2 ;
+push ( l2 , 10 ) ;
+push ( l2 , 20 ) ;
+push ( l2 , "hello" ) ;
+if l1 ~ l2
+{
+    out "l1 equals l2: true%n" ;
+}
+else
+{
+    out "l1 equals l2: false%n" ;
+}
+
+push ( l2 , 99 ) ;
+if l1 ! l2
+{
+    out "l1 != l2 after modification: true%n" ;
+}
+
+out "=== Test 4: Nested List Indexing ===" + "%n" ;
+list row0 ;
+push ( row0 , 1 ) ;
+push ( row0 , 2 ) ;
+
+list row1 ;
+push ( row1 , 3 ) ;
+push ( row1 , 4 ) ;
+
+list matrix ;
+push ( matrix , row0 ) ;
+push ( matrix , row1 ) ;
+
+out "matrix[0][1] = " + matrix [ 0 ] [ 1 ] + "%n" ;
+out "matrix[1][0] = " + matrix [ 1 ] [ 0 ] + "%n" ;
+
+matrix [ 1 ] [ 0 ] = 99 ;
+out "matrix[1][0] after assignment = " + matrix [ 1 ] [ 0 ] + "%n" ;
+
+out "=== Test 5: Nested Map Indexing ===" + "%n" ;
+map user ;
+push ( user , "name" , "Alice" ) ;
+push ( user , "age" , 25 ) ;
+
+map db ;
+push ( db , "u1" , user ) ;
+
+out "db['u1']['name'] = " + db [ "u1" ] [ "name" ] + "%n" ;
+out "db['u1']['age'] = " + db [ "u1" ] [ "age" ] + "%n" ;
+
+db [ "u1" ] [ "age" ] = 26 ;
+out "db['u1']['age'] after update = " + db [ "u1" ] [ "age" ] + "%n" ;
+out "=== Test 6: Mixed List of Maps ===" + "%n" ;
+list users ;
+map u0 ;
+push ( u0 , "name" , "Bob" ) ;
+push ( users , u0 ) ;
+
+out "users[0]['name'] = " + users [ 0 ] [ "name" ] + "%n" ;
+users [ 0 ] [ "name" ] = "Charlie" ;
+out "users[0]['name'] after update = " + users [ 0 ] [ "name" ] + "%n" ;
+
+out "=== Test 7: Map of Lists ===" + "%n" ;
+map dataset ;
+list scores ;
+push ( scores , 95 ) ;
+push ( scores , 88 ) ;
+push ( dataset , "scores" , scores ) ;
+
+out "dataset['scores'][1] = " + dataset [ "scores" ] [ 1 ] + "%n" ;
+dataset [ "scores" ] [ 1 ] = 100 ;
+out "dataset['scores'][1] after update = " + dataset [ "scores" ] [ 1 ] + "%n" ;
+.

@@ -6,25 +6,38 @@ This guide explains the current implementation architecture and is intended for 
 
 ```text
 BYKIG++/
-├── Interpreter.c
-├── VarLL.h
-├── ArithmaticExprEval.h
-├── ExprEvalStack.h
-├── Builtins.h
-├── Keywords.h
-└── BYKIG.c
+├── Interpreter.c            # Main interpreter loop, statements, declarations, CLI
+├── VarLL.h                  # Runtime structures, Value, environments, collection storage
+├── ArithmaticExprEval.h     # Infix expression evaluator, complex resolution, postfix stack
+├── ExprEvalStack.h          # Operator stack and Value stack implementation
+├── Builtins.h               # Built-in function handlers and registry
+├── Keywords.h               # Keyword-to-mode classification
+├── BYKIG.c                  # Core support routines
+├── tests/                   # Regression test suites and automated test runner
+│   ├── run_tests.py         # Test execution harness (79 tests)
+│   ├── basics/              # Core types, expressions, shadowing, strings
+│   ├── control_flow/        # Conditionals, while loops, for loops, break/continue
+│   ├── data_structures/     # Arrays, dynamic lists, generic maps, collection references
+│   ├── functions/           # Function calls, recursion, scope, return values
+│   ├── modules/             # File imports, circular dependency tests
+│   └── integration/         # Sorting, mock database, prime sieve, file analyzers
+└── mini-bykig++/            # Self-hosted companion interpreter written in BYKIG++
+    ├── main.bykig           # CLI loop, statement dispatch, block execution
+    ├── memory.bykig         # Lexical environments, heap lists/maps, function registry
+    ├── evaluator.bykig      # Expressions, collection literals, nested indexing
+    └── test_*.mini          # Test suites for mini-bykig++
 ```
 
 ### Responsibilities
 
 | File | Responsibility |
 |---|---|
-| `Interpreter.c` | Main token-driven interpreter loop, declarations, statements, control flow, functions, modules, and program entry. |
-| `VarLL.h` | Runtime structures, variable/collection storage, lookup, mutation, and frame cleanup. |
-| `ArithmaticExprEval.h` | Expression evaluation and complex-expression resolution. |
-| `ExprEvalStack.h` | Operator stack and `Value` stack implementation. |
-| `Builtins.h` | Built-in handlers and built-in registry. |
-| `Keywords.h` | Keyword-to-mode classification. |
+| `Interpreter.c` | Main token-driven interpreter loop, declarations, statements, control flow (`if`, `while`, `for`, `break`, `continue`), functions, modules, and program entry. |
+| `VarLL.h` | Unified `Value` model, variable/collection storage (`IV`, `SV`, `LV`, `MV`), lookup, mutation, reference aliasing, and frame cleanup. |
+| `ArithmaticExprEval.h` | Multi-pass expression evaluator: complex resolution (`resolve_complex_types`), nested collection indexing, string token formatting (`format_string_token`), and postfix operator stack evaluation. |
+| `ExprEvalStack.h` | Operator stack (`struct node`) and `Value` stack (`struct node2`) implementation. |
+| `Builtins.h` | Built-in handlers, streaming file scanner (`file_scan_*`) with punctuation-aware tokenization, collection built-ins, and utility functions. |
+| `Keywords.h` | Keyword-to-mode classification (`whichone`). |
 | `BYKIG.c` | Project source/build-side support inherited from the project. |
 
 ## 2. Runtime architecture
@@ -108,31 +121,33 @@ Use the fields according to `type`:
 ```text
 VAL_FLOAT      → f
 VAL_STRING     → s
-array/list/map → ptr
+VAL_LIST       → ptr points to struct lV
+VAL_MAP        → ptr points to struct mV
+array types    → ptr points to typed array struct
 VAL_ERROR      → error state
 ```
 
-The `Value` object is the runtime transport format. Storage itself remains specialized.
+The `Value` object is the runtime transport format. String conversion is handled via `value_to_string(struct Value v, char *dest, size_t dest_sz)`.
 
 ## 5. Environment model
 
 An environment is represented by the storage pointers inside `callFrame`:
 
 ```text
-IV/FV/CV/BV/SV
-IA/FA/CA/BA
-LV/MV
+IV/FV/CV/BV/SV   (primitive variables)
+IA/FA/CA/BA      (typed arrays)
+LV/MV            (dynamic lists and generic maps)
 ```
 
 `envStack[envTop]` is the active environment.
 
 Lookup walks from the current environment toward global scope:
 
-```text
-for (idx = envTop; idx >= 0; idx--)
+```c
+for (int idx = envTop; idx >= 0; idx--)
 ```
 
-This makes local declarations shadow outer declarations.
+This makes local declarations shadow outer declarations. Assignments to existing variables search from the innermost scope outwards and mutate the existing binding rather than creating a duplicate.
 
 ## 6. Memory ownership and cleanup
 
@@ -144,11 +159,11 @@ It frees:
 primitive variable nodes
 string variable nodes
 array nodes + data buffers
-list nodes + data buffers
-map nodes
+list nodes + data buffers (for non-reference lists)
+map nodes + entry buffers
 ```
 
-Function-call cleanup now occurs before restoring the caller's environment:
+Function-call cleanup occurs before restoring the caller's environment:
 
 ```text
 callee environment
@@ -158,7 +173,7 @@ cleanupFrame()
 envTop = saved_envTop
 ```
 
-This is important for recursion because every recursive invocation gets a separate environment.
+This guarantees that every recursive invocation gets a clean environment and avoids memory leaks upon unwind.
 
 ## 7. Function runtime
 
@@ -188,7 +203,7 @@ push call frame
    ↓
 create environment
    ↓
-materialize parameters
+materialize parameters (copy values or pass list reference)
    ↓
 fseek(bodyPos)
    ↓
@@ -215,7 +230,7 @@ new environment
 
 for the same `funcDef`.
 
-The current complex-expression resolver contains a call-depth guard at about 1000 frames (`callStackTop >= 999`), even though the static array is sized for 10000 entries. Treat the implementation guard as authoritative when changing recursion behavior.
+The complex-expression resolver contains a recursion-depth guard at about 1000 frames (`callStackTop >= 999`), protecting the process against runaway stack exhaustion.
 
 ## 9. Expression architecture
 
@@ -226,7 +241,9 @@ expression
    ↓
 resolve_complex_types()
    ↓
-functions / built-ins / indexing resolved
+functions / built-ins / multi-level collection indexing resolved
+   ↓
+format_string_token()
    ↓
 val()
    ↓
@@ -238,54 +255,55 @@ Value
 `val()` uses:
 
 ```text
-operator stack → struct node
-value stack    → struct node2 containing Value
+operator stack → struct node (ExprEvalStack.h)
+value stack    → struct node2 containing struct Value
 ```
 
-This avoids needing an AST for ordinary expressions.
+This avoids needing an AST for expressions while supporting arbitrary nesting.
 
-## 10. Complex expression resolution
+## 10. Complex expression resolution and string tokens
 
-`resolve_complex_types()` recognizes constructs such as:
+`resolve_complex_types()` recognizes and resolves:
 
 ```text
 function(args)
 builtin(args)
 array[index]
-list[index]
-map[key]
+list[index]...[index]
+map[key]...[key]
 ```
 
-It evaluates the complex part and rewrites the token array so ordinary expression evaluation can continue.
+### Multi-level nested indexing
+When a collection identifier is followed by `[`, `resolve_complex_types()` loops across all consecutive bracket pairs:
 
-This means a call such as:
-
-```text
-foo(2 + 3) * 4
+```c
+while (nextIdx < tokenCount && strcmp(tokens[nextIdx], "[") == 0) { ... }
 ```
 
-can become conceptually:
+It recursively evaluates each index expression via `val()`, traverses down nested lists (`struct lV`) or maps (`struct mV`), and substitutes the final resolved element.
 
-```text
-5 * 4
-```
+### String token formatting & unescaping
+To prevent string contents (such as spaces, quotes, or punctuation) from breaking the postfix tokenizer:
+- `format_string_token()` wraps string values in outer quotes and escapes inner `"` to `\"` and `\` to `\\`.
+- The postfix evaluator strips the outer quotes and unescapes `\"` into `"` and `\\` into `\`.
 
-before ordinary postfix evaluation.
+This ensures string concatenation (`greeting + " " + target + "!"`) works cleanly without losing whitespace or confusing string operators.
 
 ## 11. Operator precedence
 
-`priority()` defines precedence for the internal operator representation.
-
-Important internal equality operators are represented with single characters so the expression evaluator can use a character stack:
+`priority()` defines precedence for internal operator representation:
 
 ```text
-~  equality
-!  inequality
-< > <= >=
-& |
+~, #   equality (numeric or strcmp for strings)
+!, @   inequality
+<, >   less/greater than
+^, ?   less-or-equal, greater-or-equal
++, -   addition / subtraction (and string concatenation)
+*, /, % multiplication, division, modulo
+&, |   logical AND, logical OR
 ```
 
-The expression implementation rewrites/handles multi-character comparisons before stack evaluation.
+The expression tokenizer rewrites multi-character operators (`==`, `!=`, `<=`, `>=`, `&&`, `||`) to single-character internal tokens prior to stack evaluation.
 
 ## 12. Built-in architecture
 
@@ -293,11 +311,7 @@ The expression implementation rewrites/handles multi-character comparisons befor
 
 ```c
 typedef struct Value (*BuiltinHandler)(char args[][1000], int argCount);
-```
 
-and:
-
-```c
 struct BuiltinFunc {
     char name[100];
     int expectedArgs;
@@ -315,66 +329,74 @@ findBuiltin()
 handler
 ```
 
-To add a built-in:
+### Core Built-in Groups
+- **Collection**: `len`, `push`, `pop`, `exists`, `delete`.
+- **String utilities**: `quote`, `strip_quotes`, `is_num`, `is_str`, `starts_with`, `parse_float`.
+- **File I/O**: `file_exists`, `file_write`, `file_append`, `file_read`.
+- **Streaming scanner**: `file_scan_open`, `file_scan_next`, `file_scan_is_str`, `file_scan_close`, `file_scan_get_pos`, `file_scan_set_pos`.
 
-1. Implement a handler returning `struct Value`.
-2. Add an entry to `builtins[]`.
-3. Ensure argument parsing and expression resolution can invoke it correctly.
+### Punctuation-aware tokenizer in `file_scan_next`
+`builtin_file_scan_next()` treats `[`, `]`, `{`, `}`, `(`, `)`, `,`, and `;` as self-delimiting tokens, allowing natural code without requiring artificial whitespace padding around punctuation.
 
 ## 13. Storage model for collections
 
 ### Arrays
-
-Each primitive array type has its own node type and data pointer:
-
-```text
-iA → int *
-fA → float *
-cA → char *
-bA → int *
-```
-
-### Lists
-
-Lists use:
+Each primitive array type has its own node type and contiguous buffer:
 
 ```text
-size
-capacity
-float *data
+iA → int *data, size
+fA → float *data, size
+cA → char *data, size
+bA → int *data, size
 ```
 
-### Maps
+### Lists (`struct lV`)
+Lists are dynamic arrays storing generic `struct Value` items:
 
-Maps use fixed storage:
-
-```text
-keys[100][100]
-values[100]
-count
+```c
+struct lV {
+    char name[100];
+    int size;
+    int capacity;
+    struct Value *data;
+    struct lV *ref;
+    struct lV *next;
+};
 ```
 
-and perform linear search.
+- **Dynamic Growth**: Allocation doubles when `size >= capacity`.
+- **Reference Aliasing**: When passed to functions, `ref` links the local parameter to the caller's list, enabling in-place reference semantics.
+
+### Maps (`struct mV`)
+Maps are associative key-value stores with generic `Value` entries:
+
+```c
+struct mapEntry {
+    char key[100];
+    struct Value value;
+};
+
+struct mV {
+    char name[100];
+    int count;
+    int capacity;
+    struct mapEntry *entries;
+    struct mV *next;
+};
+```
+
+- **Dynamic Growth**: Entries buffer automatically reallocates (`realloc`) when capacity is exceeded.
+- **Generic Values**: Elements can store numbers, strings, lists, or nested maps.
 
 ## 14. Modules
 
-`use` opens another `.bykig` file and invokes the same:
+`use` opens another `.bykig` file and invokes:
 
 ```c
 run_interpreter_loop(mod_fp, resolved_path);
 ```
 
-The interpreter temporarily changes:
-
-```text
-current_fp
-```
-
-to the module and restores it afterward.
-
-Imported code runs in the current environment rather than a separate module namespace.
-
-Function definitions created while importing retain the module path in `funcDef.filepath`, allowing later calls to reopen the defining file and seek to `bodyPos`.
+The interpreter temporarily changes `current_fp` to the module and restores it afterward. Imported code runs in the current environment. Function definitions created while importing retain the module path in `funcDef.filepath`, allowing subsequent calls to reopen the defining file and seek to `bodyPos`.
 
 ## 15. Source-position control
 
@@ -386,110 +408,41 @@ fseek()
 ```
 
 for:
+- while-loop and for-loop restart positions
+- conditional skipping (`if`, `elif`, `else`)
+- function body entry and exit
+- module switching
+- caller-position restoration
 
-```text
-while-loop restart positions
-conditional skipping
-function body entry
-module switching
-caller-position restoration
-```
+## 16. Self-hosting & `mini-bykig++`
 
-This is the main substitute for an explicit instruction pointer/AST execution tree.
+`mini-bykig++` is an interpreter for `.mini` written entirely in BYKIG++, located in `mini-bykig++/`:
 
-## 16. Error handling
+- **Lexical Environments** (`memory.bykig`): Uses generic maps (`map scopeStack`, `map envVal`, `map envType`) to implement lexically-scoped variables and function registries.
+- **Heap Management**: Allocates virtual object IDs (`newList`, `newMap`) and maps object operations to associative storage.
+- **Expression Evaluation** (`evaluator.bykig`): Builds expression strings and leverages BYKIG++'s built-in `eval()` and `quote()`.
+- **Parsing** (`main.bykig`): Uses `file_scan_*` built-ins to tokenize `.mini` scripts and drive control-flow and statement execution.
+
+## 17. Error handling
 
 `safe_fscanf()` turns required-token read failures into a fatal error instead of allowing execution to continue with missing input.
 
 Other runtime checks include:
+- undefined variable lookup
+- invalid function/builtin lookup
+- call-stack overflow protection
+- break/continue outside loops
+- collection index out-of-bounds protection
+- file open/read/write failures
 
-```text
-undefined names
-invalid function/builtin lookup
-stack overflow protection
-break/continue outside a loop
-collection access failures
-file open/read/write failures
-```
-
-When extending the interpreter, preserve explicit failure behavior rather than silently manufacturing a valid `Value`.
-
-## 17. Adding a new data type
-
-A new runtime type generally requires changes across several layers:
-
-```text
-ValueType
-    ↓
-Value representation
-    ↓
-storage structure
-    ↓
-append/get/set functions
-    ↓
-typeFetcher()
-    ↓
-valFetcherGlobal()
-    ↓
-expression resolution
-    ↓
-declaration/assignment syntax
-    ↓
-cleanupFrame()
-    ↓
-function-argument copying
-    ↓
-built-ins / len / delete / exists where relevant
-```
-
-The important rule is to update ownership and cleanup at the same time as storage.
-
-## 18. Adding a new statement
-
-For a new keyword:
-
-```text
-Keywords.h
-   ↓
-new mode
-   ↓
-Interpreter.c switch case
-   ↓
-parse statement
-   ↓
-update runtime state
-   ↓
-handle errors
-```
-
-If the feature affects expressions, also integrate it with `resolve_complex_types()` and/or `val()`.
-
-## 19. Practical development checklist
+## 18. Practical development checklist
 
 Before considering an interpreter feature complete, test:
-
-```text
-normal execution
-nested execution
-function-local variables
-shadowing
-nested function calls
-recursion
-error paths
-module interaction
-repeated execution
-allocation/deallocation
-```
-
-For memory-sensitive changes, use an external memory checker such as AddressSanitizer or Valgrind in addition to language-level tests.
-
-## 20. Architectural principles
-
-When extending BYKIG++, preserve these project principles unless intentionally redesigning the runtime:
-
-1. Keep storage ownership explicit.
-2. Return runtime results through `Value` where possible.
-3. Keep complex-expression handling separate from ordinary operator evaluation.
-4. Preserve source-position restoration across nested execution.
-5. Free frame-owned allocations when a scope lifetime ends.
-6. Test nested and recursive cases, not only flat examples.
+1. Normal execution
+2. Nested execution (nested loops, nested collections, nested expressions)
+3. Lexical scoping and variable shadowing
+4. Function parameter passing (value copy vs. reference)
+5. Recursion and frame cleanup
+6. Collection mutation (`push`, `pop`, `delete`, index assignment)
+7. Error paths and bounds checks
+8. Full regression suite (`python tests/run_tests.py`)
