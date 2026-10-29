@@ -2421,7 +2421,6 @@ case 15:
                 char className[100];
                 read_token_skip_comments(fp, className);
                 
-                // 1. Validate class name: cannot be empty or keyword
                 int kw = whichone(className);
                 if (kw != 11 || className[0] == '\0') {
                     printf("Error: Invalid class name '%s' (cannot be a keyword or empty)\n", className);
@@ -2443,7 +2442,6 @@ case 15:
                     break;
                 }
                 
-                // 2. Reject duplicate class name
                 if (findClass(CLASS_REGISTRY, className) != NULL) {
                     printf("Error: Duplicate class '%s'\n", className);
                     char skipBuf[100];
@@ -2464,7 +2462,6 @@ case 15:
                     break;
                 }
                 
-                // 3. Expect opening '{' or 'extends'
                 char nextTok[100];
                 read_token_skip_comments(fp, nextTok);
                 char parentName[100] = "";
@@ -2509,7 +2506,6 @@ case 15:
                     break;
                 }
                 
-                // 4. Allocate class definition (defer registration until validated)
                 struct classDef *cls = (struct classDef*)malloc(sizeof(struct classDef));
                 if (!cls) {
                     printf("Error: Memory allocation failed for class '%s'\n", className);
@@ -2536,7 +2532,6 @@ case 15:
                 cls->constructor = NULL;
                 cls->next = NULL;
                 
-                // 5. Parse class body until matching '}'
                 int classDeclError = 0;
                 int curBraceDepth = 1;
                 while (1) {
@@ -2803,7 +2798,6 @@ case 15:
                     }
                 }
                 
-                // 6. Finalize registration or perform safe rollback on error
                 if (classDeclError) {
                     while (curBraceDepth > 0 && !feof(fp)) {
                         char skipBuf[100];

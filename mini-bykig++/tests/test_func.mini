@@ -1,32 +1,26 @@
-// test_func.mini - Functions, return values, recursion, and calls in expressions
-
-// 1. Basic function with parameters
 func add ( a , b )
 {
     return a + b ;
 }
 
 var sum = add ( 15 , 25 ) ;
-out sum ; // Expected: 40
+out sum ;
 
-// 2. String manipulation function
 func greet ( name )
 {
     return "Hello, " + name + "!" ;
 }
 
 var g = greet ( "Alice" ) ;
-out g ; // Expected: Hello, Alice!
+out g ;
 
-// 3. Standalone function call (procedure)
 func sayHello ( )
 {
     out "Procedure called successfully" ;
 }
 
-sayHello ( ) ; // Expected: Procedure called successfully
+sayHello ( ) ;
 
-// 4. Recursive factorial function
 func fact ( n )
 {
     if n <= 1
@@ -37,12 +31,9 @@ func fact ( n )
 }
 
 var f5 = fact ( 5 ) ;
-out f5 ; // Expected: 120
+out f5 ;
 
-// 5. Function calls chained inside expressions
 var combined = add ( 5 , 5 ) * fact ( 3 ) + add ( 10 , 2 ) ;
-// 10 * 6 + 12 = 72
-out combined ; // Expected: 72
+out combined ;
 
 .
-

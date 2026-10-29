@@ -1,5 +1,3 @@
-// test_collections.mini - Dynamic Lists, Generic Maps, and Nested Indexing
-
 out "=== 1. Dynamic Lists ===" ;
 var lst = [ 10 , 20 , 30 ] ;
 out lst ;

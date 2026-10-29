@@ -9,7 +9,6 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 project_dir = os.path.abspath(os.path.join(script_dir, ".."))
 interpreter_path = os.path.join(project_dir, "Interpreter.exe")
 
-# Allow custom output file path via CLI argument; default to tests/test_output.txt
 if len(sys.argv) > 1:
     output_txt_path = os.path.abspath(sys.argv[1])
 else:
@@ -78,7 +77,6 @@ for idx, tf in enumerate(test_files, start=1):
         "stderr": stderr
     })
 
-# Clean up transient files produced by file I/O tests in the project directory
 for temp_file in ["scanner_dummy.txt", "test.txt", "test_data.txt"]:
     temp_path = os.path.join(project_dir, temp_file)
     if os.path.exists(temp_path):
@@ -87,7 +85,6 @@ for temp_file in ["scanner_dummy.txt", "test.txt", "test_data.txt"]:
         except OSError:
             pass
 
-# Generate structured text report
 lines = []
 sep = "=" * 80
 sub_sep = "-" * 80

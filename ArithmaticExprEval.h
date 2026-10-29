@@ -366,7 +366,6 @@ void resolve_complex_types(char *expr) {
     }
     
      
-    // Resolve object instantiation: new ClassName ( args )
     int resolvedNew = 1;
     while (resolvedNew) {
         resolvedNew = 0;
@@ -696,12 +695,10 @@ void resolve_complex_types(char *expr) {
         }
     }
 
-    // Resolve member method calls, field accesses, and collection interactions
     int resolvedCompound = 1;
     while (resolvedCompound) {
         resolvedCompound = 0;
 
-        // 1. Spaced method call: tokens[i] . tokens[i+2] ( ... )
         for (int i = 0; i < tokenCount; i++) {
             if (i + 3 < tokenCount && strcmp(tokens[i+1], ".") == 0 && strcmp(tokens[i+3], "(") == 0) {
                 int isReceiver = 0;
@@ -784,7 +781,6 @@ void resolve_complex_types(char *expr) {
                     break;
                 }
             }
-            // 2. Unspaced method call: tokens[i] contains '.' and tokens[i+1] == "("
             else if (i + 1 < tokenCount && !strcmp(tokens[i+1], "(") && tokens[i][0] != '"' && !isdigit(tokens[i][0]) && !(tokens[i][0] == '-' && isdigit(tokens[i][1]))) {
                 char *lastDot = strrchr(tokens[i], '.');
                 if (lastDot != NULL) {
@@ -916,7 +912,6 @@ void resolve_complex_types(char *expr) {
 
         if (resolvedCompound) continue;
 
-        // 3. Spaced field access: tokens[i] . tokens[i+2] (when tokens[i+3] != "(")
         for (int i = 0; i < tokenCount; i++) {
             if (i + 2 < tokenCount && !strcmp(tokens[i+1], ".")) {
                 if (i + 3 < tokenCount && !strcmp(tokens[i+3], "(")) {
@@ -1001,7 +996,6 @@ void resolve_complex_types(char *expr) {
                     break;
                 }
             }
-            // 4. Unspaced field access: tokens[i] contains '.' and tokens[i+1] != "("
             else if (tokens[i][0] != '"' && !isdigit(tokens[i][0]) && !(tokens[i][0] == '-' && isdigit(tokens[i][1]))) {
                 char *dot = strchr(tokens[i], '.');
                 if (dot != NULL) {
@@ -1112,7 +1106,6 @@ void resolve_complex_types(char *expr) {
 
         if (resolvedCompound) continue;
 
-        // 5. Collection indexing: tokens[i] [ ... ]
         for (int i = 0; i < tokenCount; i++) {
             if (i < tokenCount - 3 && strcmp(tokens[i+1], "[") == 0) {
                 int type = typeFetcher(tokens[i]);

@@ -641,7 +641,6 @@ static inline struct Value builtin_is_instance(char args[][1000], int argCount) 
         return retV;
     }
 
-    // 1. Resolve and validate target class name
     char targetClassName[100] = "";
     char clsExpr[1000];
     snprintf(clsExpr, sizeof(clsExpr), "%s ;", args[1]);
@@ -662,16 +661,13 @@ static inline struct Value builtin_is_instance(char args[][1000], int argCount) 
 
     struct classDef *targetCls = findClass(CLASS_REGISTRY, targetClassName);
     if (!targetCls) {
-        // Unknown target class name returns 0 (false) safely
         return retV;
     }
 
-    // 2. Evaluate object expression
     char objExpr[1000];
     snprintf(objExpr, sizeof(objExpr), "%s ;", args[0]);
     struct Value oVal = val(objExpr);
 
-    // 3. Non-object values and null references return 0 (false)
     if (oVal.type != VAL_OBJECT || oVal.ptr == NULL) {
         return retV;
     }
@@ -681,7 +677,6 @@ static inline struct Value builtin_is_instance(char args[][1000], int argCount) 
         return retV;
     }
 
-    // 4. Check if inst->cls is targetCls or a subclass of targetCls
     if (isSubclassOf(inst->cls, targetCls)) {
         retV.f = 1.0f;
     }

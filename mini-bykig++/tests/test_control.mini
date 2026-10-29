@@ -1,6 +1,3 @@
-// test_control.mini - Control flow tests: if/elif/else, while, for, break, continue, scoping
-
-// 1. if / elif / else
 var score = 85 ;
 if score >= 90
 {
@@ -8,14 +5,13 @@ if score >= 90
 }
 elif score >= 80
 {
-    out 80 ; // Expected: 80
+    out 80 ;
 }
 else
 {
     out 0 ;
 }
 
-// 2. while loop with continue and break
 var counter = 0 ;
 var sum = 0 ;
 while counter < 10
@@ -29,26 +25,23 @@ while counter < 10
     {
         break ;
     }
-    sum = sum + counter ; // Adds 1, 2, 4, 5 = 12
+    sum = sum + counter ;
 }
-out sum ; // Expected: 12
+out sum ;
 
-// 3. for loop
 var total = 0 ;
 for var i = 1 ; i <= 5 ; i = i + 1
 {
-    total = total + i ; // 1 + 2 + 3 + 4 + 5 = 15
+    total = total + i ;
 }
-out total ; // Expected: 15
+out total ;
 
-// 4. Scoping & Variable Shadowing
 var x = 100 ;
 if x == 100
 {
     var x = 200 ;
-    out x ; // Expected: 200 (shadowed inside block)
+    out x ;
 }
-out x ; // Expected: 100 (preserved outer value)
+out x ;
 
 .
-

@@ -57,15 +57,15 @@ struct classDef;
 
 struct classField {
     char name[100];
-    int type;          // 1=int, 2=float, 3=char, 4=bool, 5=string, 6=intarr, 7=floatarr, 8=chararr, 9=boolarr, 10=list, 11=map, 12=object
-    int isPrivate;     // 0=public, 1=private
+    int type;
+    int isPrivate;
     struct classDef *declaringClass;
     char typeName[100];
 };
 
 struct classMethod {
     char name[100];
-    int isPrivate;     // 0=public, 1=private
+    int isPrivate;
     struct classDef *declaringClass;
     struct funcDef *func;
 };
@@ -92,19 +92,19 @@ static inline int isSubclassOf(struct classDef *child, struct classDef *parent);
 
 struct objFieldVal {
     char name[100];
-    int type;          // 1=int, 2=float, 3=char, 4=bool, 5=string, 6=intarr, 7=floatarr, 8=chararr, 9=boolarr, 10=list, 11=map, 12=object
-    int isPrivate;     // 0=public, 1=private
+    int type;
+    int isPrivate;
     struct classDef *declaringClass;
     char typeName[100];
-    struct Value val;  // Unified runtime Value representation
+    struct Value val;
 };
 
 struct objInstance {
-    int id;                     // Unique integer instance ID
-    struct classDef *cls;       // Class definition
+    int id;
+    struct classDef *cls;
     int fieldCount;
-    struct objFieldVal *fields; // Dynamically allocated field array
-    struct objInstance *next;   // Linked list in global OBJECT_HEAP
+    struct objFieldVal *fields;
+    struct objInstance *next;
 };
 
 extern struct objInstance *OBJECT_HEAP;
