@@ -19,14 +19,17 @@ It runs on top of the native BYKIG++ runtime (`Interpreter.exe`) and provides a 
 - **Object-Oriented Programming**:
   - Class declarations with fields, explicit constructors (`construct`), and instance methods.
   - Implicit zero-argument default constructors when omitted.
+  - Explicit parent constructor chaining via `super . construct ( ... )` with first-statement, single-execution, and superclass invariants.
+  - Implicit ancestor constructor chaining when `super.construct` is omitted (with diagnostics if ancestor constructors require arguments).
   - Instantiation via `new ClassName ( ... )` in expressions, statements, collections, and arguments.
   - Dynamic receiver binding (`this`) with call frame isolation across nested/recursive calls.
   - Member access and mutation via standard dot notation (`obj . field = ...`, `obj . method ( ... )`).
-  - Single inheritance (`class Dog extends Animal`), inherited member access, and duplicate field collision guards.
+  - Single inheritance (`class Dog extends Animal`), inherited member access, circular inheritance rejection, and duplicate field collision guards.
   - Virtual method overriding and dynamic runtime polymorphic dispatch.
   - Access control and encapsulation with `public` and `private` modifiers enforced against declaring class context.
+  - Null reference safety: uninitialized typed reference declarations (`Point p ;`), explicit `null` literal, `is_null ( expr )` predicate, and clear diagnostics on null dereference or null method call.
   - Runtime object type inspection predicate: `is_instance ( obj , "ClassName" )`.
-  - Standard object string representation: `<Object ClassName#id>`.
+  - Standard object string representation: `<Object ClassName#id>` (`"null"` for null references).
 - **100% Pure BYKIG++**: Implemented entirely in BYKIG++ across three decoupled modules without external runtime dependencies.
 
 ---
@@ -97,7 +100,7 @@ class Dog extends Animal
 
     public func construct ( petName , petBreed )
     {
-        this . name = petName ;
+        super . construct ( petName ) ;
         this . breed = petBreed ;
     }
 
@@ -121,8 +124,11 @@ var pets = [ myDog ] ;
 push ( pets , new Animal ( "Creature" ) ) ;
 out len ( pets ) ; // 2
 
-// Runtime type verification
+// Runtime type verification & null checks
 out is_instance ( myDog , "Animal" ) ; // 1
+out is_null ( myDog ) ; // 0
+Dog uninitDog ;
+out is_null ( uninitDog ) ; // 1
 ```
 
 ---
@@ -135,8 +141,8 @@ The test suite is organized into focused `.mini` programs located in [`tests/`](
 2. [`test_control.mini`](tests/test_control.mini): `if`/`elif`/`else`, `while` with `break` & `continue`, `for` loop, block-level variable shadowing.
 3. [`test_func.mini`](tests/test_func.mini): Multi-parameter functions, string return values, procedures, recursion (`factorial`), and chained calls in expressions.
 4. [`test_collections.mini`](tests/test_collections.mini): Dynamic lists, generic maps, `push`, `pop`, `len`, `exists`, `delete`, multi-dimensional list indexing (`matrix[1][0]`), deep map/list nesting (`data["users"][0]["name"]`), and collection parameters in functions.
-5. [`test_oop.mini`](tests/test_oop.mini): Classes, typed and untyped fields, parameterized & default constructors, dynamic `this` receiver binding & field mutation, member access via dot notation, single inheritance (`extends`), method overriding, runtime polymorphic dispatch, `is_instance` type checking, and private member encapsulation.
-6. [`test_all.mini`](tests/test_all.mini): Comprehensive end-to-end regression covering all language features including double recursion (`fibonacci`) and full OOP integration.
+5. [`test_oop.mini`](tests/test_oop.mini): Classes, fields, constructors, `this` receiver binding & mutation, single and multi-level inheritance, method overriding, runtime polymorphic dispatch, `super . construct ( ... )` parent constructor chaining, implicit ancestor construction, encapsulation violations, uninitialized/null references, null member diagnostics, and `is_instance` / `is_null` runtime predicates.
+6. [`test_all.mini`](tests/test_all.mini): Comprehensive end-to-end regression covering all language features including double recursion (`fibonacci`) and full OOP integration with `super . construct ( ... )`.
 
 ---
 

@@ -1,5 +1,3 @@
-// main.bykig - Main Execution Loop and CLI for mini-bykig++
-
 use "evaluator.bykig" ;
 
 func execute_for_iter ( float hasParen ) {
@@ -107,6 +105,174 @@ func execute_block ( float stopAtBrace ) {
             if stopAtBrace ~ 1
             {
                 break ;
+            }
+        }
+        
+        float isSuper = 0 ;
+        if token ~ "super"
+        {
+            isSuper = 1 ;
+        }
+        else
+        {
+            float sw = starts_with ( token , "super." ) ;
+            if sw ~ 1
+            {
+                isSuper = 2 ;
+            }
+        }
+        
+        if isSuper ! 1 && isSuper ! 2
+        {
+            if isInConstructor ( ) ~ 1
+            {
+                if token ! "}" && token ! ";"
+                {
+                    incCtorStmtCount ( ) ;
+                }
+            }
+        }
+        else
+        {
+            if isInConstructor ( ) ! 1
+            {
+                out "Error: 'super.construct' can only be called inside a constructor%n" ;
+                while 1 < 2
+                {
+                    string skTok = file_scan_next ( ) ;
+                    if skTok ~ ";" || skTok ~ "EOF"
+                    {
+                        break ;
+                    }
+                }
+            }
+            else
+            {
+                string curCtorClass = getCtorClass ( ) ;
+                string pCls = classParent [ curCtorClass ] ;
+                if pCls ~ ""
+                {
+                    out "Error: Class '" + curCtorClass + "' has no superclass to call 'super.construct'%n" ;
+                    while 1 < 2
+                    {
+                        string skTok = file_scan_next ( ) ;
+                        if skTok ~ ";" || skTok ~ "EOF"
+                        {
+                            break ;
+                        }
+                    }
+                }
+                elif getCtorStmtCount ( ) > 0
+                {
+                    out "Error: 'super.construct' must be the first statement in constructor%n" ;
+                    while 1 < 2
+                    {
+                        string skTok = file_scan_next ( ) ;
+                        if skTok ~ ";" || skTok ~ "EOF"
+                        {
+                            break ;
+                        }
+                    }
+                }
+                elif getCtorSuperCalled ( ) ~ 1
+                {
+                    out "Error: 'super.construct' cannot be called more than once%n" ;
+                    while 1 < 2
+                    {
+                        string skTok = file_scan_next ( ) ;
+                        if skTok ~ ";" || skTok ~ "EOF"
+                        {
+                            break ;
+                        }
+                    }
+                }
+                else
+                {
+                    setCtorSuperCalled ( ) ;
+                    incCtorStmtCount ( ) ;
+                    
+                    if isSuper ~ 1
+                    {
+                        string dotTok = file_scan_next ( ) ;
+                        string ctorTok = file_scan_next ( ) ;
+                        string openP = file_scan_next ( ) ;
+                    }
+                    else
+                    {
+                        string openP = file_scan_next ( ) ;
+                    }
+                    
+                    string curP = pCls ;
+                    while curP ! "" && classHasCtor [ curP ] ! 1
+                    {
+                        curP = classParent [ curP ] ;
+                    }
+                    
+                    float actualCount = 0 ;
+                    
+                    float peekP = file_scan_get_pos ( ) ;
+                    string firstArgTok = file_scan_next ( ) ;
+                    if firstArgTok ~ ")"
+                    {
+                        actualCount = 0 ;
+                    }
+                    else
+                    {
+                        file_scan_set_pos ( peekP ) ;
+                        evalArg ( ) ;
+                        setCtorArg ( 0 , argValStr , argValNum , argValType ) ;
+                        actualCount = 1 ;
+                        if lastArgDelim ~ ","
+                        {
+                            evalArg ( ) ;
+                            setCtorArg ( 1 , argValStr , argValNum , argValType ) ;
+                            actualCount = 2 ;
+                            if lastArgDelim ~ ","
+                            {
+                                evalArg ( ) ;
+                                setCtorArg ( 2 , argValStr , argValNum , argValType ) ;
+                                actualCount = 3 ;
+                                if lastArgDelim ~ ","
+                                {
+                                    evalArg ( ) ;
+                                    setCtorArg ( 3 , argValStr , argValNum , argValType ) ;
+                                    actualCount = 4 ;
+                                }
+                            }
+                        }
+                    }
+                    
+                    string semi = file_scan_next ( ) ;
+                    
+                    if curP ~ ""
+                    {
+                        if actualCount > 0
+                        {
+                            out "Error: Class '" + pCls + "' has no constructor matching " + actualCount + " argument(s)%n" ;
+                        }
+                        else
+                        {
+                            runImplicitParentCtors ( getCtorObj ( ) , pCls ) ;
+                        }
+                    }
+                    else
+                    {
+                        float expArgs = classCtorParamCount [ curP ] ;
+                        float isPriv = classCtorPrivate [ curP ] ;
+                        if isPriv ~ 1
+                        {
+                            out "Error: Cannot access private constructor of class '" + curP + "'%n" ;
+                        }
+                        elif actualCount ! expArgs
+                        {
+                            out "Error: Argument count mismatch for constructor in class '" + curP + "': expected " + expArgs + ", got " + actualCount + "%n" ;
+                        }
+                        else
+                        {
+                            execute_ctor_internal ( getCtorObj ( ) , curP , actualCount ) ;
+                        }
+                    }
+                }
             }
         }
         
@@ -254,23 +420,7 @@ func execute_block ( float stopAtBrace ) {
         {
             string cName = file_scan_next ( ) ;
             string openP = file_scan_next ( ) ;
-            float objId = newObjectInstance ( cName ) ;
-            initObjectFields ( objId , cName ) ;
-            if classHasCtor [ cName ] ~ 1
-            {
-                execute_class_constructor ( objId , cName ) ;
-            }
-            else
-            {
-                while 1 < 2
-                {
-                    string t = file_scan_next ( ) ;
-                    if t ~ ")" || t ~ "EOF"
-                    {
-                        break ;
-                    }
-                }
-            }
+            float objId = instantiate_new_object ( cName ) ;
             string semi = file_scan_next ( ) ;
         }
         
@@ -295,7 +445,14 @@ func execute_block ( float stopAtBrace ) {
             }
             elif eqOrSemi ~ ";"
             {
-                defVarVal ( varName , "" , 0 , 0 ) ;
+                if classExists [ token ] ~ 1
+                {
+                    defVarVal ( varName , "" , 0 , 4 ) ;
+                }
+                else
+                {
+                    defVarVal ( varName , "" , 0 , 0 ) ;
+                }
             }
         }
         
@@ -661,27 +818,35 @@ func execute_block ( float stopAtBrace ) {
             elif nextTok ~ "."
             {
                 float targetObj = getVarVal ( varName ) ;
-                string memberName = file_scan_next ( ) ;
-                string afterMember = file_scan_next ( ) ;
-                if afterMember ~ "("
+                if targetObj ~ 0
                 {
-                    execute_method_call ( targetObj , memberName ) ;
-                    string semi = file_scan_next ( ) ;
+                    out "Error: Null reference: cannot access field on null object%n" ;
+                    evalExpressionUntil ( ";" ) ;
                 }
-                elif afterMember ~ "="
+                else
                 {
-                    string targetCls = objClass [ targetObj ] ;
-                    float allowed = canAccessField ( targetCls , memberName ) ;
-                    if allowed ! 1
+                    string memberName = file_scan_next ( ) ;
+                    string afterMember = file_scan_next ( ) ;
+                    if afterMember ~ "("
                     {
-                        string owner = findFieldDeclClass ( targetCls , memberName ) ;
-                        out "Access Error: Cannot access private field '" + memberName + "' of class " + owner + "%n" ;
-                        evalExpressionUntil ( ";" ) ;
+                        execute_method_call ( targetObj , memberName ) ;
+                        string semi = file_scan_next ( ) ;
                     }
-                    else
+                    elif afterMember ~ "="
                     {
-                        evalExpressionUntil ( ";" ) ;
-                        setObjectField ( targetObj , memberName , evalResStr , evalResNum , evalResType ) ;
+                        string targetCls = objClass [ targetObj ] ;
+                        float allowed = canAccessField ( targetCls , memberName ) ;
+                        if allowed ! 1
+                        {
+                            string owner = findFieldDeclClass ( targetCls , memberName ) ;
+                            out "Access Error: Cannot access private field '" + memberName + "' of class " + owner + "%n" ;
+                            evalExpressionUntil ( ";" ) ;
+                        }
+                        else
+                        {
+                            evalExpressionUntil ( ";" ) ;
+                            setObjectField ( targetObj , memberName , evalResStr , evalResNum , evalResType ) ;
+                        }
                     }
                 }
             }
@@ -693,7 +858,6 @@ func execute_block ( float stopAtBrace ) {
     }
 }
 
-// Entry Point
 out "Enter filename to scan: " ;
 string filename ;
 in filename ;

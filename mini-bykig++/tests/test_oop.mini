@@ -90,7 +90,7 @@ class Dog extends Animal
 
     public func construct ( n , b )
     {
-        this . name = n ;
+        super . construct ( n ) ;
         this . breed = b ;
     }
 
@@ -155,6 +155,86 @@ var v = new Vault ( 777 ) ;
 out v . reveal ( ) ; // Allowed: 777
 v . secret = 999 ; // Denied: Access Error
 out v . secret ; // Denied: Access Error
+
+// 8. Multilevel Inheritance & super.construct Chaining
+out "=== 8. Multilevel Inheritance & Constructor Chaining ===" ;
+class Grandparent
+{
+    public string gName ;
+    public func construct ( g )
+    {
+        this . gName = g ;
+    }
+    public func getG ( )
+    {
+        return this . gName ;
+    }
+}
+
+class ParentCls extends Grandparent
+{
+    public string pName ;
+    public func construct ( g , p )
+    {
+        super . construct ( g ) ;
+        this . pName = p ;
+    }
+    public func getP ( )
+    {
+        return this . pName ;
+    }
+}
+
+class ChildCls extends ParentCls
+{
+    public string cName ;
+    public func construct ( g , p , c )
+    {
+        super . construct ( g , p ) ;
+        this . cName = c ;
+    }
+    public func getC ( )
+    {
+        return this . cName ;
+    }
+}
+
+var ch = new ChildCls ( "Gen1" , "Gen2" , "Gen3" ) ;
+out ch . getG ( ) ; // Gen1
+out ch . getP ( ) ; // Gen2
+out ch . getC ( ) ; // Gen3
+out is_instance ( ch , "ChildCls" ) ; // 1
+out is_instance ( ch , "ParentCls" ) ; // 1
+out is_instance ( ch , "Grandparent" ) ; // 1
+
+// 9. Null References & is_null Predicate
+out "=== 9. Null References & is_null Predicate ===" ;
+Point uninitP ;
+out uninitP ; // null
+out is_null ( uninitP ) ; // 1
+var validP = new Point ( 5 , 10 ) ;
+out is_null ( validP ) ; // 0
+validP = null ;
+out is_null ( validP ) ; // 1
+out is_null ( 100 ) ; // 0
+out is_null ( "hello" ) ; // 0
+
+// 10. Implicit Zero-Argument Base Constructor
+out "=== 10. Implicit Base Constructor ===" ;
+class BaseAuto
+{
+    public float status ;
+    public func construct ( )
+    {
+        this . status = 42 ;
+    }
+}
+class ChildAuto extends BaseAuto
+{
+    public float val ;
+}
+var ca = new ChildAuto ( ) ;
+out ca . status ; // 42
 
 out "=== OOP Tests Completed Successfully ===" ;
 .

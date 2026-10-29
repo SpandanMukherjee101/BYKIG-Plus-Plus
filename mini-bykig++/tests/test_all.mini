@@ -120,7 +120,7 @@ class Rectangle extends Shape
 
     public func construct ( w , h )
     {
-        this . kind = "Rectangle" ;
+        super . construct ( "Rectangle" ) ;
         this . w = w ;
         this . h = h ;
     }

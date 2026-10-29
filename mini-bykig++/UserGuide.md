@@ -483,7 +483,7 @@ class Dog extends Animal
 
     public func construct ( petName , petBreed )
     {
-        this . name = petName ;
+        super . construct ( petName ) ;
         this . breed = petBreed ;
     }
 
@@ -493,6 +493,101 @@ class Dog extends Animal
     }
 }
 ```
+
+### Parent Constructor Chaining (`super . construct`)
+Derived class constructors can explicitly invoke their parent class constructor using `super . construct ( ... ) ;`:
+
+```mini
+class Grandparent
+{
+    public string gName ;
+    public func construct ( g )
+    {
+        this . gName = g ;
+    }
+}
+
+class ParentCls extends Grandparent
+{
+    public string pName ;
+    public func construct ( g , p )
+    {
+        super . construct ( g ) ;
+        this . pName = p ;
+    }
+}
+
+class ChildCls extends ParentCls
+{
+    public string cName ;
+    public func construct ( g , p , c )
+    {
+        super . construct ( g , p ) ;
+        this . cName = c ;
+    }
+}
+```
+
+#### Invariants & Rules for `super . construct`
+1. **First-Statement Requirement**: `super . construct ( ... ) ;` must be the very first statement executed inside the derived constructor. Executing other statements beforehand triggers an error.
+2. **Single-Invocation Requirement**: `super . construct ( ... ) ;` may be called at most once per constructor execution.
+3. **Constructor-Only**: Calling `super . construct` outside a constructor produces a runtime error.
+4. **Superclass Requirement**: Calling `super . construct` in a root class with no superclass produces an error.
+
+### Implicit Ancestor Constructor Chaining
+If a derived class constructor omits `super . construct`, or if a derived class has no explicit constructor, `mini-bykig++` automatically chains and invokes zero-argument ancestor constructors up the inheritance hierarchy:
+
+```mini
+class BaseAuto
+{
+    public float status ;
+    public func construct ( )
+    {
+        this . status = 42 ;
+    }
+}
+
+class ChildAuto extends BaseAuto
+{
+    public float val ;
+}
+
+var ca = new ChildAuto ( ) ;
+out ca . status ; // 42 (initialized by BaseAuto constructor)
+```
+
+> [!NOTE]
+> If any ancestor class in the inheritance chain requires arguments for its constructor and `super . construct` was omitted, construction halts with a diagnostic specifying the required argument count.
+
+### Class Invariants & Validations
+`mini-bykig++` validates class declarations to maintain hierarchy invariants:
+- **Duplicate Class Rejection**: Defining two classes with the same name outputs `Error: Duplicate class '<Name>'`.
+- **Duplicate Field Rejection**: Declaring the same field name twice within the same class or conflicting with an inherited field outputs `Error: Duplicate field '<name>' in class '<Name>'`.
+- **Inheritance Cycle Rejection**: Circular or self-referential inheritance (e.g. `class A extends A` or `class A extends B` where `B extends A`) is rejected.
+
+### Null References & Safety
+`mini-bykig++` supports explicit null references and safe null state checks:
+- **Uninitialized Typed Declarations**: Declaring a typed object variable without assignment initializes it to null:
+  ```mini
+  Point uninitP ;
+  out uninitP ; // null
+  ```
+- **Explicit `null` Literal**: Variables can be assigned `null`:
+  ```mini
+  validP = null ;
+  ```
+- **The `is_null ( expr )` Built-in**: Returns `1` if the value is an uninitialized or null object reference, and `0` for valid object instances or primitive values:
+  ```mini
+  out is_null ( uninitP ) ; // 1
+  out is_null ( validP ) ;  // 1 (after assignment to null)
+  out is_null ( 100 ) ;     // 0
+  out is_null ( "hello" ) ; // 0
+  ```
+- **Null Dereference Diagnostics**: Attempting to read/write a member field or invoke a method on a null receiver produces a clean diagnostic rather than undefined behavior:
+  ```mini
+  // Output: Error: Null reference: cannot access field on null object
+  // Output: Error: Null reference: cannot call method on null receiver
+  ```
 
 ### Method Overriding & Polymorphism
 Subclasses can override inherited methods. Method calls resolve dynamically based on the receiver's actual runtime class:
@@ -564,6 +659,7 @@ out d ; // <Object Dog#1>
 | `exists` | `exists(map, key)` | Returns `1` if `key` exists in `map`, `0` otherwise. | `exists(user, "name")` -> `1` |
 | `delete` | `delete(map, key)` | Removes `key` and its associated value from `map`. | `delete(user, "temp")` |
 | `is_instance` | `is_instance(obj, "Class")` | Returns `1` if `obj` is an instance of `Class` or a subclass; `0` otherwise. | `is_instance(d, "Animal")` -> `1` |
+| `is_null` | `is_null(expr)` | Returns `1` if `expr` is an uninitialized or null object reference; `0` otherwise. | `is_null(uninitP)` -> `1` |
 
 ---
 

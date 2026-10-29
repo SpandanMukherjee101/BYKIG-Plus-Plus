@@ -58,10 +58,12 @@ This document provides a comprehensive status matrix of language features, colle
 | Feature | Status | Notes |
 |---|:---:|---|
 | `class` Declaration | ✅ | Declares classes with fields, constructors, and instance methods. |
+| Duplicate Class Rejection | ✅ | Redefining a previously declared class name produces an error. |
 | Single Inheritance (`extends`) | ✅ | Subclasses inherit all fields and methods from a declared superclass. |
+| Multilevel Inheritance | ✅ | Unlimited hierarchy depth (e.g. `Child` -> `Parent` -> `Grandparent`). |
 | Superclass Prior Declaration | ✅ | Parent class must be declared before child class. |
-| Duplicate Field Collision Rejection | ✅ | Subclasses declaring identical field names as parent classes are rejected. |
-| Self-Inheritance Rejection | ✅ | Circular or self-referential inheritance (`class A extends A`) is rejected. |
+| Duplicate Field Collision Rejection | ✅ | Redundant field definitions in same class or conflicting inherited field names rejected. |
+| Circular Inheritance Rejection | ✅ | Direct self-inheritance or indirect cyclic inheritance graphs rejected. |
 | Missing Parent Validation | ✅ | Inheriting from an undeclared parent class produces an error. |
 | Instance Fields | ✅ | Typed or untyped instance fields initialized per object. |
 | Access Modifiers (`public`/`private`) | ✅ | Supported on fields and methods; defaults to `public`. |
@@ -70,8 +72,12 @@ This document provides a comprehensive status matrix of language features, colle
 | Instantiation (`new`) | ✅ | Instantiates objects in expressions, statements, arguments, and collections. |
 | Explicit Constructors (`construct`) | ✅ | `construct ( ... )` initializes instances with arguments upon `new`. |
 | Implicit Default Constructor | ✅ | Zero-argument construction provided if no constructor is declared. |
+| Explicit Parent Constructor Chaining | ✅ | `super . construct ( ... ) ;` supported as first statement in derived constructor. |
+| Parent Constructor Invariants | ✅ | `super.construct` enforced: must be first statement, called at most once, rejected outside constructor or without superclass. |
+| Implicit Ancestor Constructor Chaining | ✅ | Automatically chains zero-argument ancestor constructors up the inheritance hierarchy. |
+| Ancestor Argument Verification | ✅ | Attempting to default-construct a class whose ancestor requires constructor arguments produces a diagnostic. |
 | Dynamic Receiver Binding (`this`) | ✅ | Binds current object to `this` inside methods and constructors. |
-| Receiver Stack (`thisObjStack`) | ✅ | Dedicated receiver stack prevents receiver leakage across calls. |
+| Receiver Stack (`thisStack`) | ✅ | Dedicated receiver stack prevents receiver leakage across calls. |
 | Receiver Call Frame Isolation | ✅ | Nested method calls and free functions (`execute_func_call`) maintain isolated receivers. |
 | `this` Field Access & Mutation | ✅ | `this . field` and `this . field = expr ;`. |
 | `this` Method Calls | ✅ | `this . otherMethod ( ... )`. |
@@ -79,7 +85,12 @@ This document provides a comprehensive status matrix of language features, colle
 | Dynamic Virtual Dispatch | ✅ | Method calls dynamically resolve from receiver's actual runtime class. |
 | Method Overriding | ✅ | Child class overrides parent method; runtime dispatch invokes child implementation. |
 | Inherited Method Execution | ✅ | Unoverridden parent methods are callable on child instances. |
+| Null Reference Value | ✅ | Type tag `4` with object ID `0`. Formats as `"null"`. |
+| Uninitialized Reference Declarations | ✅ | `ClassName varName ;` initializes reference to `null`. |
+| Explicit `null` Literal | ✅ | `varName = null ;` sets reference variable to null. |
+| Null Dereference Diagnostics | ✅ | Clean runtime diagnostics when attempting field access or method call on null object. |
 | Runtime Type Check (`is_instance`) | ✅ | Built-in testing exact class match or any ancestor class in hierarchy. |
+| Runtime Null Check (`is_null`) | ✅ | Built-in testing if object reference is null or uninitialized (returns `1` or `0`). |
 | Formatted Object Output | ✅ | Standard representation: `<Object ClassName#id>` (`"null"` if null). |
 | Reference Semantics & Aliasing | ✅ | Object variables hold heap references; mutations reflect across aliases. |
 
@@ -95,6 +106,7 @@ This document provides a comprehensive status matrix of language features, colle
 | `exists` | `exists(map, key)` | Number (`0`/`1`) | Checks if `key` is present in `map`. |
 | `delete` | `delete(map, key)` | Number | Removes key-value pair from `map`. |
 | `is_instance` | `is_instance(obj, "Class")` | Number (`0`/`1`) | Checks if `obj` is an instance of `"Class"` or subclass. |
+| `is_null` | `is_null(expr)` | Number (`0`/`1`) | Checks if `expr` is a null or uninitialized object reference. |
 | `out` | `out expr ;` | N/A | Statement outputting expression result with newline. |
 | `in` | `in varName ;` | N/A | Statement reading standard input line into variable. |
 
@@ -104,10 +116,14 @@ This document provides a comprehensive status matrix of language features, colle
 
 | Component | Module | Implementation Design |
 |---|---|---|
-| Scope Stack | [`memory.bykig`](memory.bykig) | `scopeStack[1000]`; manages variable indices across nested blocks. |
-| Variable Registry | [`memory.bykig`](memory.bykig) | Parallel arrays: `varName`, `varType`, `varValNum`, `varValStr`. |
-| Dynamic List Heap | [`memory.bykig`](memory.bykig) | Heap-allocated 2D dynamic arrays with capacity expansion. |
-| Generic Map Heap | [`memory.bykig`](memory.bykig) | Key lists and parallel value tables per heap map ID. |
+| Scope Stack | [`memory.bykig`](memory.bykig) | `scopeStack`; manages lexical block environments. |
+| Variable Registry | [`memory.bykig`](memory.bykig) | Scoped key-value mapping (`envVal`, `envType`). |
+| Dynamic List Heap | [`memory.bykig`](memory.bykig) | Heap lists with element arrays (`listSize`, `listData`, `listElemType`). |
+| Generic Map Heap | [`memory.bykig`](memory.bykig) | Key lists and hash tables (`mapCount`, `mapHasKey`, `mapVals`, `mapKeys`). |
+| Object Registry | [`memory.bykig`](memory.bykig) | Object type metadata and field tables (`objClass`, `objFieldVal`, `objFieldValStr`, `objFieldType`). |
+| Receiver Stack | [`memory.bykig`](memory.bykig) | `thisStack`, `thisClassStack`; pushes/pops receiver and context across calls. |
+| Constructor Stack | [`memory.bykig`](memory.bykig) | `ctorClassStack`, `ctorStmtCount`, `ctorSuperCalled`, `ctorObjStack`; manages active constructor frame. |
+| Ctor Argument Passing | [`memory.bykig`](memory.bykig) | `setCtorArg`/`getCtorArg*`; frame-indexed maps bypassing 10-parameter host limitation. |
 | Object Instance Heap | [`memory.bykig`](memory.bykig) | Parallel field value maps indexed by `[objId][fieldName]`. |
 | Class Registry | [`memory.bykig`](memory.bykig) | Metadata maps for classes, inheritance, fields, and methods. |
 | Receiver Stack | [`memory.bykig`](memory.bykig) | `thisObjStack` and `thisExecClassStack` for reentrant method dispatch. |

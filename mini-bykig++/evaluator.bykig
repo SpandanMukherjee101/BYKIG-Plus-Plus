@@ -1,5 +1,3 @@
-// evaluator.bykig - Expression, Condition, Builtin, and Function Evaluator for mini-bykig++
-
 use "memory.bykig" ;
 
 string lastArgDelim = "" ;
@@ -66,7 +64,6 @@ func resolveToken ( string t ) {
     return t ;
 }
 
-// Builtin functions recognized in mini-bykig++
 func isMiniBuiltin ( string name ) {
     if name ~ "len"
     {
@@ -89,6 +86,10 @@ func isMiniBuiltin ( string name ) {
         return 1 ;
     }
     if name ~ "is_instance"
+    {
+        return 1 ;
+    }
+    if name ~ "is_null"
     {
         return 1 ;
     }
@@ -252,9 +253,17 @@ func execute_builtin_call ( string bName ) {
             }
         }
     }
+    elif bName ~ "is_null"
+    {
+        builtinResType = 0 ;
+        builtinResNum = 0 ;
+        if a0_t ~ 4 && a0_n ~ 0
+        {
+            builtinResNum = 1 ;
+        }
+    }
 }
 
-// Parses List Literals: [ elem1 , elem2 , ... ]
 func parse_list_literal ( ) {
     float id = newList ( ) ;
     while 1 < 2
@@ -278,23 +287,7 @@ func parse_list_literal ( ) {
         {
             string cName = file_scan_next ( ) ;
             string oP = file_scan_next ( ) ;
-            float oId = newObjectInstance ( cName ) ;
-            initObjectFields ( oId , cName ) ;
-            if classHasCtor [ cName ] ~ 1
-            {
-                execute_class_constructor ( oId , cName ) ;
-            }
-            else
-            {
-                while 1 < 2
-                {
-                    string t = file_scan_next ( ) ;
-                    if t ~ ")" || t ~ "EOF"
-                    {
-                        break ;
-                    }
-                }
-            }
+            float oId = instantiate_new_object ( cName ) ;
             listPush ( id , "" , oId , 4 ) ;
         }
         elif tok ~ "["
@@ -369,7 +362,6 @@ func parse_list_literal ( ) {
     return id ;
 }
 
-// Parses Map Literals: { "k" : v , "k2" : v2 }
 func parse_map_literal ( ) {
     float id = newMap ( ) ;
     while 1 < 2
@@ -399,23 +391,7 @@ func parse_map_literal ( ) {
         {
             string cName = file_scan_next ( ) ;
             string oP = file_scan_next ( ) ;
-            float oId = newObjectInstance ( cName ) ;
-            initObjectFields ( oId , cName ) ;
-            if classHasCtor [ cName ] ~ 1
-            {
-                execute_class_constructor ( oId , cName ) ;
-            }
-            else
-            {
-                while 1 < 2
-                {
-                    string t = file_scan_next ( ) ;
-                    if t ~ ")" || t ~ "EOF"
-                    {
-                        break ;
-                    }
-                }
-            }
+            float oId = instantiate_new_object ( cName ) ;
             mapSet ( id , key , "" , oId , 4 ) ;
         }
         elif valTok ~ "["
@@ -490,7 +466,6 @@ func parse_map_literal ( ) {
     return id ;
 }
 
-// Chained index evaluation on a variable: matrix[0][1], data["users"][0]["name"]
 func resolve_indexed_val ( string varName ) {
     float curObj = getVarVal ( varName ) ;
     float curType = getVarType ( varName ) ;
@@ -598,23 +573,7 @@ func evalArg ( ) {
         {
             string cName = file_scan_next ( ) ;
             string openP = file_scan_next ( ) ;
-            float objId = newObjectInstance ( cName ) ;
-            initObjectFields ( objId , cName ) ;
-            if classHasCtor [ cName ] ~ 1
-            {
-                execute_class_constructor ( objId , cName ) ;
-            }
-            else
-            {
-                while 1 < 2
-                {
-                    string t = file_scan_next ( ) ;
-                    if t ~ ")" || t ~ "EOF"
-                    {
-                        break ;
-                    }
-                }
-            }
+            float objId = instantiate_new_object ( cName ) ;
             soleType = 4 ;
             soleNum = objId ;
             soleStr = "" ;
@@ -885,6 +844,12 @@ func evalArg ( ) {
                                 soleType = 0 ;
                                 soleNum = 0 ;
                             }
+                            elif token ~ "null"
+                            {
+                                soleType = 4 ;
+                                soleNum = 0 ;
+                                soleStr = "" ;
+                            }
                             else
                             {
                                 float isN = is_num ( token ) ;
@@ -1031,8 +996,7 @@ func execute_func_call ( string funcName ) {
     hasReturn = 0 ;
 }
 
-func execute_class_constructor ( float objId , string className ) {
-    float pCount = classCtorParamCount [ className ] ;
+func execute_ctor_internal ( float objId , string className , float pCount ) {
     float isPriv = classCtorPrivate [ className ] ;
     if isPriv ~ 1
     {
@@ -1044,56 +1008,11 @@ func execute_class_constructor ( float objId , string className ) {
         }
     }
     
-    string a0_s = "" ;
-    float a0_n = 0 ;
-    float a0_t = 0 ;
-    string a1_s = "" ;
-    float a1_n = 0 ;
-    float a1_t = 0 ;
-    string a2_s = "" ;
-    float a2_n = 0 ;
-    float a2_t = 0 ;
-    string a3_s = "" ;
-    float a3_n = 0 ;
-    float a3_t = 0 ;
-    
-    if pCount > 0
-    {
-        evalArg ( ) ;
-        a0_s = argValStr ;
-        a0_n = argValNum ;
-        a0_t = argValType ;
-    }
-    if pCount > 1
-    {
-        evalArg ( ) ;
-        a1_s = argValStr ;
-        a1_n = argValNum ;
-        a1_t = argValType ;
-    }
-    if pCount > 2
-    {
-        evalArg ( ) ;
-        a2_s = argValStr ;
-        a2_n = argValNum ;
-        a2_t = argValType ;
-    }
-    if pCount > 3
-    {
-        evalArg ( ) ;
-        a3_s = argValStr ;
-        a3_n = argValNum ;
-        a3_t = argValType ;
-    }
-    if pCount ~ 0
-    {
-        string dummy = file_scan_next ( ) ;
-    }
-    
     float saved_pos = file_scan_get_pos ( ) ;
     file_scan_set_pos ( classCtorPos [ className ] ) ;
     
     pushThis ( objId , className ) ;
+    pushCtorFrame ( objId , className ) ;
     pushScope ( ) ;
     
     defVarVal ( "this" , "" , objId , 4 ) ;
@@ -1102,33 +1021,182 @@ func execute_class_constructor ( float objId , string className ) {
     if pCount > 0
     {
         string pn0 = classCtorParams [ ck + "_0" ] ;
-        defVarVal ( pn0 , a0_s , a0_n , a0_t ) ;
+        defVarVal ( pn0 , getCtorArgS ( 0 ) , getCtorArgN ( 0 ) , getCtorArgT ( 0 ) ) ;
     }
     if pCount > 1
     {
         string pn1 = classCtorParams [ ck + "_1" ] ;
-        defVarVal ( pn1 , a1_s , a1_n , a1_t ) ;
+        defVarVal ( pn1 , getCtorArgS ( 1 ) , getCtorArgN ( 1 ) , getCtorArgT ( 1 ) ) ;
     }
     if pCount > 2
     {
         string pn2 = classCtorParams [ ck + "_2" ] ;
-        defVarVal ( pn2 , a2_s , a2_n , a2_t ) ;
+        defVarVal ( pn2 , getCtorArgS ( 2 ) , getCtorArgN ( 2 ) , getCtorArgT ( 2 ) ) ;
     }
     if pCount > 3
     {
         string pn3 = classCtorParams [ ck + "_3" ] ;
-        defVarVal ( pn3 , a3_s , a3_n , a3_t ) ;
+        defVarVal ( pn3 , getCtorArgS ( 3 ) , getCtorArgN ( 3 ) , getCtorArgT ( 3 ) ) ;
+    }
+    
+    string parentName = classParent [ className ] ;
+    if parentName ! ""
+    {
+        float peek_pos = file_scan_get_pos ( ) ;
+        string first_tok = file_scan_next ( ) ;
+        file_scan_set_pos ( peek_pos ) ;
+        
+        float isSuper = 0 ;
+        if first_tok ~ "super"
+        {
+            isSuper = 1 ;
+        }
+        else
+        {
+            float sw = starts_with ( first_tok , "super." ) ;
+            if sw ~ 1
+            {
+                isSuper = 1 ;
+            }
+        }
+        
+        if isSuper ! 1
+        {
+            string reqP = getParentReqArgs ( parentName ) ;
+            if reqP ! ""
+            {
+                out "Error: Class '" + className + "' constructor cannot initialize superclass '" + reqP + "': superclass requires " + classCtorParamCount [ reqP ] + " argument(s)%n" ;
+            }
+            else
+            {
+                runImplicitParentCtors ( objId , parentName ) ;
+            }
+        }
     }
     
     execute_block ( 1 ) ;
     
     file_scan_set_pos ( saved_pos ) ;
     popScope ( ) ;
+    popCtorFrame ( ) ;
     popThis ( ) ;
     hasReturn = 0 ;
+    return 1 ;
+}
+
+func runImplicitParentCtors ( float objId , string parentName ) {
+    if parentName ~ ""
+    {
+        return 1 ;
+    }
+    string cur = parentName ;
+    while cur ! "" && classHasCtor [ cur ] ! 1
+    {
+        cur = classParent [ cur ] ;
+    }
+    if cur ~ ""
+    {
+        return 1 ;
+    }
+    float pCount = classCtorParamCount [ cur ] ;
+    if pCount > 0
+    {
+        out "Error: Superclass '" + cur + "' constructor requires " + pCount + " argument(s)%n" ;
+        return 0 ;
+    }
+    float isPriv = classCtorPrivate [ cur ] ;
+    if isPriv ~ 1
+    {
+        out "Error: Cannot access private constructor of class '" + cur + "'%n" ;
+        return 0 ;
+    }
+    execute_ctor_internal ( objId , cur , 0 ) ;
+    return 1 ;
+}
+
+func execute_class_constructor ( float objId , string className ) {
+    float pCount = classCtorParamCount [ className ] ;
+    
+    if pCount > 0
+    {
+        evalArg ( ) ;
+        setCtorArg ( 0 , argValStr , argValNum , argValType ) ;
+    }
+    if pCount > 1
+    {
+        evalArg ( ) ;
+        setCtorArg ( 1 , argValStr , argValNum , argValType ) ;
+    }
+    if pCount > 2
+    {
+        evalArg ( ) ;
+        setCtorArg ( 2 , argValStr , argValNum , argValType ) ;
+    }
+    if pCount > 3
+    {
+        evalArg ( ) ;
+        setCtorArg ( 3 , argValStr , argValNum , argValType ) ;
+    }
+    if pCount ~ 0
+    {
+        string dummy = file_scan_next ( ) ;
+    }
+    
+    execute_ctor_internal ( objId , className , pCount ) ;
+}
+
+func instantiate_new_object ( string cName ) {
+    float objId = newObjectInstance ( cName ) ;
+    initObjectFields ( objId , cName ) ;
+    if classHasCtor [ cName ] ~ 1
+    {
+        execute_class_constructor ( objId , cName ) ;
+    }
+    else
+    {
+        float hasArgs = 0 ;
+        while 1 < 2
+        {
+            string t = file_scan_next ( ) ;
+            if t ~ ")" || t ~ "EOF"
+            {
+                break ;
+            }
+            if t ! "(" && t ! ","
+            {
+                hasArgs = 1 ;
+            }
+        }
+        if hasArgs ~ 1
+        {
+            out "Error: Class '" + cName + "' has no constructor matching argument(s)%n" ;
+        }
+        else
+        {
+            string pName = classParent [ cName ] ;
+            if pName ! ""
+            {
+                string reqP = getParentReqArgs ( pName ) ;
+                if reqP ! ""
+                {
+                    out "Error: Class '" + cName + "' cannot be default-constructed: superclass '" + reqP + "' requires " + classCtorParamCount [ reqP ] + " argument(s)%n" ;
+                }
+                else
+                {
+                    runImplicitParentCtors ( objId , pName ) ;
+                }
+            }
+        }
+    }
+    return objId ;
 }
 
 func execute_method_call ( float objId , string methodName ) {
+    if objId ~ 0
+    {
+        out "Error: Null reference: cannot call method on null receiver%n" ;
+        return 0 ;
+    }
     string actualClass = objClass [ objId ] ;
     string declClass = findMethodClass ( actualClass , methodName ) ;
     if declClass ~ ""
@@ -1252,6 +1320,14 @@ func resolve_member_access ( string baseVarName ) {
     {
         curObj = getVarVal ( baseVarName ) ;
     }
+    if curObj ~ 0
+    {
+        out "Error: Null reference: cannot access field on null object%n" ;
+        evalResType = 0 ;
+        evalResNum = 0 ;
+        evalResStr = "" ;
+        return 0 ;
+    }
     
     while 1 < 2
     {
@@ -1307,7 +1383,7 @@ func resolve_member_access ( string baseVarName ) {
         string peekTok = file_scan_next ( ) ;
         if peekTok ~ "." && evalResType ~ 4
         {
-            // chained loop continues
+            float chainedNext = 1 ;
         }
         else
         {
@@ -1342,23 +1418,7 @@ func evalExpressionUntil ( string stopToken ) {
         {
             string cName = file_scan_next ( ) ;
             string openP = file_scan_next ( ) ;
-            float objId = newObjectInstance ( cName ) ;
-            initObjectFields ( objId , cName ) ;
-            if classHasCtor [ cName ] ~ 1
-            {
-                execute_class_constructor ( objId , cName ) ;
-            }
-            else
-            {
-                while 1 < 2
-                {
-                    string t = file_scan_next ( ) ;
-                    if t ~ ")" || t ~ "EOF"
-                    {
-                        break ;
-                    }
-                }
-            }
+            float objId = instantiate_new_object ( cName ) ;
             soleType = 4 ;
             soleNum = objId ;
             soleStr = "" ;
@@ -1652,6 +1712,12 @@ func evalExpressionUntil ( string stopToken ) {
                             {
                                 soleType = 0 ;
                                 soleNum = 0 ;
+                            }
+                            elif token ~ "null"
+                            {
+                                soleType = 4 ;
+                                soleNum = 0 ;
+                                soleStr = "" ;
                             }
                             else
                             {

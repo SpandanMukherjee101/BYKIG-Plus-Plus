@@ -140,11 +140,53 @@ The OOP subsystem maintains metadata tables in [`memory.bykig`](memory.bykig) to
 
 ### Dynamic Receiver Stack (`this`)
 To guarantee reentrancy and prevent receiver leakage across nested calls, recursion, and free functions:
-- `thisObjStack[thisTop]`: Stores the active receiver's heap object ID.
-- `thisExecClassStack[thisTop]`: Stores the executing method's declaring class.
+- `thisStack[thisStackTop]`: Stores the active receiver's heap object ID.
+- `thisClassStack[thisStackTop]`: Stores the executing method's declaring class.
 - `pushThis(objId, execClass)`: Pushes a receiver context when entering a method or constructor.
 - `popThis()`: Restores the caller's receiver context upon returning.
 - `execute_func_call` pushes `(0, "")` to guarantee that global free functions never inherit an active receiver context.
+
+### Constructor Frame Stack & Parameter Passing Abstraction
+Constructor execution manages an explicit stack frame to support nested constructor calls and enforce language invariants:
+- **Constructor Frame Stack**:
+  - `ctorStackTop`: Current constructor recursion depth (`-1` when outside constructors).
+  - `ctorClassStack[ctorStackTop]`: Declaring class of currently executing constructor.
+  - `ctorStmtCount[ctorStackTop]`: Statement counter tracking statements executed in current constructor body.
+  - `ctorSuperCalled[ctorStackTop]`: Boolean flag set when `super . construct` is invoked.
+  - `ctorObjStack[ctorStackTop]`: Heap object ID being constructed.
+  - Functions: `pushCtorFrame`, `popCtorFrame`, `isInConstructor`, `getCtorClass`, `getCtorObj`, `getCtorStmtCount`, `incCtorStmtCount`, `getCtorSuperCalled`, `setCtorSuperCalled`.
+- **Parameter Passing Abstraction**:
+  - The native BYKIG++ interpreter (`Interpreter.c`) enforces a strict maximum of 10 parameters per function signature (`struct funcParam params[10];`).
+  - To prevent truncation when passing multi-argument constructors and ancestors, `mini-bykig++` decouples argument passing into frame-indexed maps:
+    - `setCtorArg(idx, strVal, numVal, typeTag)` writes to `(ctorStackTop + 1) + "_" + idx`.
+    - `getCtorArgS(idx)`, `getCtorArgN(idx)`, `getCtorArgT(idx)` read from `ctorStackTop + "_" + idx`.
+    - `execute_ctor_internal ( float objId , string className , float pCount )` requires only 3 parameters regardless of constructor argument count.
+
+### Explicit & Implicit Parent Constructor Chaining
+- **Explicit `super . construct`**:
+  - Validates `isInConstructor() == 1`.
+  - Validates that the active constructor's class defines a non-empty `classParent`.
+  - Enforces the first-statement invariant (`getCtorStmtCount() == 0`).
+  - Enforces the single-call invariant (`getCtorSuperCalled() == 0`).
+  - Pops the child receiver, invokes `execute_ctor_internal` for the parent class, and restores child receiver.
+- **Implicit Chaining**:
+  - If a constructor completes with `getCtorSuperCalled() == 0`, or if a class is default-constructed, `runImplicitParentCtors` traverses ancestor classes up to the root.
+  - Verifies `parentRequiresArgs(parentName) == 0`. If an ancestor constructor requires arguments, construction aborts with an informative diagnostic.
+
+### Unified Object Instantiation (`instantiate_new_object`)
+All instantiation sites (`new ClassName ( ... )` in expressions, list literals, map literals, or standalone statements) delegate to a single entry point:
+- Allocates heap instance via `newObjectInstance(cName)`.
+- Recursively initializes fields via `initObjectFields(objId, cName)`.
+- If `classHasCtor[cName] == 1`, evaluates arguments into `setCtorArg` and invokes `execute_ctor_internal`.
+- If `classHasCtor[cName] == 0`, validates zero-argument syntax and invokes `runImplicitParentCtors`.
+
+### Null Safety Architecture
+- **Object Null Representation**: Object reference values have type tag `4` (`valType == 4`). A null reference is represented by object ID `0` (`valNum == 0`).
+- **Uninitialized Typed Declarations**: Declaring `ClassName obj ;` automatically binds the variable with type `4` and value `0`.
+- **`null` Keyword**: Recognized in expression evaluation (`evalArg` and `evalExpressionUntil`) as type `4` with value `0`.
+- **Formatting**: `formatValue` renders object references with ID `0` as `"null"`.
+- **Predicate**: `is_null(expr)` returns `1` when `valType == 4 && valNum == 0`, and `0` otherwise.
+- **Diagnostics**: `resolve_member_access`, `execute_method_call`, and dot-assignment handlers check `targetObj == 0` and abort with `Error: Null reference: cannot access field on null object` or `Error: Null reference: cannot call method on null receiver`.
 
 ---
 
@@ -213,17 +255,31 @@ The main loop consumes tokens and dispatches:
 
 ---
 
-## 8. Critical Host Runtime Invariant
+## 8. Critical Host Runtime Invariants
 
-> [!IMPORTANT]
-> **BYKIG++ Block Formatting Invariant**
-> In the native host interpreter (`Interpreter.c`), conditional block skipping scans line-by-line using `fgets` expecting `{` and `}` on separate lines.
-> **All `.bykig` code within `mini-bykig++` must use standard multi-line formatting for control flow:**
-> ```bykig
-> if condition
-> {
->     statement ;
-> }
-> ```
-> Placing braces on the same line as statements (e.g., `if c { stmt ; }`) causes the host block scanner to miss the `{`, losing block depth synchronization and resulting in premature EOF or infinite parsing loops.
+### 1. BYKIG++ Block Formatting Invariant
+In the native host interpreter (`Interpreter.c`), conditional block skipping scans line-by-line using `fgets` expecting `{` and `}` on separate lines:
+```bykig
+if condition
+{
+    statement ;
+}
+```
+Placing braces on the same line as statements (e.g., `if c { stmt ; }`) causes the host block scanner to miss the `{`, losing block depth synchronization and resulting in premature EOF or infinite parsing loops.
+
+### 2. Zero `//` Comments Constraint
+To avoid scanner position mismatches and comment stripping defects in the host runtime, **no `//` comments are permitted inside any `.bykig` file** across the implementation.
+
+### 3. Native Function Parameter Count Limit (10 Parameters)
+In native BYKIG++ (`Interpreter.c`), function parameter definitions are statically bounded:
+```c
+struct funcParam params[10];
+```
+Any function defined with more than 10 parameters will have trailing parameters silently truncated, leading to uninitialized or corrupted variable reads. For complex or recursive operations requiring many values (such as constructor chaining), state must be passed via frame-indexed associative maps (`setCtorArg` / `getCtorArg`) rather than large parameter lists.
+
+### 4. Map Literal Initialization & Sentinel Keys
+Because native BYKIG++ map literals require `{ key = value }` and reject empty `{}`:
+- Maps are initialized with a sentinel key: `{ "__sentinel__" = 0 }`.
+- Never use language keywords (e.g. `"null"`, `"new"`, `"class"`) as map initializers, as `exists(map, key)` would erroneously match keyword tokens and cause control-flow diversion.
+- Helper functions like `hasFunc(name)` and `registerClass(name)` explicitly guard against sentinel and keyword keys.
 

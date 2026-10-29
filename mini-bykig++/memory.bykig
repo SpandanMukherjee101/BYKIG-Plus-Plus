@@ -1,6 +1,3 @@
-// memory.bykig - Scoped Environment, Heap Objects, and Function Registry for mini-bykig++
-
-// Scope Stack
 float scopeId = 0 ;
 float scopeStackTop = 0 ;
 map scopeStack = { "0" = 0 } ;
@@ -23,10 +20,8 @@ func currentScopeId ( ) {
     return sid ;
 }
 
-// Variables storage
-// envType: 0 = Number, 1 = String, 2 = List (ObjId), 3 = Map (ObjId)
-map envVal = { "null" = 0 } ;
-map envType = { "null" = 0 } ;
+map envVal = { "__sentinel__" = 0 } ;
+map envType = { "__sentinel__" = 0 } ;
 
 func getVarScopeKey ( string name ) {
     float idx = scopeStackTop ;
@@ -101,7 +96,6 @@ func setVarVal ( string name , string valStr , float valNum , float valType ) {
     }
 }
 
-// Backward-compatible helpers
 func defVar ( string name , string valStr , float valNum , float isStr ) {
     if isStr ~ 1
     {
@@ -144,7 +138,6 @@ func getVarIsStr ( string name ) {
     return 0 ;
 }
 
-// Heap Objects Storage (Dynamic Lists and Generic Maps)
 float nextObjId = 1 ;
 
 func allocObjId ( ) {
@@ -153,10 +146,9 @@ func allocObjId ( ) {
     return id ;
 }
 
-// Lists storage
-map listSize = { "null" = 0 } ;
-map listData = { "null" = 0 } ;
-map listElemType = { "null" = 0 } ;
+map listSize = { "__sentinel__" = 0 } ;
+map listData = { "__sentinel__" = 0 } ;
+map listElemType = { "__sentinel__" = 0 } ;
 
 func newList ( ) {
     float id = allocObjId ( ) ;
@@ -232,12 +224,11 @@ func listLen ( float listId ) {
     return sz ;
 }
 
-// Maps storage
-map mapCount = { "null" = 0 } ;
-map mapHasKey = { "null" = 0 } ;
-map mapVals = { "null" = 0 } ;
-map mapValTypes = { "null" = 0 } ;
-map mapKeys = { "null" = "" } ;
+map mapCount = { "__sentinel__" = 0 } ;
+map mapHasKey = { "__sentinel__" = 0 } ;
+map mapVals = { "__sentinel__" = 0 } ;
+map mapValTypes = { "__sentinel__" = 0 } ;
+map mapKeys = { "__sentinel__" = "" } ;
 
 func newMap ( ) {
     float id = allocObjId ( ) ;
@@ -307,7 +298,6 @@ func mapLen ( float mapId ) {
     return cnt ;
 }
 
-// Value Formatter for Output and String Conversion
 func formatValue ( string valStr , float valNum , float valType ) {
     if valType ~ 0
     {
@@ -398,10 +388,9 @@ func formatValue ( string valStr , float valNum , float valType ) {
     return "" ;
 }
 
-// Function registry
-map funcPos = { "null" = 0 } ;
-map funcParamCount = { "null" = 0 } ;
-map funcParams = { "null" = "" } ;
+map funcPos = { "__sentinel__" = 0 } ;
+map funcParamCount = { "__sentinel__" = 0 } ;
+map funcParams = { "__sentinel__" = "" } ;
 
 func registerFunc ( string name , float pos , float pCount , string p0 , string p1 , string p2 , string p3 ) {
     funcPos [ name ] = pos ;
@@ -429,6 +418,10 @@ func registerFunc ( string name , float pos , float pCount , string p0 , string 
 }
 
 func hasFunc ( string name ) {
+    if name ~ "" || name ~ "__sentinel__" || name ~ "null"
+    {
+        return 0 ;
+    }
     float ex = exists ( funcPos , name ) ;
     return ex ;
 }
@@ -471,7 +464,6 @@ func getFuncParamName ( string name , float idx ) {
     return "" ;
 }
 
-// Control flow & Return values
 float hasReturn = 0 ;
 float loopBreak = 0 ;
 float loopContinue = 0 ;
@@ -507,32 +499,38 @@ func getReturnIsStr ( ) {
     return 0 ;
 }
 
-// ==========================================
-// OOP: Class Registry and Object Storage
-// ==========================================
+map classExists = { "__sentinel__" = 0 } ;
+map classParent = { "__sentinel__" = "" } ;
+map classFieldCount = { "__sentinel__" = 0 } ;
+map classFields = { "__sentinel__" = "" } ;
+map classFieldPrivate = { "__sentinel__" = 0 } ;
+map classFieldOwner = { "__sentinel__" = "" } ;
 
-map classExists = { "null" = 0 } ;
-map classParent = { "null" = "" } ;
-map classFieldCount = { "null" = 0 } ;
-map classFields = { "null" = "" } ;
-map classFieldPrivate = { "null" = 0 } ;
-map classFieldOwner = { "null" = "" } ;
+map classMethodCount = { "__sentinel__" = 0 } ;
+map classMethods = { "__sentinel__" = "" } ;
+map classMethodPos = { "__sentinel__" = 0 } ;
+map classMethodParamCount = { "__sentinel__" = 0 } ;
+map classMethodParams = { "__sentinel__" = "" } ;
+map classMethodPrivate = { "__sentinel__" = 0 } ;
+map classMethodOwner = { "__sentinel__" = "" } ;
 
-map classMethodCount = { "null" = 0 } ;
-map classMethods = { "null" = "" } ;
-map classMethodPos = { "null" = 0 } ;
-map classMethodParamCount = { "null" = 0 } ;
-map classMethodParams = { "null" = "" } ;
-map classMethodPrivate = { "null" = 0 } ;
-map classMethodOwner = { "null" = "" } ;
-
-map classHasCtor = { "null" = 0 } ;
-map classCtorPos = { "null" = 0 } ;
-map classCtorParamCount = { "null" = 0 } ;
-map classCtorParams = { "null" = "" } ;
-map classCtorPrivate = { "null" = 0 } ;
+map classHasCtor = { "__sentinel__" = 0 } ;
+map classCtorPos = { "__sentinel__" = 0 } ;
+map classCtorParamCount = { "__sentinel__" = 0 } ;
+map classCtorParams = { "__sentinel__" = "" } ;
+map classCtorPrivate = { "__sentinel__" = 0 } ;
 
 func registerClass ( string name , string parentName ) {
+    if name ~ "" || name ~ "__sentinel__" || name ~ "null"
+    {
+        return 0 ;
+    }
+    float cEx = exists ( classExists , name ) ;
+    if cEx ~ 1
+    {
+        out "Error: Duplicate class '" + name + "'%n" ;
+        return 0 ;
+    }
     if parentName ! ""
     {
         if parentName ~ name
@@ -545,6 +543,16 @@ func registerClass ( string name , string parentName ) {
         {
             out "Error: Parent class '" + parentName + "' not found%n" ;
             return 0 ;
+        }
+        string curAnc = parentName ;
+        while curAnc ! ""
+        {
+            if curAnc ~ name
+            {
+                out "Error: Circular inheritance detected for class '" + name + "' extending '" + parentName + "'%n" ;
+                return 0 ;
+            }
+            curAnc = classParent [ curAnc ] ;
         }
     }
     classExists [ name ] = 1 ;
@@ -591,6 +599,13 @@ func canAccessField ( string className , string fieldName ) {
 }
 
 func registerClassField ( string className , string fieldName , float isPriv ) {
+    string fk = className + "_" + fieldName ;
+    float alreadyEx = exists ( classFieldOwner , fk ) ;
+    if alreadyEx ~ 1
+    {
+        out "Error: Duplicate field '" + fieldName + "' in class '" + className + "'%n" ;
+        return 0 ;
+    }
     float cnt = classFieldCount [ className ] ;
     if cnt >= 64
     {
@@ -611,7 +626,6 @@ func registerClassField ( string className , string fieldName , float isPriv ) {
     classFields [ idxK ] = fieldName ;
     classFieldCount [ className ] = cnt + 1 ;
     
-    string fk = className + "_" + fieldName ;
     classFieldPrivate [ fk ] = isPriv ;
     classFieldOwner [ fk ] = className ;
     return 1 ;
@@ -728,11 +742,36 @@ func isSubclass ( string childClass , string parentClass ) {
     return 0 ;
 }
 
-// Object Storage (Type 4)
-map objClass = { "null" = "" } ;
-map objFieldVal = { "null" = 0 } ;
-map objFieldValStr = { "null" = "" } ;
-map objFieldType = { "null" = 0 } ;
+func getParentReqArgs ( string className ) {
+    string cur = classParent [ className ] ;
+    while cur ! ""
+    {
+        if classHasCtor [ cur ] ~ 1
+        {
+            float pc = classCtorParamCount [ cur ] ;
+            if pc > 0
+            {
+                return cur ;
+            }
+        }
+        cur = classParent [ cur ] ;
+    }
+    return "" ;
+}
+
+func parentRequiresArgs ( string className ) {
+    string reqClass = getParentReqArgs ( className ) ;
+    if reqClass ! ""
+    {
+        return classCtorParamCount [ reqClass ] ;
+    }
+    return 0 ;
+}
+
+map objClass = { "__sentinel__" = "" } ;
+map objFieldVal = { "__sentinel__" = 0 } ;
+map objFieldValStr = { "__sentinel__" = "" } ;
+map objFieldType = { "__sentinel__" = 0 } ;
 
 func newObjectInstance ( string className ) {
     float id = allocObjId ( ) ;
@@ -791,10 +830,9 @@ func getObjectFieldType ( float objId , string fieldName ) {
     return t ;
 }
 
-// 'this' Receiver Stack
 float thisStackTop = 0 - 1 ;
-map thisStack = { "null" = 0 } ;
-map thisClassStack = { "null" = "" } ;
+map thisStack = { "__sentinel__" = 0 } ;
+map thisClassStack = { "__sentinel__" = "" } ;
 
 func pushThis ( float objId , string execClass ) {
     thisStackTop = thisStackTop + 1 ;
@@ -825,5 +863,108 @@ func getThisExecClass ( ) {
         return c ;
     }
     return "" ;
+}
+
+float ctorStackTop = 0 - 1 ;
+map ctorClassStack = { "__sentinel__" = "" } ;
+map ctorStmtCount = { "__sentinel__" = 0 } ;
+map ctorSuperCalled = { "__sentinel__" = 0 } ;
+map ctorObjStack = { "__sentinel__" = 0 } ;
+
+func pushCtorFrame ( float objId , string className ) {
+    ctorStackTop = ctorStackTop + 1 ;
+    ctorClassStack [ ctorStackTop ] = className ;
+    ctorStmtCount [ ctorStackTop ] = 0 ;
+    ctorSuperCalled [ ctorStackTop ] = 0 ;
+    ctorObjStack [ ctorStackTop ] = objId ;
+}
+
+func popCtorFrame ( ) {
+    if ctorStackTop >= 0
+    {
+        ctorStackTop = ctorStackTop - 1 ;
+    }
+}
+
+func isInConstructor ( ) {
+    if ctorStackTop >= 0
+    {
+        return 1 ;
+    }
+    return 0 ;
+}
+
+func getCtorClass ( ) {
+    if ctorStackTop >= 0
+    {
+        return ctorClassStack [ ctorStackTop ] ;
+    }
+    return "" ;
+}
+
+func getCtorObj ( ) {
+    if ctorStackTop >= 0
+    {
+        return ctorObjStack [ ctorStackTop ] ;
+    }
+    return 0 ;
+}
+
+func getCtorStmtCount ( ) {
+    if ctorStackTop >= 0
+    {
+        return ctorStmtCount [ ctorStackTop ] ;
+    }
+    return 0 ;
+}
+
+func incCtorStmtCount ( ) {
+    if ctorStackTop >= 0
+    {
+        float cnt = ctorStmtCount [ ctorStackTop ] ;
+        ctorStmtCount [ ctorStackTop ] = cnt + 1 ;
+    }
+}
+
+func getCtorSuperCalled ( ) {
+    if ctorStackTop >= 0
+    {
+        return ctorSuperCalled [ ctorStackTop ] ;
+    }
+    return 0 ;
+}
+
+func setCtorSuperCalled ( ) {
+    if ctorStackTop >= 0
+    {
+        ctorSuperCalled [ ctorStackTop ] = 1 ;
+    }
+}
+
+map ctorArgStr = { "__sentinel__" = "" } ;
+map ctorArgNum = { "__sentinel__" = 0 } ;
+map ctorArgType = { "__sentinel__" = 0 } ;
+
+func setCtorArg ( float idx , string s , float n , float t ) {
+    float targetTop = ctorStackTop + 1 ;
+    string k = targetTop + "_" + idx ;
+    ctorArgStr [ k ] = s ;
+    ctorArgNum [ k ] = n ;
+    ctorArgType [ k ] = t ;
+}
+
+func getCtorArgS ( float idx ) {
+    string k = ctorStackTop + "_" + idx ;
+    return ctorArgStr [ k ] ;
+}
+
+func getCtorArgN ( float idx ) {
+    string k = ctorStackTop + "_" + idx ;
+    return ctorArgNum [ k ] ;
+}
+
+func getCtorArgT ( float idx ) {
+    string k = ctorStackTop + "_" + idx ;
+    return ctorArgType [ k ] ;
 }
 .
